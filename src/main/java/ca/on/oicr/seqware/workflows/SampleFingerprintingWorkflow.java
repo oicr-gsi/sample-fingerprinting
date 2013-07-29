@@ -35,6 +35,7 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
     private String dbSNP_data;
     private String checkedSNPs;
     private String queue;
+    private String reportName = "sample_fingerprint";
     
     //GATK parameters
     private String stand_call_conf = "50.0";
@@ -140,14 +141,14 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
             this.studyName = getProperty("study_name");         
         }
        
-       // iterate over inputs
-      for (int i = 0; i< this.bam_files.length; i++) {
-        Log.stdout("CREATING FILE: bam_inputs_" + i);
-        SqwFile file = this.createFile("bam_inputs_" + i);
-        file.setSourcePath(this.bam_files[i]);
-        file.setType("application/bam");
-	file.setIsInput(true);
-	Log.stdout("PROVISIONED path for bam_inputs_" + i + " is " + file.getProvisionedPath());
+        // iterate over inputs
+        for (int i = 0; i< this.bam_files.length; i++) {
+         Log.stdout("CREATING FILE: bam_inputs_" + i);
+         SqwFile file = this.createFile("bam_inputs_" + i);
+         file.setSourcePath(this.bam_files[i]);
+         file.setType("application/bam");
+	 file.setIsInput(true);
+	 Log.stdout("PROVISIONED path for bam_inputs_" + i + " is " + file.getProvisionedPath());
         
         //Using first file, try to guess the study name if it was not provided as an argument in .ini file
         if (i == 0 && this.studyName.isEmpty()) {
@@ -197,7 +198,7 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
       
       //Set up the output (we have to set up only those which don't exist yet)
       SqwFile report_file = this.createFile("report_zip");
-      String report_name = "sample_fingerprint";    
+      String report_name = this.reportName + "." + this.studyName;    
       report_file.setSourcePath(this.dataDir + report_name + ".report.zip");
       report_file.setType("application/zip-report-bundle");
       report_file.setIsOutput(true);
@@ -408,7 +409,8 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
            make_pics.setCommand("perl " + getWorkflowBaseDir() + "dependencies/make_report.pl "
                               + "--matrix=" + matrix.getSourcePath() + " "
                               + "--datadir=" + this.dataDir + " "
-                              + "--study=" + this.studyName);
+                              + "--study=" + this.studyName + " "
+                              + "> " + this.dataDir + "index.html");
            make_pics.setMaxMemory("2000");
            if (!this.queue.isEmpty()) {
             make_pics.setQueue(this.queue);
@@ -434,10 +436,10 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
            if (!this.watchersList.isEmpty()) {
             Job job_alert = workflow.createBashJob("send_alert");
             job_alert.setCommand("perl" + getWorkflowBaseDir() + "dependencies/plotReporter.pl "
-                              + "--emails=" + this.watchersList + " "
-                              + "--report=" + this.dataDir + "index.html"
-                              + "--zip=" + getFiles().get("report_zip").getSourcePath()
-                              + "--finaldir=" + getFiles().get("report_zip").getOutputPath());
+                              + "--watchers=" + this.watchersList + " "
+                              + "--report=" + this.dataDir + "index.html "
+                              + "--studyname=" + this.studyName + " "
+                              + "--bundle=" + getFiles().get("report_zip").getOutputPath());
 
             job_alert.setMaxMemory("2000");
             job_alert.addParent(zip_report);

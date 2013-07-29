@@ -189,7 +189,9 @@ foreach my $sl (sort {$a<=>$b} keys %sliced) {
                       : &printout_slice($sliced{$sl},$sl,\@slicelines,join("_",($studyname,$sl)),$datadir,$t,"FALSE");
 }
 
+#===========================================================================================
 # process slices with two R scripts - one for heatmap, one for 'barcode'-looking fingerprint
+#===========================================================================================
 sub printout_slice {
  my %sliced = %{shift @_};
  my $slice_id = shift @_;
@@ -256,8 +258,10 @@ sub printout_slice {
  }
 
  # Register the image name in the report hash
+# my $flag = $flagged eq "TRUE" ? "FLAGGED" : "OK";
  $reports{$slice_id} = {img=>$filecard.".png",
                         fp=>[@fingers],
+                        flagged=>$flagged eq "TRUE" ? "FLAGGED" : "OK",
                         title=>$pngtitle};
 }
 
@@ -313,7 +317,7 @@ sub heatmap_rep {
  return td(img({-src=>$reports{$heat}->{img},
                 -width=>500,
                 -height=>500,
-                -alt=>'Heatmap'.$heat}),br,
+                -alt=>'Heatmap_'.$heat."_".$reports{$heat}->{flagged}}),br,
            image_button({-src=>$link_image,
                 -width=>111,
                 -height=>32,
