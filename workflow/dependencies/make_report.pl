@@ -12,7 +12,7 @@ use IO::File;
 use Data::Dumper;
 
 use constant THRESHOLD=>30; # That many SNPs every genotype should have
-use constant DEBUG=>0;
+use constant DEBUG=>1;
 use constant SAMPLESPERSLICE=>8;
 
 my($datadir,$tempdir,$matrix,$studyname,$refsnps); # external parameters
@@ -136,7 +136,7 @@ print STDERR "Got ".scalar(keys %indexed_lines)." indexed lines\n" if DEBUG;
 ORDERED:
 foreach my $id (@ordered_list) {
  if (!$samples{$id}) {next ORDERED;}
- if (scalar(keys %seen_sample) > SAMPLESPERSLICE && $id ne $ordered_list[$#ordered_list]) {
+ if (scalar(keys %seen_sample) >= SAMPLESPERSLICE && $id ne $ordered_list[$#ordered_list]) {
   %seen_sample = ();
   $count++;
  }
@@ -247,10 +247,11 @@ sub printout_slice {
  for (my $cl = 0; $cl < @clustered_ids; $cl++) {
   foreach my $id (keys %ids) {
    if($ids{$id} eq $clustered_ids[$cl]){
-    $png = $datadir.$filecard.".fp.".$cl."png";
+    $png = $datadir.$filecard.".fp.".$cl.".png";
     push(@fingers,{img=>$png,
                    name=>$id});
     my $fin = $id.".fin";
+    $fin =~s!.*/!!;
     print STDERR "Will Rscript create_fingerprints.r $tempdir $fin $colors{$samples{$clustered_ids[$cl]}->{sample}} $refsnps $png\n" if DEBUG;
     `Rscript create_fingerprints.r $tempdir $fin $colors{$samples{$clustered_ids[$cl]}->{sample}} $refsnps $png`;
    } 
@@ -287,8 +288,8 @@ $n_rows = int($n_rows) < $n_rows ? int($n_rows + 1) : int($n_rows);
 print STDERR "N rows: ".$n_rows."\n" if DEBUG;
 # 1. image of the heatmap and 2. button with a link to popup with fingerprints
 my @hmaps = map {&heatmap_rep($_)} (sort {$a<=>$b} keys %reports);
-my @tab_rows = map {$_+2 == $#hmaps ? Tr({-align=>'LEFT',-valign=>'BOTTOM'},@hmaps[$_..$_+2])
-                                    : Tr({-align=>'LEFT',-valign=>'BOTTOM'},@hmaps[$_..$#hmaps]);} (0..$n_rows-1);
+my @tab_rows = map {3*$_+2 <= $#hmaps ? Tr({-align=>'LEFT',-valign=>'BOTTOM'},@hmaps[3*$_..3*$_+2])
+                                      : Tr({-align=>'LEFT',-valign=>'BOTTOM'},@hmaps[3*$_..$#hmaps]);} (0..$n_rows-1);
 
 print table({-border=>0},
             @tab_rows);
@@ -326,7 +327,7 @@ sub heatmap_rep {
                 -onClick=>"showFingerprints(\'$popup\')",
                 -value=>$heat,
                 -align=>'MIDDLE'}),
-           h6($reports{$heat}->{title}));
+           h7($reports{$heat}->{title}));
 }
 
 # ======================================================================================

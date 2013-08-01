@@ -23,7 +23,7 @@ plotfile<-function(f,title,maxSNPs,flagged=FALSE) {
  # Sort the matrix, it saves a lot of headaches
  ordcol<-order(colnames(DATA[,1:dim(DATA)[1]]))
  ordrow<-order(rownames(DATA))
- SORTED<-cbind(DATA[,ordcol],SNPs=DATA[,71],Color=DATA[,72])
+ SORTED<-cbind(DATA[,ordcol],SNPs=DATA[,lim + 1],Color=DATA[,lim + 2])
  DATA<-SORTED[ordrow,]
 
  COLFUN <- colorRamp(c("white","lightblue","blue"),space="rgb")
