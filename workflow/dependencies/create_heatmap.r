@@ -31,7 +31,7 @@ plotfile<-function(f,title,maxSNPs,flagged=FALSE) {
  normSNPs<-with(DATA,(SNPs) / max(SNPs))
 
 
- HEAT<-heatmap(as.matrix(DATA[,1:lim]),na.rm= TRUE,Rowv=TRUE,Colv=TRUE,col=rgb(COLFUN(seq(from=0,to=1,by=0.01)),maxColorValue=255),symm=TRUE, cexRow=0.9, cexCol=0.9, main=paste("Genotype proximity for",title),RowSideColors=as.character(DATA$Color),ColSideColors=rgb(NUMFUN(normSNPs),maxColorValue=255),xlab=NULL,ylab=NULL,distfun=function(c) as.dist(1-cor(t(c), method="pearson")),margins=c(7,7),cex.main=0.6,bg="salmon")
+ HEAT<-heatmap(as.matrix(DATA[,1:lim]),na.rm= TRUE,Rowv=TRUE,Colv=TRUE,col=rgb(COLFUN(seq(from=0,to=1,by=0.01)),maxColorValue=255),symm=TRUE, cexRow=0.9, cexCol=0.9, labRow=FALSE, labCol=FALSE, main=paste("Genotype proximity for",title),RowSideColors=as.character(DATA$Color),ColSideColors=rgb(NUMFUN(normSNPs),maxColorValue=255),distfun=function(c) as.dist(1-cor(t(c), method="pearson")),margins=c(7,7),cex.main=0.6,bg="salmon")
 
  indexes = HEAT$rowInd
  cat(rev(rownames(DATA)[indexes]),"\n")

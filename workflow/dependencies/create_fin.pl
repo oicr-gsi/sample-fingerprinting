@@ -34,7 +34,9 @@ open(REFVCF,"grep -v \"^#\" $refvcf |") or die "Couldn't read from reference vcf
 while(<REFVCF>) {
  $snpcount++;
  my @temp = split("\t");
- $refs{$temp[0]}->{$temp[1]} = {flag=>$flags->{zerocov},dbsnp=>$temp[2]};
+ $refs{$temp[0]}->{$temp[1]} = {flag =>$flags->{zerocov},
+                                dbsnp=>$temp[2],
+                                ref  =>$temp[3]};
 }
 print STDERR scalar(keys %refs)." reference points retrieved\n" if DEBUG;
 close REFVCF;
@@ -73,19 +75,23 @@ open(VCF,$vcfhandle) or die "Couldn't read from vcf file [$vcf]";
 while (<VCF>) {
  my @temp = split("\t");
  next if (!$refs{$temp[0]}->{$temp[1]});
- if ($temp[3] =~/[ACGT]{1}/i) {
-   $refs{$temp[0]}->{$temp[1]}->{flag} = uc($temp[3]);
+ if ($temp[4] =~/[ACGT]{1}/i && $temp[4] ne $temp[3]) {
+   $refs{$temp[0]}->{$temp[1]}->{flag} = uc($temp[4]);
  } else { $refs{$temp[0]}->{$temp[1]}->{flag} = $flags->{nosnp};}
 }
 
 close(VCF);
-
-@bitstrip = ();
+print OUT join("\t",("CHROM","POS","ID","SNP","FLAG")),"\n";
 foreach my $chr (sort keys %refs) {
+ foreach my $coord (sort {$a<=>$b} keys %{$refs{$chr}}) {
+  my $snp = $refs{$chr}->{$coord}->{flag} eq 'M' ? $refs{$chr}->{$coord}->{ref}.$refs{$chr}->{$coord}->{ref} : $refs{$chr}->{$coord}->{ref}.$refs{$chr}->{$coord}->{flag};
+  $snp = "" if $refs{$chr}->{$coord}->{flag} eq 'N';
+  
+  print OUT join("\t",($chr,$coord,$refs{$chr}->{$coord}->{dbsnp},$snp,$refs{$chr}->{$coord}->{flag})),"\n";
+ }
  print STDERR scalar(keys %{$refs{$chr}})." datapoints will be printed out\n" if DEBUG;
- map{push (@bitstrip,$refs{$chr}->{$_}->{flag}) } (sort keys %{$refs{$chr}});
+ 
 }
 
-print OUT join("\n",@bitstrip);
 close OUT;
 

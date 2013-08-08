@@ -29,8 +29,8 @@ for(n in names[[1]]) {
 }
 
 # Set the width of image an right margin
-#offset<-ifelse(maxchar*6.5>snps+10,maxchar*6.5,0)
-offset = 0
+#off<-ifelse(maxchar*6.5>snps+10,maxchar*6.5,0)
+off = 0
 
 # Function for drawing colorstrips
 colorstrip<-function(cls,ccol,base,height,margin=0) {
@@ -50,13 +50,13 @@ BLANC="#D7D7D7"
 
 print(paste("We will have ",length(names[[1]]),"rows in our diagram"))
 
-png(filename=pngname,width=ifelse(offset==0,snps+10,offset),height=image_height,units="px",pointsize=15,bg="white")
+png(filename=pngname,width=ifelse(off==0,snps+10,off),height=image_height,units="px",pointsize=15,bg="white")
 par(mar=c(0,0,0,0)+0.1,family="sans",mfrow=c(length(names[[1]]),1))
 
 for(i in 1:length(names[[1]])){
  
- FP<-read.table(paste(dir,names[[1]][i],sep=""),header=F)
- DATA<-cbind("Flag"=FP,"Color"=rep(BLANC,length(FP)))
+ FP<-read.table(paste(dir,names[[1]][i],sep=""),header=T,sep="\t")
+ DATA<-data.frame(FP$FLAG,rep(BLANC,length(FP$FLAG)))
  colnames(DATA)<-c("Flag","Color")
  C<-as.vector(DATA$Color)
 
@@ -72,7 +72,7 @@ for(i in 1:length(names[[1]])){
  name = substr(names[[1]][i],0,nchar(names[[1]][i])-4)
  print(paste("Name for ",i," is ",name))
  
- plot(1, type="n", axes=F, xlab="", ylab="",xlim=c(0,ifelse(offset==0,snps+10,offset)),ylim=c(0,10),yaxs = 'i',xaxs = 'i')
+ plot(1, type="n", axes=F, xlab="", ylab="",xlim=c(0,ifelse(off==0,snps+10,off)),ylim=c(0,10),yaxs = 'i',xaxs = 'i')
  colorstrip(C,cclrs[[1]][i],0,10,0)
  #text(5,1,name,pos=4,cex=1,font=2)
  

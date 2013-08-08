@@ -45,7 +45,7 @@ open (HTML,"<$html_path") or die "Couldn't read from report [$html_path]";
 @affected_samples = ();
 while (<HTML>) {
  chomp;
- while (/alt=\"Heatmap_\d+_(\w+?)\"..+?h6\>(\S+?)\<\/h6/g) {
+ while (/label style=\"color:\#ff0000;\">(\S+?)\<\/label/g) {
   if ($1 eq $FLAGGED) {
     push (@affected_samples,$2);
   }
