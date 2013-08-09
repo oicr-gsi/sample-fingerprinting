@@ -248,6 +248,7 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
          this.finalOutDir = outdir;
          this.dataDir = getProperty("data_dir").endsWith("/") ? getProperty("data_dir") : getProperty("data_dir") + "/";
          //this.addDirectory(this.dataDir + "images");
+         //this.addDirectory(this.dataDir + "html");
                  
        } catch (Exception e) {
          Logger.getLogger(SampleFingerprintingWorkflow.class.getName()).log(Level.WARNING, null, e);
@@ -286,7 +287,7 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
                                + "-R " + this.genomeFile + " "
                                + "-T UnifiedGenotyper "
                                + "-I " + bam.getProvisionedPath() + " "
-                               + "-o " + basename + " "
+                               + "-o " + this.vcf_files[i] + " "
                                + "-stand_call_conf " + this.stand_call_conf + " "
                                + "-stand_emit_conf " + this.stand_emit_conf + " "
                                + "-dcov " + this.dcov + " "

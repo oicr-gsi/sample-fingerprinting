@@ -492,7 +492,7 @@ sub heatmap_rep {
  my $popup = &create_popup($heat,$datadir);
 
  my @samples = split(",",$reports{$heat}->{title});
- my @labels  = map{$flagged{samples}->{$_} ? br.label({-style=>"color:#ff0000;"},$_) : br.label($_)} @samples;
+ my @labels  = map{$flagged{samples}->{$_} ? br.label({-style=>"color:#f93b08;"},$_) : br.label($_)} @samples;
 
  return td(img({-src=>$reports{$heat}->{img},
                 -width=>500,
