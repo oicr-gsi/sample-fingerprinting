@@ -145,6 +145,10 @@ print STDERR "Got ".scalar(keys %indexed_lines)." indexed lines\n" if DEBUG;
 ORDERED:
 foreach my $id (@ordered_list) {
  if (!$samples{$id}) {next ORDERED;}
+ if ($sample_counter{$samples{$id}->{sample}} < 2) {
+  $filtered{$samples{$id}->{file}}++; # Skip all files which are single representatives of their sample
+  next ORDERED;
+ }
  if (scalar(keys %seen_sample) >= SAMPLESPERSLICE && $id ne $ordered_list[$#ordered_list]) {
   %seen_sample = ();
   $count++;
@@ -172,10 +176,10 @@ my $headerline = $lines[0];
 foreach my $cl (sort {$a<=>$b} keys %sliced) {
    foreach my $file_id (keys %{$sliced{$cl}}) {
      if ($parent_clusters{$samples{$file_id}->{sample}}->{cluster}!=$cl) {
-         # Retrieve the lines for all files pertaining to the sample and 
+         # Retrieve the lines for all files pertaining to the sample 
          my @clines = ($headerline,$indexed_lines{$file_id});
          my @plines = @clines;
-         map{push(@plines,$indexed_lines{$_})} (keys %{$sliced{$parent_clusters{$samples{$file_id}->{sample}}->{cluster}}});
+         map{push(@plines,$indexed_lines{$_}) if $samples{$_}->{sample} eq $samples{$file_id}->{sample}} (keys %{$sliced{$parent_clusters{$samples{$file_id}->{sample}}->{cluster}}});
          
          if (&aver_ji(\@plines,$samples{$file_id}->{sample},1) >= &aver_ji(\@clines,$samples{$file_id}->{sample},0) - JACCARDOFFSET) {
              # Reassign to parent cluster:
@@ -191,21 +195,43 @@ foreach my $cl (sort {$a<=>$b} keys %sliced) {
     }
   }
 }
-print STDERR Dumper(%flagged) if DEBUG;
 
+# Append last cluster to last-1 cluster if there's only one sample in the last one
+# TODO: clusters nedd to be re-assembled after reassigning step
+my %samples_last = ();
+my $last_sample;
+map{$samples_last{$samples{$_}->{sample}}++;$last_sample = $samples{$_}->{sample};} (keys %{$sliced{scalar(keys %sliced)-1}});
+if (scalar(keys %samples_last) < 2 && scalar(keys %sliced) > 1) {
+ foreach my $f (keys %{$sliced{scalar(keys %sliced)-1}}) {
+  $sliced{scalar(keys %sliced)-1}->{$f} = undef;
+  $sliced{scalar(keys %sliced)-2}->{$f}++;
+  if ($flagged{slices}->{scalar(keys %sliced)-1}) {
+    $flagged{slices}->{scalar(keys %sliced)-2}++;
+    $flagged{slices}->{scalar(keys %sliced)-1} = undef;
+  }
+ }
+ $sperslice{scalar(keys %sliced)-2}->{$last_sample}++;
+ $sliced{scalar(keys %sliced)-1} = undef;
+}
+print STDERR Dumper(%flagged) if DEBUG;
 
 # =================================================
 # Now print all slices 
 # =================================================
 
 foreach my $sl (sort {$a<=>$b} keys %sliced) {
- my $t = join(",",(keys %{$sperslice{$sl}})); # Title
+ next if !$sliced{$sl};
+ $sperslice{$sl} = {};
  my @slicelines = ($lines[0]);
 
  foreach my $oid(@ordered_list) {
    next if !$sliced{$sl}->{$oid};
+   $sperslice{$sl}->{$samples{$oid}->{sample}}++;
    push(@slicelines,$indexed_lines{$oid}) if $indexed_lines{$oid};
  }
+ if (scalar(keys %{$sperslice{$sl}}) == 0){next;} # Skip non-existing clices
+ my $t = join(",",(keys %{$sperslice{$sl}})); # Title
+ print STDERR "MY TITLE: $t\n" if DEBUG;
  
  $flagged{slices}->{$sl} ? &printout_slice($sliced{$sl},$sl,\@slicelines,join("_",($studyname,$sl)),$datadir,$t,"TRUE") 
                          : &printout_slice($sliced{$sl},$sl,\@slicelines,join("_",($studyname,$sl)),$datadir,$t,"FALSE");
@@ -233,7 +259,9 @@ print button(-onClick=>"showFingerprints('help.html')",
              -name=>"help_button",
              -value=>"Help");
 print "\n&nbsp;&nbsp;\n";
-print button(-onClick=>"window.location.href=\'$matrix\'",
+my $matrix_link = $matrix;
+$matrix_link=~s!.*/!!;
+print button(-onClick=>"window.location.href=\'$matrix_link\'",
              -name=>"download_button",
              -value=>"Download Data");
 print h2("Sample Fingerprinting for ".$studyname." study");
@@ -253,7 +281,7 @@ if (scalar(keys %{$flagged{files}}) > 0) {
 if (scalar(keys %filtered) > 0) {
  my @filtered = map{Tr({-align=>'LEFT',-valign=>'BOTTOM'},td($_))} (keys %filtered);
 
- print h3("Files skipped due to low coverage/small number of SNPs at control loci:");
+ print h3("Files skipped due to low coverage/small number of SNPs or single file in a sample:");
  print br;
  print table({-border=>0},
               @filtered);
@@ -337,6 +365,7 @@ sub printout_slice {
  my %colors;
  my @lines  = @{shift @_};
  print STDERR "Got ".scalar(@lines)." lines for cluster $slice_id\n" if DEBUG;
+ return if scalar(@lines) <= 1;
  my($filecard,$datadir,$pngtitle,$flagged) = @_;
 
  # Temporary matrix file for a slice
@@ -347,7 +376,6 @@ sub printout_slice {
  my $fm = new IO::File(">$matfile") or die "Cannot write to file [$matfile]";
  my $first = shift @lines;
  my @names = split "\t",$first;
- 
  
  shift @names; # remove 1st (useless) element
 
@@ -441,17 +469,16 @@ sub printout_slice {
 sub aver_ji {
  # If there's no sample, will use all values exept 1 (genotype compared with itself)
  my($lines,$sample,$include) = @_;
-
  my @values = ();
  my $first = shift @{$lines};
- my @names = split "\t",$first; 
- shift @names; # remove 1st (useless) element
+ my @names = grep {/\S+/} split "\t",$first; 
+ #shift @names; # remove 1st (useless) element
 
  my %indexes;
  if ($sample) {
   NAME:
   for (my $i = 0; $i < @names; $i++) {
-   if ($ids{$names[$i]} && $names[$i]=~/$sample/) {
+   if ($ids{$names[$i]} && $samples{$ids{$names[$i]}}->{sample} eq $sample) {
     $indexes{$i} = $ids{$names[$i]};
    }              
   }
@@ -464,12 +491,10 @@ sub aver_ji {
     if ($include) {
      map{if ($temp[$_ + 1] ne "1" && $temp[$_ + 1] ne "NA"){push(@values,$temp[$_ + 1])}} (sort {$a<=>$b} keys %indexes);
     } else {
-     $snp_index ? map{if (!$indexes{$_} && $temp[$_ + 1] ne "1" && $temp[$_ + 1] ne "NA"){push(@values,$temp[$_ + 1])}} (1..($snp_index-1))
-                : map{if (!$indexes{$_} && $temp[$_ + 1] ne "1" && $temp[$_ + 1] ne "NA"){push(@values,$temp[$_ + 1])}} (1..$#temp);
+     map{if (!$indexes{$_} && $temp[$_ + 1]=~/\d+/ && $temp[$_ + 1] ne "1" && $temp[$_ + 1] ne "NA"){push(@values,$temp[$_ + 1])}} (1..($snp_index-2));
     }
    } else {
-    $snp_index ? map{if ($temp[$_ + 1] ne "1" && $temp[$_ + 1] ne "NA"){push(@values,$temp[$_ + 1])}} (1..($snp_index-1)) 
-               : map{if ($temp[$_ + 1] ne "1" && $temp[$_ + 1] ne "NA"){push(@values,$temp[$_ + 1])}} (1..$#temp);
+    map{if ($temp[$_ + 1] ne "1" && $temp[$_ + 1] ne "NA"){push(@values,$temp[$_ + 1])}} (1..($snp_index-2));
    }
  }
  # return average Jaccard index:

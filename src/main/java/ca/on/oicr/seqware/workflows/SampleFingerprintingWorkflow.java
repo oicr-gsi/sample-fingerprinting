@@ -159,17 +159,17 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
             this.studyName = getProperty("study_name");         
         }
        
-        
         this.vcf_files = new String[this.bam_files.length];
+	//List <String> vcf_buffer = new ArrayList<String>(this.bam_files.length);
         // iterate over inputs
         boolean haveNewVcfs = false;
         for (int i = 0; i< this.bam_files.length; i++) {
-         Log.stdout("CREATING FILE: bam_inputs_" + i);
+         //Log.stdout("CREATING FILE: bam_inputs_" + i);
          SqwFile file = this.createFile("bam_inputs_" + i);
          file.setSourcePath(this.bam_files[i]);
          file.setType("application/bam");
 	 file.setIsInput(true);
-	 Log.stdout("PROVISIONED path for bam_inputs_" + i + " is " + file.getProvisionedPath());
+	 //Log.stdout("PROVISIONED path for bam_inputs_" + i + " is " + file.getProvisionedPath());
         
         //Using first file, try to guess the study name if it was not provided as an argument in .ini file
         if (i == 0 && this.studyName.isEmpty()) {
@@ -183,25 +183,33 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
         
         SqwFile file_vcf = this.createFile("vcf_inputs_" + i);
         file_vcf.setType("text/vcf-4");
-        String basename = this.bam_files[i].substring(this.bam_files[i].lastIndexOf("/")+1);
-        String vcfName  = basename.substring(0,basename.lastIndexOf(".bam")) + ".snps.raw.vcf";
+        String basename = this.bam_files[i].substring(this.bam_files[i].lastIndexOf("/")+1,this.bam_files[i].lastIndexOf(".bam"));
+        if (basename.contains(".")) {
+         basename = basename.substring(0,basename.indexOf("."));
+        }
+        String vcfName  = basename + ".snps.raw.vcf";
         
         
         //If we don't have a vcf file we need to set it as an output
 	if (null == this.genotypes || this.genotypes[i].isEmpty() || this.genotypes[i].equals("NA")) {
           file_vcf.setSourcePath(this.dataDir + vcfName);
           file_vcf.setIsOutput(true);
-          haveNewVcfs = true;
-          this.vcf_files[i] = file_vcf.getSourcePath();
+	  haveNewVcfs = true;
+	  //Log.stdout("Creating new vcf output in " + file_vcf.getSourcePath());
+	  this.vcf_files[i] = file_vcf.getSourcePath();
+	  //vcf_buffer.add(i,file_vcf.getSourcePath());
         } else {
           file_vcf.setSourcePath(this.genotypes[i]);
           file_vcf.setIsInput(true);
-          this.vcf_files[i] = file_vcf.getProvisionedPath();
-        }
+	  this.vcf_files[i] = file_vcf.getProvisionedPath();
+	//  vcf_buffer.add(i,file_vcf.getProvisionedPath());
+	}
         file_vcf.setOutputPath(finalOutDir + vcfName);
         file_vcf.setForceCopy(true);
         
       }
+      //this.vcf_files = new String[] {vcf_buffer.toArray()};
+      Log.stdout("Created vcf files array of length " + this.vcf_files.length);
       
       // We will need to have a STUDYNAME_jaccard.matrix.csv output file setup here
       if (haveNewVcfs) {
@@ -264,6 +272,19 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
           Workflow workflow = this.getWorkflow();
           int newVcfs = 0;
           List<Job> gatk_jobs = new ArrayList<Job>();
+         
+          // A small copy job
+          Job job_copy = workflow.createBashJob("copy_resources");
+          job_copy.setCommand("cp -R " + getWorkflowBaseDir()
+                            + "/data/* " 
+                            + this.dataDir);
+
+          job_copy.setMaxMemory("2000");
+            if (!this.queue.isEmpty()) {
+             job_copy.setQueue(this.queue);
+            }
+          gatk_jobs.add(job_copy);
+          
           
           for (int i = 0; i < this.bam_files.length; i++) {
            SqwFile vcf = this.getFiles().get("vcf_inputs_" + i);
@@ -281,6 +302,9 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
              }  
           
            String basename = this.bam_files[i].substring(this.bam_files[i].lastIndexOf("/")+1,this.bam_files[i].lastIndexOf(".bam"));
+           if (basename.contains(".")) {
+               basename = basename.substring(0,basename.indexOf("."));
+           }
            if (vcf.isOutput()) {
              Job job_gatk = workflow.createBashJob("call_snps_" + i);
              job_gatk.setCommand("java -Xmx2g -jar " + getWorkflowBaseDir() + "/bin/GenomeAnalysisTK-" + this.gatkVersion + "/GenomeAnalysisTK.jar "
@@ -310,7 +334,7 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
                             + "-R " + this.genomeFile + " "
                             + "-T DepthOfCoverage "
                             + "-I " + bam.getProvisionedPath() + " "
-                            + "-o " + this.dataDir + basename + " " 
+                            + "-o " + this.tempDir + basename + " " 
                             + "-L " + this.checkedSNPs);
             job_gatk2.setMaxMemory(getProperty("gatk_memory"));
             if (!this.queue.isEmpty()) {
@@ -323,11 +347,11 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
             job_fin.setCommand(getWorkflowBaseDir() + "/dependencies/create_fin.pl "
                           + "--refvcf="   + this.checkedSNPs + " "
                           + "--genotype=" + this.vcf_files[i] + " "
-                          + "--coverage=" + this.dataDir + basename.substring(0,basename.lastIndexOf(".bam")) + ".sample_interval_summary "
+                          + "--coverage=" + this.tempDir + basename + ".sample_interval_summary "
                           + "--datadir="  + this.tempDir + " "
-                          + "--basename=" + basename.substring(0,basename.lastIndexOf(".bam")));
+                          + "--basename=" + basename);
             
-            job_fin.setMaxMemory("3000");
+            job_fin.setMaxMemory("4000");
             job_fin.addParent(job_gatk2);
 
             gatk_jobs.add(job_fin);         
@@ -342,7 +366,7 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
            
            // At his point we need to stage, bgzip and tabix all vcf files we would need to create a jaccard matrix
            StringBuilder vcf_list    = new StringBuilder();
-           vcf_list.append(vcf_files[0] + " ");
+           vcf_list.append(this.vcf_files[0]);
            for (int i = 1;i < this.vcf_files.length; i++) {
                vcf_list.append(",").append(this.vcf_files[i]);
            }
@@ -359,7 +383,6 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
            
            //SET PARENTS FOR VCFPREP JOB
             for(Job parent: gatk_jobs) {
-	       Log.stdout("Adding parent for tabix job");
 	       job_vcfprep.addParent(parent);
 	     }
            
@@ -377,8 +400,8 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
                int chunkMultiplier = 1;
                StringBuilder vcf_chunk      = new StringBuilder();   // For list of vcf files in a chunk
                StringBuilder chunkedResults = new StringBuilder();
-               List<String> vcf_chunks  = new ArrayList<String>(); 
-               List<Job> jaccard_chunks = new ArrayList<Job>();
+	       List<String> vcf_chunks  = new ArrayList<String>(this.vcf_files.length); 
+	       List<Job> jaccard_chunks = new ArrayList<Job>(this.vcf_files.length*this.vcf_files.length/2);
                
                // Make chunks from the long list of files
                vcf_chunk.append(this.vcf_files[0]);
@@ -389,18 +412,18 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
                    vcf_chunk.append(",").append(this.vcf_files[vc]); // jaccard_index script will ignore empty entries, comma at the start is Ok
                    continue;
                  }
-                vcf_chunks.add(chunkMultiplier, vcf_chunk.toString());
+                vcf_chunks.add(vcf_chunk.toString());
                 vcf_chunk  = new StringBuilder();
                 vcf_chunk.append(vcf_files[vc]);
                 chunkMultiplier += 1;
                }                
-                vcf_chunks.add(chunkMultiplier, vcf_chunk.toString());
+                vcf_chunks.add(vcf_chunk.toString());
                 
                 int resultID = 1;
                 
                 // Combine chunks and run the jobs, registering results for later use
-                for (int c = 1; c < vcf_chunks.size(); c++) {
-                  for (int cc = c; c < vcf_chunks.size(); cc++) {
+                for (int c = 0; c < vcf_chunks.size(); c++) {
+                  for (int cc = c; cc < vcf_chunks.size(); cc++) {
                    if (c == cc){continue;}
                    String merged_list = vcf_chunks.get(c) + "," + vcf_chunks.get(cc);
                    
@@ -466,7 +489,7 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
                               + "--datadir=" + this.dataDir + " "
                               + "--studyname=" + this.studyName + " "
                               + "> " + this.dataDir + "index.html");
-           make_pics.setMaxMemory("2000");
+           make_pics.setMaxMemory("3000");
            if (!this.queue.isEmpty()) {
             make_pics.setQueue(this.queue);
            }
@@ -476,7 +499,7 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
         
            // Zip everything into a report bundle for provisioning
            Job zip_report = workflow.createBashJob("zip_everything");
-           zip_report.setCommand("zip " + getFiles().get("report_zip").getSourcePath() + " "
+           zip_report.setCommand("zip -r " + getFiles().get("report_zip").getSourcePath() + " "
                                + this.dataDir + "*.png "
                                + this.dataDir + "images/* "
                                + this.dataDir + "*_genotype_report.csv "

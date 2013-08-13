@@ -46,6 +46,7 @@ close REFVCF;
 open(SUMMARY,"<$summary") or die "Couldn't read from summary file [$summary]";
  my $count = 0;
  $basename ||= $summary;
+ $basename = $' if $basename=~m!/!;
 
  if ($basename =~m!\.sample_interval_summary!) {
   $basename = $`;
