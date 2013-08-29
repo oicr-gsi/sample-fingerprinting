@@ -1,5 +1,24 @@
 #!/usr/bin/perl -w
 
+=head2 SUMMARY
+ 
+ Script for filtering and clustering genotypes, splitting matrix into a set of smaller chunks and producing html report with images
+
+=head2 USAGE
+
+ make_report.pl --datadir=[required] --studyname=[required] --matrix=[required] --refsnps=[required] --tempdir=[optional]
+
+ Script requires similarity matrix (tab-delimited), directory with data (vcf files) studyname and number of control points (SNPs)
+ Optionally it uses tempdir parameter which may point to a directory with coverage depth data if that is different than datadir
+
+=head2 EXAMPLES
+
+ ./make_report.pl --matrix=PCSI_WG.matrix.all.txt --datadir=. --tempdir=./GATK.out/PCSI_EX.depth/ --studyname=PCSI --refsnps=400 > index.html
+
+ ./make_report.pl --matrix=PCSI_EX.matrix.all.txt --datadir=blah/ --studyname=PCSI --refsnps=400 > PCSI_test.html 
+
+=cut
+
 # =================================================================================================================
 # Script for filtering and clustering genotypes, splitting matrix into a set of smaller chunks and producing images 
 # + html wrapper
@@ -14,13 +33,13 @@ use Data::Dumper;
 use constant THRESHOLD=>30; # That many SNPs every genotype should have
 use constant DEBUG=>0;
 use constant SAMPLESPERSLICE=>8;
-use constant JACCARDOFFSET=>0.1; # Allow files to be reassigned to their parent cluster if they similarity to external files is not that great
+use constant JACCARDOFFSET=>0.1; # Allow lanes to be reassigned to their parent cluster if they similarity to the lanes from other donors is not that great
 
 my($datadir,$tempdir,$matrix,$studyname,$refsnps); # external parameters
 my($snp_index,%samples,%sample_counter,%ids,%filtered,@lines,%reports,%flagged); # internal variables
 
-# %flagged structure: %flagged = (samples=>{} slices=>{} files=>{}) multiple levels of flagging
-%flagged = (samples=>{}, slices=>{}, files=>{});
+# %flagged structure: %flagged = (samples=>{} files=>{}) multiple levels of flagging
+%flagged = (samples=>{}, files=>{});
 
 my $pngsize = 750;
 
@@ -31,7 +50,7 @@ my $pngsize = 750;
 # matrix => path to file with similarity matrix (jaccard indexes) for a heatmap
 # genotype => path to file with genotype info for a heatmap
 
-my @colors = qw/red orange yellow green lightblue blue purple darkgreen black/; 
+my @colors = qw/red orange yellow green lightblue blue purple darkgreen black pink/; 
 my $USAGE="make_report.pl --datadir=[req] --studyname=[req] --matrix=[req] --refsnps=[req] --tempdir=[opt]";
 my $result = GetOptions ('datadir=s'    => \$datadir, # working (output) directory
                          'tempdir=s'    => \$tempdir,  # directory with temporary GATK files
@@ -61,15 +80,17 @@ if ($matrix && -e $matrix) {
  while (<$fh>) {
   chomp;
   my @temp = split("\t");
+  my $trimmed_name = $temp[0];
+  $trimmed_name=~s/(SWID_\d+)_(.*)/$2\_$1/;
 
   if ($temp[$snp_index] && $temp[$snp_index] >= THRESHOLD && $temp[0]=~/(\d+)_($studyname.\d+)_/) {
     $ids{$temp[0]} = join("_",($2,$1));
-    $samples{$ids{$temp[0]}} = {sample=>$2,file=>$temp[0]}; # register a file as pertaining to a certain sample (studyname_sampleid)
+    $samples{$ids{$temp[0]}} = {sample=>$2,file=>$temp[0],name=>$trimmed_name}; # register a file as pertaining to a certain sample (studyname_sampleid)
     $sample_counter{$2}++; 
 
     push(@lines,join("\t",@temp));
   } else {
-    $filtered{$temp[0]}++;
+    $filtered{$temp[0]} = $trimmed_name;
     next;
   }
  } # reading from matrix ends here
@@ -137,82 +158,96 @@ my $count   = 0; # slice counter
 map{if(/(\S+)\t/ && $ids{$1}){$indexed_lines{$ids{$1}} = $_}} @lines;
 print STDERR "Got ".scalar(keys %indexed_lines)." indexed lines\n" if DEBUG;
 
-# ==============================================
-# Compose slices: Using list from previous step,  
-# assemble slices having fewer or 8 samples (preliminary clustering)
-# ==============================================
+# ======================================================================================
+# Pre-clustering step, need to re-assign lanes to parent cluster if needed
+# pre-clustering results should be used to assemble final clusters for creating heatmaps
+# ======================================================================================
+
+my %preclusters = ();
+my $current_sample;
 
 ORDERED:
 foreach my $id (@ordered_list) {
  if (!$samples{$id}) {next ORDERED;}
  if ($sample_counter{$samples{$id}->{sample}} < 2) {
-  $filtered{$samples{$id}->{file}}++; # Skip all files which are single representatives of their sample
+  $filtered{$samples{$id}->{file}} = $samples{$id}->{name}; # Skip all files which are single representatives of their sample
   next ORDERED;
  }
- if (scalar(keys %seen_sample) >= SAMPLESPERSLICE && $id ne $ordered_list[$#ordered_list]) {
-  %seen_sample = ();
-  $count++;
- }
+ $current_sample ||=$samples{$id};
+ $count++ if ($current_sample ne $samples{$id});
 
- $seen_sample{$samples{$id}->{sample}}++;
- $sliced{$count}->{$id}++;
+ #$seen_sample{$samples{$id}->{sample}}++;
+ $preclusters{$count}->{$id}++;
  $sperslice{$count}->{$samples{$id}->{sample}}++;
- $parent_clusters{$samples{$id}->{sample}} ||= {max=>$sperslice{$count}->{$samples{$id}->{sample}},cluster=>$count};
- 
- if ($sperslice{$count}->{$samples{$id}->{sample}} > $parent_clusters{$samples{$id}->{sample}}->{max}) {
+
+ if (!$parent_clusters{$samples{$id}->{sample}} || $sperslice{$count}->{$samples{$id}->{sample}} > $parent_clusters{$samples{$id}->{sample}}->{max}) {
          $parent_clusters{$samples{$id}->{sample}} = {max=>$sperslice{$count}->{$samples{$id}->{sample}},cluster=>$count};
  }
 }
 
-# Flag suspicios slices here:===============================================================
-# internal mixup detection (secondary clustering, reassigning files)
-# ==========================================================================================
-# 1. Identify suspects (files)
-# 2. retrieve average jaccard indexes for suspects (parent cluster vs new cluster)
-# 3. reassign if needed or flag
-# ==========================================================================================
+# ============================================================================================
+# Re-assign lanes to parent clusters, if needed. Flag those lanes which can not be re-assigned
+# Use the results in the next step (composing clusters)
+# ============================================================================================
 my $headerline = $lines[0];
 
-foreach my $cl (sort {$a<=>$b} keys %sliced) {
-   foreach my $file_id (keys %{$sliced{$cl}}) {
+foreach my $cl (sort {$a<=>$b} keys %preclusters) {
+   foreach my $file_id (keys %{$preclusters{$cl}}) {
      if ($parent_clusters{$samples{$file_id}->{sample}}->{cluster}!=$cl) {
          # Retrieve the lines for all files pertaining to the sample 
          my @clines = ($headerline,$indexed_lines{$file_id});
          my @plines = @clines;
-         map{push(@plines,$indexed_lines{$_}) if $samples{$_}->{sample} eq $samples{$file_id}->{sample}} (keys %{$sliced{$parent_clusters{$samples{$file_id}->{sample}}->{cluster}}});
+         map{push(@plines,$indexed_lines{$_}) if $samples{$_}->{sample} eq $samples{$file_id}->{sample}} (keys %{$preclusters{$parent_clusters{$samples{$file_id}->{sample}}->{cluster}}});
          
+         # FIXME this needs to be handled differently (perhaps not here, but on the level of R script that build the heatmap)
          if (&aver_ji(\@plines,$samples{$file_id}->{sample},1) >= &aver_ji(\@clines,$samples{$file_id}->{sample},0) - JACCARDOFFSET) {
              # Reassign to parent cluster:
              print STDERR $file_id." gets reassigned to its parent cluster\n" if DEBUG;
-             $sliced{$cl}->{$file_id} = undef;
-             $sliced{$parent_clusters{$samples{$file_id}->{sample}}->{cluster}}->{$file_id}++;
+             $preclusters{$cl}->{$file_id} = undef;
+             $preclusters{$parent_clusters{$samples{$file_id}->{sample}}->{cluster}}->{$file_id}++;
          } else {
-             # Flag slice, file and sample
-             $flagged{slices}->{$cl}++;
-             $flagged{files}->{$samples{$file_id}->{file}}++;
+             # Flag file and sample
+             print STDERR "FOUND split file, putative swap\n" if DEBUG;
+             $flagged{files}->{$samples{$file_id}->{name}}++;
              $flagged{samples}->{$samples{$file_id}->{sample}}++;
          }
     }
   }
 }
 
-# Append last cluster to last-1 cluster if there's only one sample in the last one
-# TODO: clusters nedd to be re-assembled after reassigning step
-my %samples_last = ();
-my $last_sample;
-map{$samples_last{$samples{$_}->{sample}}++;$last_sample = $samples{$_}->{sample};} (keys %{$sliced{scalar(keys %sliced)-1}});
-if (scalar(keys %samples_last) < 2 && scalar(keys %sliced) > 1) {
+# ==============================================
+# Compose slices: Using list from previous step,  
+# assemble slices having fewer or 8 samples (final clustering)
+# ==============================================
+%sperslice = ();
+my $slice_id = 0;
+PRE:
+foreach my $pre (sort {$a<=>$b} keys %preclusters) {
+ map{if(!defined($preclusters{$pre}->{$_})){next PRE}} (keys %{$preclusters{$pre}});
+ if ($sperslice{$slice_id} && scalar(keys $sperslice{$slice_id}) >= SAMPLESPERSLICE) {
+  $slice_id++;
+ }
+
+ foreach my $file_id (keys %{$preclusters{$pre}}) {
+  $sperslice{$slice_id}->{$samples{$file_id}->{sample}}++;
+  $sliced{$slice_id}->{$file_id}++;
+ }
+}
+
+# =================================================
+# Append last cluster to last-1 cluster if there's 
+# only one (or two) sample in the last one
+# =================================================
+
+if (scalar(keys %{$sperslice{scalar(keys %sliced)-1}}) <= 2 && scalar(keys %sliced) > 1) {
  foreach my $f (keys %{$sliced{scalar(keys %sliced)-1}}) {
   $sliced{scalar(keys %sliced)-1}->{$f} = undef;
   $sliced{scalar(keys %sliced)-2}->{$f}++;
-  if ($flagged{slices}->{scalar(keys %sliced)-1}) {
-    $flagged{slices}->{scalar(keys %sliced)-2}++;
-    $flagged{slices}->{scalar(keys %sliced)-1} = undef;
-  }
  }
- $sperslice{scalar(keys %sliced)-2}->{$last_sample}++;
+ map {$sperslice{scalar(keys %sliced)-2}->{$_}++} (keys %{$sperslice{scalar(keys %sliced)-1}});
  $sliced{scalar(keys %sliced)-1} = undef;
 }
+
 print STDERR Dumper(%flagged) if DEBUG;
 
 # =================================================
@@ -233,8 +268,7 @@ foreach my $sl (sort {$a<=>$b} keys %sliced) {
  my $t = join(",",(keys %{$sperslice{$sl}})); # Title
  print STDERR "MY TITLE: $t\n" if DEBUG;
  
- $flagged{slices}->{$sl} ? &printout_slice($sliced{$sl},$sl,\@slicelines,join("_",($studyname,$sl)),$datadir,$t,"TRUE") 
-                         : &printout_slice($sliced{$sl},$sl,\@slicelines,join("_",($studyname,$sl)),$datadir,$t,"FALSE");
+ &printout_slice($sliced{$sl},$sl,\@slicelines,join("_",($studyname,$sl)),$datadir,$t);
  &printout_snps($sliced{$sl},$sl,join("_",($studyname,$sl)),$datadir);
 }
 
@@ -279,7 +313,7 @@ if (scalar(keys %{$flagged{files}}) > 0) {
 
 #2. Filtered files:
 if (scalar(keys %filtered) > 0) {
- my @filtered = map{Tr({-align=>'LEFT',-valign=>'BOTTOM'},td($_))} (keys %filtered);
+ my @filtered = map{Tr({-align=>'LEFT',-valign=>'BOTTOM'},td($_))} (values %filtered);
 
  print h3("Files skipped due to low coverage/small number of SNPs or single file in a sample:");
  print br;
@@ -319,7 +353,13 @@ sub printout_snps {
  foreach my $id (sort keys %sliced) {
   my $finfile = $tempdir.$samples{$id}->{file}.".fin";
 
-  $fh_fin->open($finfile) or warn "File with snp info for $id is not available";
+  my $file_ok = 1;
+  $fh_fin->open($finfile) or $file_ok = 0;
+  if (!$file_ok) {
+   warn "File with snp info for $id is not available";
+   next;
+  }
+  
   my $first = <$fh_fin>;
   if ($first!~/^CHROM/){next;}
 
@@ -339,14 +379,14 @@ sub printout_snps {
  my $fname = $datadir.join("_",($studyname,$slice_id,"genotype_report.csv"));
  $fh_fin->open(">$fname") or die "Couldn't write genotype report to [$fname]";
  print $fh_fin join("\t",@titles[0..2]);
- map{print $fh_fin "\t".$samples{$_}->{file}} (sort keys %sliced);
- print $fh_fin "\n";
+ my @fnames = map{$samples{$_}->{name}} (sort keys %sliced);
+ print $fh_fin "\t",join("\t",@fnames),"\n";
 
  foreach my $chrom (sort keys %snpinfo) {
   foreach my $pos (sort {$a<=>$b} keys %{$snpinfo{$chrom}}) {
    print $fh_fin join("\t",($chrom,$pos,$snpinfo{$chrom}->{$pos}));
    foreach my $file_id (sort keys %sliced) {
-    print $fh_fin "\t".$snpcalls{$snpinfo{$chrom}->{$pos}}->{$samples{$file_id}->{file}}; 
+    $snpcalls{$snpinfo{$chrom}->{$pos}}->{$samples{$file_id}->{file}} ? print $fh_fin "\t".$snpcalls{$snpinfo{$chrom}->{$pos}}->{$samples{$file_id}->{file}} : print $fh_fin "\t"; 
    }
    print $fh_fin "\n";
   }
@@ -367,6 +407,7 @@ sub printout_slice {
  print STDERR "Got ".scalar(@lines)." lines for cluster $slice_id\n" if DEBUG;
  return if scalar(@lines) <= 1;
  my($filecard,$datadir,$pngtitle,$flagged) = @_;
+ $flagged ||="FALSE";
 
  # Temporary matrix file for a slice
  my $outfile = $datadir.$filecard.".csv";
@@ -376,17 +417,19 @@ sub printout_slice {
  my $fm = new IO::File(">$matfile") or die "Cannot write to file [$matfile]";
  my $first = shift @lines;
  my @names = split "\t",$first;
- 
  shift @names; # remove 1st (useless) element
+ #my @shuffled_names = @names;
+ #map {s/(SWID_\d+)_(.*)/$2\_$1/} @shuffled_names;
 
  my %indexes;
  my $colcount = 0;
+ 
  NAME:
  for (my $i = 0; $i < @names; $i++) {
   if ($ids{$names[$i]} && $sliced{$ids{$names[$i]}}) {
    print $fo "\t".$ids{$names[$i]};
    $names[$i]=~s!.*/!!;
-   print $fm "\t".$names[$i];
+   print $fm "\t".$samples{$ids{$names[$i]}}->{name};
 
    $indexes{$i} = $ids{$names[$i]};
    $colors{$samples{$ids{$names[$i]}}->{sample}} ||= $colors[$colcount++];
@@ -402,7 +445,8 @@ sub printout_slice {
   my @temp = split("\t");
   print $fo $ids{$temp[0]};
   $temp[0]=~s!.*/!!; # remove path, leave the name
-  print $fm $temp[0];
+  my $col = $colors{$samples{$ids{$temp[0]}}->{sample}};
+  print $fm $samples{$ids{$temp[0]}}->{name};
   
   foreach my $idx(sort {$a<=>$b} keys %indexes) {
    if ($temp[$idx + 1] ne "NA") {
@@ -416,7 +460,7 @@ sub printout_slice {
 
   print $fo "\t".$temp[$snp_index];
   print $fm "\t".$temp[$snp_index];
-  print $fo "\t".$colors{$samples{$ids{$temp[0]}}->{sample}};
+  print $fo "\t".$col;
   print $fo "\n";
   print $fm "\n";
 
@@ -428,33 +472,70 @@ sub printout_slice {
  my $png = $datadir.$filecard.".png";
  print STDERR "Will Rscript create_heatmap.r $outfile $pngtitle $refsnps $png $pngsize $flagged\n" if DEBUG;
  my $clustered_ids = `Rscript create_heatmap.r $outfile $pngtitle $refsnps $png $pngsize $flagged`;
- my @clustered_ids = split(" ",$clustered_ids);
+ my @clustered_ids = grep {/$studyname/} split(" ",$clustered_ids);
  
  my @fingers = ();
  my %seen_sample = (); # Re-use this hash for calculating
+ my %maxfiles = ();   # maximum number of files in a sample (donor) on this heatmap. 'Max' cluster doesn't get marked
  my $current_sample;
+ my $lbuffer = [];     # lane buffer - for holding files in a cluster
 
- for (my $cl = 0; $cl < @clustered_ids; $cl++) {
+ # Checking for broken clusters and generating fingerprint glyphs
+
+ for (my $cl = 0; $cl < @clustered_ids; $cl++) { 
+  next if $flagged{files}->{$samples{$clustered_ids[$cl]}->{name}};  # Skipping these should prevent marking clusters that have putative swap lanes inserted
+
+  $current_sample ||= $samples{$clustered_ids[$cl]}->{sample};
+  $seen_sample{$current_sample} ||= [];
+  $maxfiles{$current_sample} ||= 0;
+
   if ($current_sample && $samples{$clustered_ids[$cl]}->{sample} && $current_sample ne $samples{$clustered_ids[$cl]}->{sample}) {
-    $seen_sample{$current_sample}++;
-    $current_sample = $samples{$clustered_ids[$cl]}->{sample};
-  } else {
+    push(@{$seen_sample{$current_sample}},$lbuffer);
+    if ($maxfiles{$current_sample} < scalar(@{$lbuffer})){$maxfiles{$current_sample} = scalar(@{$lbuffer});}
+    $lbuffer = [];
     $current_sample = $samples{$clustered_ids[$cl]}->{sample};
   }
+  push(@{$lbuffer},$clustered_ids[$cl]);  
+  
+
+  ID:
   foreach my $id (keys %ids) {
    if($ids{$id} eq $clustered_ids[$cl]){
     $png = $datadir.$filecard.".fp.".$cl.".png";
     push(@fingers,{img=>$png,
-                   name=>$id});
+                   name=>$samples{$ids{$id}}->{name}});
     my $fin = $id.".fin";
     $fin =~s!.*/!!;
     print STDERR "Will Rscript create_fingerprints.r $tempdir $fin $colors{$samples{$clustered_ids[$cl]}->{sample}} $refsnps $png\n" if DEBUG;
     `Rscript create_fingerprints.r $tempdir $fin $colors{$samples{$clustered_ids[$cl]}->{sample}} $refsnps $png`;
+    last ID;
    } 
   }
  }
+ 
+ if (scalar(@{$lbuffer}) > 0) {
+  push(@{$seen_sample{$current_sample}},$lbuffer);
+  if ($maxfiles{$current_sample} < scalar(@{$lbuffer})){$maxfiles{$current_sample} = scalar(@{$lbuffer});}
+ }
 
- map {if ($seen_sample{$_} > 1){$flagged{slices}->{$slice_id}++;$flagged{samples}->{$_}++;}} (keys %seen_sample);
+ # Updating flagging for files and samples
+ foreach my $sample (keys %seen_sample) {
+  next if (scalar(@{$seen_sample{$sample}}) <= 1);
+
+  foreach my $clustr(@{$seen_sample{$sample}}) {
+   if ($sample eq 'PCSI_0311') {
+     print STDERR Dumper($clustr) if DEBUG;
+   }
+   if (scalar(@{$clustr}) < $maxfiles{$sample}) {
+     map{$flagged{files}->{$samples{$_}->{name}}++} (@{$clustr});
+     $flagged{samples}->{$sample}++;
+     $flagged = "TRUE";
+   }
+  }
+ }
+
+ print STDERR Dumper(%flagged) if DEBUG;
+
  # Register the image name in the report hash
  $reports{$slice_id} = {img=>$filecard.".png",
                         fp=>[@fingers],
@@ -472,7 +553,6 @@ sub aver_ji {
  my @values = ();
  my $first = shift @{$lines};
  my @names = grep {/\S+/} split "\t",$first; 
- #shift @names; # remove 1st (useless) element
 
  my %indexes;
  if ($sample) {
