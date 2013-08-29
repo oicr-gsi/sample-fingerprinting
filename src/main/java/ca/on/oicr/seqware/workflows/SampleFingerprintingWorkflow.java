@@ -29,7 +29,7 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
     private String watchersList = "";
     private String finalOutDir;
     private String dataDir;
-    private String tempDir = "tempfiles";
+    private String tempDir = "tempfiles/";
     private String gatkVersion;
     private String tabixVersion;
     private String vcftoolsVersion;
@@ -255,8 +255,6 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
          this.addDirectory(getProperty("data_dir"));
          this.finalOutDir = outdir;
          this.dataDir = getProperty("data_dir").endsWith("/") ? getProperty("data_dir") : getProperty("data_dir") + "/";
-         //this.addDirectory(this.dataDir + "images");
-         //this.addDirectory(this.dataDir + "html");
                  
        } catch (Exception e) {
          Logger.getLogger(SampleFingerprintingWorkflow.class.getName()).log(Level.WARNING, null, e);
@@ -372,10 +370,10 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
            }
            
            Job job_vcfprep = workflow.createBashJob("prepare_vcfs");
-           job_vcfprep.setCommand("echo \"" + vcf_list.toString() + "\" "
-                                + "perl -ne " + "\'{chomp;@vcfs=split(\",\");map{`"
-                                + getWorkflowBaseDir() + "/bin/tabix-" + this.tabixVersion + "/bgzip -c $_ > $_.gz && "
-                                + getWorkflowBaseDir() + "/bin/tabix-" + this.tabixVersion + "/tabix -p vcf $_.gz`;} @vcfs}");
+           job_vcfprep.setCommand(getWorkflowBaseDir() + "/dependencies/prepare_vcfs.pl "
+                                + "--datadir=" + this.dataDir + " "
+                                + "--tabix=" + getWorkflowBaseDir() + "/bin/tabix-" + this.tabixVersion + "/tabix "
+                                + "--bgzip=" + getWorkflowBaseDir() + "/bin/tabix-" + this.tabixVersion + "/bgzip");
            job_vcfprep.setMaxMemory("2000");
             if (!this.queue.isEmpty()) {
              job_vcfprep.setQueue(this.queue);
