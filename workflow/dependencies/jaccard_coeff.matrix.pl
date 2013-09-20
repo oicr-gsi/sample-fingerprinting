@@ -160,7 +160,7 @@ print "\n";
 sub id_file {
  my $file = shift @_;
  return if $file!~/\D+/; 
- $file = $` if $file =~/.snps.raw.vcf.gz$/;
+ $file = $` if $file =~/.snps.raw.vcf.*/;
 
  if ($file=~/(\d+)_($studyname.\d+_)/) {
   #print STDERR "Studyname $studyname detected\n" if DEBUG;
