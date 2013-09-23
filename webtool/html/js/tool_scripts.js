@@ -6,7 +6,7 @@ function countDonors(chks,ops,limit){
  var donors = []
  for (i=0; i<chks; i++) {
   if (document.getElementById("check" + i).checked) {
-    if (checked > limit) {
+    if (checked >= limit ) {
      alert("Too many donors checked, please choose no more than " + limit)
      return
     }

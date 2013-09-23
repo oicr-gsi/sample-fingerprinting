@@ -1,4 +1,5 @@
 To install the webtool you will need to set up apache directory for cgi-bi and html files
+(usually it would be /var/www or $HOME/public_html)
 Pass this dir as a parameter to installation script during interactive setup:
 
 perl Build.PL
