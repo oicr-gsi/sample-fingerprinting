@@ -8,7 +8,7 @@ use strict;
 use warnings;
 use CGI qw(:standard escape form start_table end_table);
 use CGI::Carp qw(fatalsToBrowser);    # Remove for production use
-use SwapRepoter;
+use SwapReporter;
 
 $CGI::POST_MAX = 1024 * 15000;  # maximum upload filesize is 15M
 $CGI::DISABLE_UPLOADS = 0; # 1 disables uploads, 0 enables uploads
@@ -91,7 +91,6 @@ sub handle_fileUpload {
   binmode($upfile);
 
   while ( $nBytes = read($upfile, $buffer, 1024) ) {
- #while ( $nBytes = read($fh, $buffer, 1024) ) {
 	print ZIPFILE $buffer;
 	$totBytes += $nBytes;
  }
@@ -175,8 +174,8 @@ sub handle_fileUpload {
 sub show_customTool {
 
  my($list,$options,$dir,$matrix) = @_;
- my @donors = grep{/\S+/} split(",",$list);
- return if @donors == 0;
+ my %donors = map {$_=>1} split(",",$list);
+ return if scalar(keys %donors) == 0;
  
  print header;
  print start_html(-title=>'Custom Report Creation',
@@ -191,12 +190,13 @@ sub show_customTool {
  print br;
  my @inputs = ();
 
- for (my $d=0; $d<@donors; $d++) {
-  push(@inputs,(checkbox({-id=>'check'.$d,
-                         -name=>"$donors[$d]",
+ my $chk = 0;
+ foreach my $d(sort keys %donors) {
+  push(@inputs,(checkbox({-id=>'check'.$chk++,
+                         -name=>"$d",
                          -checked=>0,
-                         -value=>"$donors[$d]",
-                         -onclick=>"countDonors(".scalar(@donors).",\'$options\',".SAMPLESPERSLICE.")",
+                         -value=>"$d",
+                         -onclick=>"countDonors(".scalar(keys %donors).",\'$options\',".SAMPLESPERSLICE.")",
                          -height=>"32"}),br));
  }
  
