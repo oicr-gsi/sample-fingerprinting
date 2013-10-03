@@ -14,7 +14,7 @@ my($html_path,$watchers,$bundle,$studyname); # external parameters
 my(@affected_samples,@emails,$vetted_emails); # internal variables
 
 my $MAIL = 'mail';
-my $FLAGGED = "FLAGGED";
+my $FLAGGED = '\"color:\#f93b08;\"';
 my $MESSAGE = 
 " Hi, it appears that  there is a possible sample swap detected for study STUDY,
 Affected samples are:\nAFFECTED\nAnd the path to the report bundle is BUNDLE
@@ -45,17 +45,15 @@ open (HTML,"<$html_path") or die "Couldn't read from report [$html_path]";
 @affected_samples = ();
 while (<HTML>) {
  chomp;
- while (/label style=\"color:\#ff0000;\">(\S+?)\<\/label/g) {
-  if ($1 eq $FLAGGED) {
-    push (@affected_samples,$2);
-  }
+ while (/label style=$FLAGGED>(\S+?)\<\/label/g) { 
+    push (@affected_samples,$1);
  }
 }
 close HTML;
 
 if (scalar(@affected_samples == 0)) {print STDERR "No flagged data found, stopping...\n";
                                      exit;}
-my $affected = join(" and\n",@affected_samples);
+my $affected = join(",\n",@affected_samples);
 print STDERR "Affected Samples: \n".$affected."\n" if DEBUG;
 $MESSAGE=~s/STUDY/$studyname/;
 $MESSAGE=~s/AFFECTED/$affected/;

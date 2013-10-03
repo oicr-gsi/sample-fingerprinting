@@ -11,4 +11,6 @@ html/images/sim_button.png
 html/js/tool_scripts.js
 install_util/SwapReportInstall.pm
 lib/SwapReporter.pm
+t/00test_r.t
+t/rscripts/test_r.r
 MANIFEST			This list of files
