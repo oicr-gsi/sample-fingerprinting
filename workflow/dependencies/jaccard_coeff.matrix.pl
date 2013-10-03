@@ -9,7 +9,8 @@ use Getopt::Long;
 use Data::Dumper;
 use strict;
 
-use constant DEBUG =>1;
+
+use constant DEBUG =>0;
 # Below is the dafault for vcf_compare, should not be used when workflow runs
 my $vcf_compare = "vcftools/bin/vcf-compare";
 
@@ -17,14 +18,16 @@ my(%ids,%files,%matrix,%seen,$list,$studyname,$vcf_path,$oldmatrix,$datadir);
 my(%snps,%cols,%scols); # For assigning colors and number of snps (scols for assigning a color to a sample (like PCSI_006)
 my @colors = qw/red orange yellow green lightblue blue purple darkgreen brown black/;
 
-my $USAGE="jaccard_coef.matrix.pl --list=[req] --studyname=[req] --existing_matrix=[optional] --vcf-compare=[] ";
+my $USAGE="jaccard_coef.matrix.pl --list=[req] --studyname=[req] --datadir=[optional] --existing_matrix=[optional] --vcf-compare=[]";
 
 my $result = GetOptions ('list=s'            => \$list, # list with filenames
                          'existing_matrix=s' => \$oldmatrix, # file with previously calculater indexes
+                         'datadir=s'        => \$datadir, # directory with vcf files
                          'vcf_compare=s'     => \$vcf_path, # path to vcftools vcf-compare script
                          'studyname=s'       => \$studyname);
 
 if (!$list || !$studyname) {die $USAGE;}
+$datadir ||=".";
 $vcf_compare = $vcf_path if $vcf_path;
 
 # ==========================================================
@@ -34,39 +37,49 @@ $vcf_compare = $vcf_path if $vcf_path;
 my @old_matrices = $oldmatrix ? grep{/\S+/} split(",",$oldmatrix) : undef;
 if (@old_matrices && @old_matrices > 0) {
 foreach my $old (@old_matrices) {
- if (-e $old) {
+ if ($old && -e $old) {
   print STDERR "We have some older data, will append our results to the existing matrix\n" if DEBUG;
   open(OLD,"<$old") or die "Couldn't read from the file with previously calculated indexes";
+  my $sindex; # index of number of snps
   my $idstring = <OLD>;
   chomp($idstring);
-
-  my @tempids = grep {/\D+/}  split("\t",$idstring);
-  my $has_snps = $tempids[$#tempids] =~ /SNP/ ? 1 : 0;
-  pop @tempids if $tempids[$#tempids] =~ /SNP/;
-
+  my @tempids = ();
+  @tempids = grep {/\S+/} split("\t",$idstring);
+  if ($tempids[$#tempids] =~ /SNP/) {
+   $sindex = $#tempids;
+   pop @tempids;
+  }
+   
   map {&id_file($_)} (@tempids);
 
   while (<OLD>) {
    chomp;
    my @temp = split("\t");
    $temp[0] = $` if $temp[0] =~/.snps.raw.vcf.gz$/;
+   $temp[0] =~s!.*/!!;
+   next if !$files{$temp[0]};
+   my $idx = 1;
+   T:
+   foreach my $t (@tempids) {
+     $t =~s!.*/!!;
+     $t =~s!\..*!!;
+     if (!$files{$t}) {next T;} # We should get rid of all funny entries here (like random 00 appering in files randomly)
+     $t = $` if $t=~/.snps.raw.vcf.gz$/;
+     $seen{$files{$temp[0]}}->{$files{$t}}++;
+     $seen{$files{$t}}->{$files{$temp[0]}}++;
 
-   for (my $t = 0;$t < @tempids;$t++) {
-     $tempids[$t] = $` if $tempids[$t]=~/.snps.raw.vcf.gz$/;
-     $seen{$files{$temp[0]}}->{$files{$tempids[$t]}}++;
-     $seen{$files{$tempids[$t]}}->{$files{$temp[0]}}++;
-
-     $matrix{$files{$tempids[$t]}}->{$files{$temp[0]}} = $matrix{$files{$temp[0]}}->{$files{$tempids[$t]}} = $temp[$t+1] if ($files{$tempids[$t]} && $files{$temp[0]});
+     $matrix{$files{$t}}->{$files{$temp[0]}} = $matrix{$files{$temp[0]}}->{$files{$t}} = $temp[$idx++] if ($files{$t} && $files{$temp[0]});
     }
-
-   $snps{$files{$temp[0]}} = $has_snps ? $temp[$#temp] : &calculate_snps($temp[0]);
+   
+   $snps{$files{$temp[0]}} = $sindex ? $temp[$#temp] : &calculate_snps($temp[0]);
   }
   close OLD;
+ } else {
+   next;
  }
 }
-print STDERR "Identified ".scalar(keys %seen)." interactions and number of SNPs for ".scalar(keys %snps)." files using old matrices\n" if DEBUG;
+print STDERR "Identified ".scalar(keys %seen)." interactions using old matrices\n" if DEBUG;
 }
-
 
 # =================================================================================
 # Collect information on files, build matrix using new (and old, if available) data
@@ -99,8 +112,8 @@ foreach my $id(keys %ids) {
    next SM;
   }
   
-  my $file1 = $ids{$id};
-  my $file2 = $ids{$s};
+  my $file1 = $datadir.$ids{$id};
+  my $file2 = $datadir.$ids{$s};
 
   if ($seen{$id}->{$s}) {next;} 
   $seen{$id}->{$s}++;
@@ -136,7 +149,7 @@ foreach my $id(keys %ids) {
 # Printing out scores in matrix-style
 # ====================================
 
-my @heads;
+my @heads = ();
 map {/.snps.raw.vcf.gz/ ? push(@heads,$`) : push(@heads,$ids{$_})} (sort keys %matrix);
 print join("\t",("",@heads,"SNPs")); #,"Color","SNPs"));
 print "\n";
@@ -159,8 +172,10 @@ print "\n";
 
 sub id_file {
  my $file = shift @_;
- return if $file!~/\D+/; 
- $file = $` if $file =~/.snps.raw.vcf.*/;
+ return if $file=~/^0+$/;
+ $file=~s!.*/!!; 
+ $file=~s!\..*!!;
+ $file = $` if $file =~/.snps.raw.vcf.gz$/;
 
  if ($file=~/(\d+)_($studyname.\d+_)/) {
   #print STDERR "Studyname $studyname detected\n" if DEBUG;
@@ -168,12 +183,13 @@ sub id_file {
   $ids{$id} = $file;
   $files{$file} = $id;
  } elsif ($file=~/($studyname.{0,1}\d+)\.(\S+)/) {
-  print STDERR "Studyname $studyname detected\n" if DEBUG;
+  #print STDERR "Studyname $studyname detected\n" if DEBUG;
   my $id = join("_",($1,$2));
   $ids{$id} = $file;
   $files{$file} = $id;
  } else {
   #print STDERR "Studyname $studyname NOT detected\n" if DEBUG;
+  return;
   $ids{$file} = $file;
   $files{$file} = $file;
  }
@@ -185,6 +201,9 @@ sub id_file {
 
 sub calculate_snps {
  my $file = shift @_;
+ if ($file!~/$datadir/) {
+  $file = $datadir.$file;
+ }
  print STDERR "Calculating SNPs for $file\n" if DEBUG;
  if ($file !~/.snps.raw.vcf.gz$/) {
    $file.=".snps.raw.vcf.gz";
@@ -193,4 +212,21 @@ sub calculate_snps {
  my $result = `zcat $file | grep -v ^# | wc -l`;
  chomp($result);
  return $result;
+}
+
+sub load_matrix {
+ my $matrix = shift @_;
+ print STDERR "Reading from [$matrix]\n" if DEBUG; 
+ if ($matrix=~/\.list$/) {
+  open(LIST,"$matrix") or die "Couldn't read from list of old matrices [$matrix]";
+  my @temp = ();
+  map{chomp; push(@temp,$_)} (<LIST>);
+  close LIST;
+  print STDERR "Returning ".scalar(@temp)." files\n" if DEBUG;
+  return @temp;
+ } else {
+   my @temp = split(",",$matrix);
+   return @temp;
+ }
+ 
 }

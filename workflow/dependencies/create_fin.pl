@@ -30,7 +30,8 @@ my $flags = {zerocov => "N",   # No coverage
 
 # Read reference SNPs into a hash
 
-open(REFVCF,"grep -v \"^#\" $refvcf |") or die "Couldn't read from reference vcf file [$refvcf]";
+my $refhandle = $refvcf=~/\.gz$/ ? "zcat $refvcf | grep -v \"^#\" | " : "grep -v \"^#\" $refvcf |";
+open(REFVCF,$refhandle) or die "Couldn't read from reference vcf file [$refvcf]";
 while(<REFVCF>) {
  $snpcount++;
  my @temp = split("\t");
