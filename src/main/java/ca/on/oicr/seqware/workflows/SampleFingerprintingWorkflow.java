@@ -30,6 +30,7 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
     private String finalOutDir;
     private String dataDir;
     private String tempDir = "tempfiles/";
+    private String finDir  = "finfiles/";
     private String gatkVersion;
     private String tabixVersion;
     private String vcftoolsVersion;
@@ -246,6 +247,7 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
 
          this.addDirectory(outdir);      
          this.addDirectory(this.tempDir);
+         this.addDirectory(this.finDir);
          this.addDirectory(getProperty("data_dir"));
          this.finalOutDir = outdir;
          this.dataDir = getProperty("data_dir").endsWith("/") ? getProperty("data_dir") : getProperty("data_dir") + "/";
@@ -339,6 +341,7 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
                           + "--genotype=" + this.vcf_files[i] + " "
                           + "--coverage=" + this.tempDir + basename + ".sample_interval_summary "
                           + "--datadir="  + this.tempDir + " "
+                          + "--outdir="   + this.finDir + " "
                           + "--basename=" + basename);
             
             job_fin.setMaxMemory("4000");
@@ -485,7 +488,7 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
            make_pics.setCommand("perl " + getWorkflowBaseDir() + "/dependencies/make_report.pl "
                           + "--matrix=" + matrix.getSourcePath() + " "
                           + "--refsnps=" + this.check_points + " "
-                          + "--tempdir=" + this.tempDir + " "
+                          + "--tempdir=" + this.finDir + " "
                           + "--datadir=" + this.dataDir + " "
                           + "--studyname=" + this.studyName + " "
                           + "> " + this.dataDir + "index.html");
@@ -496,6 +499,19 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
             make_pics.setQueue(this.queue);
            }
            
+           
+           
+           // Zip finfiles and similarity matrix for customization in the webtool
+           Job zip_fins = workflow.createBashJob("zip_finfiles");
+           zip_fins.setCommand("zip -r " + this.dataDir + "customize.me.zip "
+                           + this.dataDir + "finfiles "
+                           + this.dataDir + matrix.getSourcePath());
+           zip_fins.addParent(make_pics);
+           zip_fins.setMaxMemory("2000");
+           if (!this.queue.isEmpty()) {
+             zip_fins.setQueue(this.queue);
+           }
+           
            // Zip everything into a report bundle for provisioning
            Job zip_report = workflow.createBashJob("zip_everything");
            zip_report.setCommand("zip -r " + getFiles().get("report_zip").getSourcePath() + " "
@@ -504,8 +520,9 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
                            + this.dataDir + "*_genotype_report.csv "
                            + this.dataDir + "*_similarity_matrix.csv "
                            + this.dataDir + matrix.getSourcePath() + " "
+                           + this.dataDir + "customize.me.zip "
                            + this.dataDir + "*.html");
-           zip_report.addParent(make_pics);
+           zip_report.addParent(zip_fins);
            zip_report.setMaxMemory("2000");
            if (!this.queue.isEmpty()) {
              zip_report.setQueue(this.queue);

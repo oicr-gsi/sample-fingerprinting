@@ -14,17 +14,20 @@ my $USAGE = "create_fin.pl --refvcf=[ref vcf file]
                            --genotype=[genotype vcf file]
                            --coverage=[sample interval summary file]
                            --datadir=[data dir]
+                           --outdir=[output dir] (optional)
                            --basename=[base name]\n";
 
-my($refvcf,$vcf,$summary,$ccols,$datadir,$pngname,$snpcount,$basename,$workdir);
+my($refvcf,$vcf,$summary,$datadir,$snpcount,$basename,$outdir);
 my $result = GetOptions ('--refvcf=s'   => \$refvcf,
                          '--genotype=s'=>  \$vcf,
                          '--coverage=s' => \$summary,
                          '--datadir=s'  => \$datadir,
+                         '--outdir=s'   => \$outdir,
                          '--basename=s' => \$basename);
 
 die $USAGE if (!$refvcf || !$summary || !$datadir || !$vcf);
 
+$outdir ||= $datadir;
 my $flags = {zerocov => "N",   # No coverage
              nosnp   => "M"};  # no SNP, base matches the reference
 
@@ -70,7 +73,7 @@ while (<SUMMARY>) {
 print STDERR $count." coordinates got coverage info\n" if DEBUG;
 close SUMMARY;
 
-open(OUT,">$datadir/$basename.fin") or die "Couldn't write to [$datadir/$basename.fin]";
+open(OUT,">$outdir/$basename.fin") or die "Couldn't write to [$outdir/$basename.fin]";
 
 my $vcfhandle = $vcf=~/\.gz$/ ? "zcat $vcf | grep -v \"^#\" | " : "grep -v \"^#\" $vcf |";
 open(VCF,$vcfhandle) or die "Couldn't read from vcf file [$vcf]";
