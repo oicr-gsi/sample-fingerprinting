@@ -166,7 +166,8 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
             this.manualOutput = false;
             Logger.getLogger(SampleFingerprintingWorkflow.class.getName()).log(Level.WARNING, "No manual output requested, will append a random dir to the output path");
         } else {
-            this.manualOutput = true;
+            String manualCheck = getProperty("manual_output");
+            this.manualOutput = (manualCheck.isEmpty() || manualCheck.equalsIgnoreCase("false")) ? false : true;
         }
        
         this.vcf_files = new String[this.bam_files.length];
