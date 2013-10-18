@@ -47,7 +47,7 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
     private String stand_emit_conf = "10.0";
     private String dcov = "50";
     private int jChunkSize = 50; // Maximum allowed number of vcf files when jaccard_indexing step doesn't fork into multiple sub-jobs
-    
+    private boolean manualOutput;
     
     @Override
     public Map<String, SqwFile> setupFiles() {
@@ -90,10 +90,10 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
            this.check_points = getProperty("check_points");
        }
        
-       if (getProperty("exisiting_matrix") == null) {
-           Logger.getLogger(SampleFingerprintingWorkflow.class.getName()).log(Level.WARNING, "exisiting_matrix not provided, will calclate jaccard indexes for all genotypes");
+       if (getProperty("existing_matrix") == null) {
+           Logger.getLogger(SampleFingerprintingWorkflow.class.getName()).log(Level.WARNING, "existing_matrix not provided, will calclate jaccard indexes for all genotypes");
        } else {
-           this.existingMatrix = getProperty("exisiting_matrix");
+           this.existingMatrix = getProperty("existing_matrix");
        }
        
        if (getProperty("watchers_list") == null) {
@@ -160,6 +160,13 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
             this.studyName = "";
         } else {
             this.studyName = getProperty("study_name");         
+        }
+        
+        if (getProperty("manual_output") == null) {
+            this.manualOutput = false;
+            Logger.getLogger(SampleFingerprintingWorkflow.class.getName()).log(Level.WARNING, "No manual output requested, will append a random dir to the output path");
+        } else {
+            this.manualOutput = true;
         }
        
         this.vcf_files = new String[this.bam_files.length];
@@ -241,16 +248,22 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
         try {
           String outdir = null;
          if (getProperty("output_dir") != null && getProperty("output_prefix") != null) {
-          outdir = getProperty("output_prefix") + getProperty("output_dir")
-                             + "/seqware-" + this.getSeqware_version() + "_" + this.getName() + "_" + this.getVersion() + "/" + this.getRandom() + "/";
+          outdir = getProperty("output_prefix") + getProperty("output_dir");
+          if (!this.manualOutput)
+                  outdir += "/seqware-" + this.getSeqware_version() + "_" + this.getName() + "_" + this.getVersion() + "/" + this.getRandom() + "/";
          }
 
+         this.dataDir = getProperty("data_dir");
+         if (this.dataDir == null ||this.dataDir.isEmpty())
+             this.dataDir = "data/";
+         if (!this.dataDir.endsWith("/"))
+             this.dataDir+="/";
+         this.addDirectory(this.dataDir);
          this.addDirectory(outdir);      
          this.addDirectory(this.tempDir);
-         this.addDirectory(this.finDir);
-         this.addDirectory(getProperty("data_dir"));
+         this.addDirectory(this.finDir);        
          this.finalOutDir = outdir;
-         this.dataDir = getProperty("data_dir").endsWith("/") ? getProperty("data_dir") : getProperty("data_dir") + "/";
+
                  
        } catch (Exception e) {
          Logger.getLogger(SampleFingerprintingWorkflow.class.getName()).log(Level.WARNING, null, e);
