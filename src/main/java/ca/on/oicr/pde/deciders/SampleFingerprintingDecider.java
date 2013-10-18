@@ -28,10 +28,10 @@ import org.w3c.dom.Element;
 public class SampleFingerprintingDecider extends OicrDecider {
     private Map<String, ReturnValue> pathToAttributes = new HashMap<String, ReturnValue>();
     
-    private String output_prefix;
-    private String output_dir;
+    private String output_prefix = "./";
+    private String output_dir = "seqware-results";
     private String studyName;
-    private String watcherList;
+    private String watchersList;
     
     
     //these params should come from settings xml file
@@ -46,6 +46,7 @@ public class SampleFingerprintingDecider extends OicrDecider {
     
     //Previous workflow runs
     private String existingMatrix;
+    private String genotypes;
     
     private String currentRType; // resequencing type
     private String currentTType; // template type
@@ -57,6 +58,7 @@ public class SampleFingerprintingDecider extends OicrDecider {
         parser.accepts("study-name", "Required: name of the study that we need to analyze.").withRequiredArg();
         parser.accepts("template-type", "Required: name of the study that we need to analyze.").withRequiredArg();
         parser.accepts("resequencing-type", "Optional: resequencing type for templates other than WG").withRequiredArg();
+        parser.accepts("existing-matrix", "Optional: existing matrix from previous workflow run(s)").withRequiredArg();
         parser.accepts("output-path", "Optional: the path where the files should be copied to " 
                 + "after analysis. Corresponds to output-prefix in INI file. Default: ./").withRequiredArg();
         parser.accepts("output-folder", "Optional: the name of the folder to put the output into relative to "
@@ -68,13 +70,14 @@ public class SampleFingerprintingDecider extends OicrDecider {
         parser.accepts("stand-emit-conf", "Optional: GATK parameter, Default: 10.0"
                 + "The minimum phred-scaled confidence threshold at which variants should be emitted").withRequiredArg();
         parser.accepts("dcov", "Optional: GATK parameter, 50 for 4x, 200 for >30x WGS or Whole exome, Default: 50").withRequiredArg();
-        parser.accepts("watcher-list", "Optional: Comma-separated list of oicr emails for people interested in monitoring this workflow").withRequiredArg();
+        parser.accepts("watchers-list", "Optional: Comma-separated list of oicr emails for people interested in monitoring this workflow").withRequiredArg();
     }
     
     @Override
     public ReturnValue init() {
 
         Log.debug("INIT");
+        this.setMetaType(Arrays.asList("application/bam"));
 	//Group by template type if no other grouping selected
         if (!this.options.has("group-by")) {
             this.setGroupingStrategy(Header.STUDY_SWA);
@@ -84,7 +87,7 @@ public class SampleFingerprintingDecider extends OicrDecider {
         
         if (this.options.has("output-path")) {
           this.output_prefix = options.valueOf("output-path").toString();
-          if (null == this.output_prefix)
+          if (this.output_prefix.isEmpty())
 	      this.output_prefix = "./";
           else if (!this.output_prefix.endsWith("/"))
               this.output_prefix += "/";
@@ -93,19 +96,27 @@ public class SampleFingerprintingDecider extends OicrDecider {
         
         if (this.options.has("output-folder")) {
           this.output_dir = options.valueOf("output-folder").toString();
-          if (null == this.output_dir)
+          if (this.output_dir.isEmpty())
 	      this.output_dir = "seqware-results";
 	}
         
-        if (this.options.has("watcher-list")) {
-          String commaSepWatchers = options.valueOf("watcher-list").toString();
+        if (this.options.has("existing-matrix")) {
+          this.existingMatrix = options.valueOf("existing-matrix").toString();
+          if (null == this.existingMatrix || this.existingMatrix.isEmpty())
+	      this.existingMatrix = "";
+	}
+        
+        if (this.options.has("watchers-list")) {
+          String commaSepWatchers = options.valueOf("watchers-list").toString();
           
           String[] watchers = commaSepWatchers.split(",");
           for (String email : watchers) {
               if (email.contains("@oicr.on.ca")) {
-                  this.watcherList += this.watcherList.isEmpty() ? email : "," + email;
+                  this.watchersList += this.watchersList.isEmpty() ? email : "," + email;
               }
           }
+          if (this.watchersList.contains("@"))
+              this.watchersList = "";
 	}
        
         if (this.options.has("study-name")) {
@@ -248,8 +259,6 @@ public class SampleFingerprintingDecider extends OicrDecider {
     @Override
     protected Map<String, String> modifyIniFile(String commaSeparatedFilePaths, String commaSeparatedParentAccessions) {
         Log.debug("INI FILE:" + commaSeparatedFilePaths);
-        String barcodeString = "";
-        String enameString   = "";
         //reset test mode
         if (!this.options.has("test")) {
             this.setTest(false);
@@ -271,19 +280,27 @@ public class SampleFingerprintingDecider extends OicrDecider {
     
         if (null != this.checkedSNPs) {
           iniFileMap.put("checked_snps", this.checkedSNPs);
-          iniFileMap.put("checked_snps", "" + this.checkPoints);
+          iniFileMap.put("check_points", "" + this.checkPoints);
         }
         
         if (null != this.genomeFile) {
           iniFileMap.put("genome_file", this.genomeFile);  
         }
         
-        if (null != this.existingMatrix) {
+        if (null != this.genotypes && !this.genotypes.isEmpty()) {
+          iniFileMap.put("genotypes", this.genotypes);
+        } else {
+          iniFileMap.put("genotypes", "");  
+        }
+        
+        if (null != this.existingMatrix && !this.existingMatrix.isEmpty()) {
           iniFileMap.put("existing_matrix", this.existingMatrix);
+        } else {
+          iniFileMap.put("existing_matrix", "");  
         }
 
-        if (null != this.watcherList) {
-          iniFileMap.put("watcher_list", this.watcherList);
+        if (null != this.watchersList && !this.watchersList.isEmpty()) {
+          iniFileMap.put("watchers_list", this.watchersList);
         }
         
         return iniFileMap;
