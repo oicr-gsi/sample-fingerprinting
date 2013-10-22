@@ -262,7 +262,7 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
          this.addDirectory(this.dataDir);
          this.addDirectory(outdir);      
          this.addDirectory(this.tempDir);
-         this.addDirectory(this.finDir);        
+         this.addDirectory(this.dataDir + this.finDir);        
          this.finalOutDir = outdir;
 
                  
@@ -355,7 +355,7 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
                           + "--genotype=" + this.vcf_files[i] + " "
                           + "--coverage=" + this.tempDir + basename + ".sample_interval_summary "
                           + "--datadir="  + this.tempDir + " "
-                          + "--outdir="   + this.finDir + " "
+                          + "--outdir="   + this.dataDir + this.finDir + " "
                           + "--basename=" + basename);
             
             job_fin.setMaxMemory("4000");
@@ -502,7 +502,7 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
            make_pics.setCommand("perl " + getWorkflowBaseDir() + "/dependencies/make_report.pl "
                           + "--matrix=" + matrix.getSourcePath() + " "
                           + "--refsnps=" + this.check_points + " "
-                          + "--tempdir=" + this.finDir + " "
+                          + "--tempdir=" + this.dataDir + this.finDir + " "
                           + "--datadir=" + this.dataDir + " "
                           + "--studyname=" + this.studyName + " "
                           + "> " + this.dataDir + "index.html");
