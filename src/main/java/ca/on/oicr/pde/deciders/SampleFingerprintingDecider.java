@@ -8,6 +8,8 @@ package ca.on.oicr.pde.deciders;
 import java.util.*;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import net.sourceforge.seqware.common.module.FileMetadata;
@@ -26,8 +28,8 @@ import org.w3c.dom.Element;
 
 
 public class SampleFingerprintingDecider extends OicrDecider {
-    private Map<String, ReturnValue> pathToAttributes = new HashMap<String, ReturnValue>();
-    
+
+    private SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.S");
     private String output_prefix = "./";
     private String output_dir = "seqware-results";
     private String studyName;
@@ -44,21 +46,26 @@ public class SampleFingerprintingDecider extends OicrDecider {
     private double standEmitConf = 10.0;
     private int    dcov          = 50;
     
-    //Previous workflow runs
+    //Previous workflow runs and input files
     private String existingMatrix;
     private String genotypes;
+    private String inputFiles;
+    private boolean provisionVcfs;
     
     private String currentRType; // resequencing type
     private String currentTType; // template type
     private String SNPConfigFile = "/.mounts/labs/PDE/data/SampleFingerprinting/hotspots.config.xml";
-
+    private Map<String, BeSmall> fileSwaToSmall;
+    
     public SampleFingerprintingDecider() {
         super();
+        fileSwaToSmall  = new HashMap<String, BeSmall>();
         parser.acceptsAll(Arrays.asList("ini-file"), "Optional: the location of the INI file.").withRequiredArg();
         parser.accepts("study-name", "Required: name of the study that we need to analyze.").withRequiredArg();
         parser.accepts("template-type", "Required: name of the study that we need to analyze.").withRequiredArg();
         parser.accepts("resequencing-type", "Optional: resequencing type for templates other than WG").withRequiredArg();
         parser.accepts("existing-matrix", "Optional: existing matrix from previous workflow run(s)").withRequiredArg();
+        parser.accepts("provision-vcfs", "Optional: set to non-null re-using vcf files from the runs this decider will launch").withRequiredArg();
         parser.accepts("output-path", "Optional: the path where the files should be copied to " 
                 + "after analysis. Corresponds to output-prefix in INI file. Default: ./").withRequiredArg();
         parser.accepts("output-folder", "Optional: the name of the folder to put the output into relative to "
@@ -77,7 +84,9 @@ public class SampleFingerprintingDecider extends OicrDecider {
     public ReturnValue init() {
 
         Log.debug("INIT");
-        this.setMetaType(Arrays.asList("application/bam"));
+        String [] metaTypes = {"application/bam","text/vcf-4","text/plain"}; 
+        this.setMetaType(Arrays.asList(metaTypes));
+        
 	//Group by template type if no other grouping selected
         if (!this.options.has("group-by")) {
             this.setGroupingStrategy(Header.STUDY_SWA);
@@ -104,6 +113,10 @@ public class SampleFingerprintingDecider extends OicrDecider {
           this.existingMatrix = options.valueOf("existing-matrix").toString();
           if (null == this.existingMatrix || this.existingMatrix.isEmpty())
 	      this.existingMatrix = "";
+	}
+        
+        if (this.options.has("provision-vcfs")) {
+          this.provisionVcfs = options.valueOf("provision-vcfs").toString().isEmpty() ? false : true;
 	}
         
         if (this.options.has("watchers-list")) {
@@ -174,18 +187,21 @@ public class SampleFingerprintingDecider extends OicrDecider {
               System.exit(1);
         }
         
+        
         //allows anything defined on the command line to override the defaults here.
         ReturnValue val = super.init();
         return val;
     }    
+    
+    
+    
 
 
     protected String handleGroupByAttribute(String attribute, String group_id, String template_type) {
-
         String groupBy = this.getGroupingStrategy().getTitle();
-        //Log.stdout("GROUP BY ATTRIBUTE: " + groupBy + " " + attribute);
         String[] parentNames = attribute.split(":");
-        List <String> groupBySet = new ArrayList();
+        List <String> groupBySet = new ArrayList<String>();
+        
         groupBySet.add(parentNames[parentNames.length - 1]);
         if (null != template_type) {
             groupBySet.add(template_type);
@@ -205,105 +221,174 @@ public class SampleFingerprintingDecider extends OicrDecider {
              groupBy = groupBy.concat(myFilters[i]);
          }
         }
-
         return groupBy;
-        
     }
 
     @Override
     protected boolean checkFileDetails(ReturnValue returnValue, FileMetadata fm) {
               
-        Log.debug("CHECK FILE DETAILS:" + fm);
-        //If there is no resequencing type, set it to NA
         String targetResequencingType = returnValue.getAttribute(Header.SAMPLE_TAG_PREFIX.getTitle() + "geo_targeted_resequencing");
         String targetTemplateType     = returnValue.getAttribute(Header.SAMPLE_TAG_PREFIX.getTitle() + "geo_library_source_template_type");
-        if (null == targetResequencingType && !this.currentRType.equals("NA")) {
-            return false;
+        
+        if (fm.getMetaType().equals("application/bam")) {
+            if (null == targetResequencingType && !this.currentRType.equals("NA")) {
+                return false;
+            }
+            if (null == targetTemplateType || !targetTemplateType.equals(this.currentTType)) {
+                return false;
+            }
+            
+        } else if (fm.getMetaType().equals("text/vcf-4") || fm.getMetaType().equals("text/plain")) {
+            if (null == targetTemplateType || !this.currentTType.equals(targetTemplateType)) {
+                return false;
+            }
         }
-        if (null == targetTemplateType || !targetTemplateType.equals(this.currentTType)) {
-            return false;
-        }
-              
-	pathToAttributes.put(fm.getFilePath(), returnValue);
+
         return super.checkFileDetails(returnValue, fm);
     }
     
     
     @Override
     public Map<String, List<ReturnValue>> separateFiles(List<ReturnValue> vals, String groupBy) {
-        //get files from study
-        Map<String, List<ReturnValue>> map = new HashMap<String, List<ReturnValue>>();
 
+        Map<String, ReturnValue> iusDeetsToRV = new HashMap<String, ReturnValue>();
         //group files according to the designated header (e.g. sample SWID)
         for (ReturnValue r : vals) {
-            String currVal  = r.getAttributes().get(groupBy);
+            String currentRV  = r.getAttributes().get(groupBy);
             String group_id = r.getAttribute(Header.SAMPLE_TAG_PREFIX.getTitle() + "geo_group_id");
             String template_type = r.getAttribute(Header.SAMPLE_TAG_PREFIX.getTitle() + "geo_library_source_template_type");
-            if (null == currVal || null == template_type || !template_type.equals(this.currentTType)) {
+            if (null == currentRV || null == template_type || !template_type.equals(this.currentTType)) {
                 continue;
             }
-            currVal = null != group_id ? handleGroupByAttribute(currVal, group_id, template_type) : handleGroupByAttribute(currVal, null, template_type);
+           
+            currentRV = null != group_id ? handleGroupByAttribute(currentRV, group_id, template_type) : handleGroupByAttribute(currentRV, null, template_type);       
             
-            if (null != currVal) {
-                List<ReturnValue> vs = map.get(currVal);
-                if (vs == null) {
-                    vs = new ArrayList<ReturnValue>();
+            if (null != currentRV) {
+                BeSmall currentSmall = new BeSmall(r);
+                fileSwaToSmall.put(r.getAttribute(Header.FILE_SWA.getTitle()), currentSmall);
+                
+                String fileDeets = currentSmall.getIusDetails();
+                Date currentDate = currentSmall.getDate();
+            
+            //if there is no entry yet, add it
+            if (iusDeetsToRV.get(fileDeets) == null) {
+                Log.debug("Adding file " + fileDeets + " -> \n\t" + currentSmall.getPath());
+                iusDeetsToRV.put(fileDeets, r);
+            } 
+            //if there is an entry, compare the current value to the 'old' one in
+            //the map. if the current date is newer than the 'old' date, replace
+            //it in the map
+            else {
+                ReturnValue oldRV = iusDeetsToRV.get(fileDeets);
+                
+                BeSmall oldSmall = fileSwaToSmall.get(oldRV.getAttribute(Header.FILE_SWA.getTitle()));
+                Date oldDate = oldSmall.getDate();
+                if (currentDate.after(oldDate)) {
+                    Log.debug("Adding file " + fileDeets + " -> \n\t" + currentSmall.getDate()
+                            + "\n\t instead of file "
+                            + "\n\t" + oldSmall.getDate());
+                    iusDeetsToRV.put(fileDeets, r);
+                } else {
+                    Log.debug("Disregarding file " + fileDeets + " -> \n\t" + currentSmall.getDate()
+                            + "\n\tas older than duplicate sequencer run/lane/barcode in favour of "
+                            + "\n\t" + oldSmall.getDate());
+                    Log.debug(currentDate + " is before " + oldDate);
                 }
-                vs.add(r);
-                map.put(currVal, vs);
+            }
+                
             }
         }
-     return map;
+
+     List<ReturnValue> newValues = new ArrayList<ReturnValue>(iusDeetsToRV.values());
+     return super.separateFiles(newValues, groupBy);
     }
 
+    
     @Override
-    protected Map<String, String> modifyIniFile(String commaSeparatedFilePaths, String commaSeparatedParentAccessions) {
-        Log.debug("INI FILE:" + commaSeparatedFilePaths);
+    public ReturnValue customizeRun(WorkflowRun run) {
+        Log.debug("INI FILE:" + run.getIniFile().toString());
         //reset test mode
         if (!this.options.has("test")) {
             this.setTest(false);
         }
+        
+        Set<String> vcfFiles = new HashSet<String>();
+        this.inputFiles = "";
+        this.genotypes  = "";
+        
+        for (FileAttributes atts : run.getFiles()) {
+          if (atts.getMetatype().equals("application/bam")) {
+            if (!this.inputFiles.isEmpty()) {
+                this.inputFiles += ",";
+            }
+              this.inputFiles += atts.getPath();
+          } else if (atts.getMetatype().equals("text/vcf-4")) { // Add them to set, sort later
+              vcfFiles.add(atts.getPath());
+          } else if (atts.getMetatype().equals("text/plain")) { // There should be only one
+              this.existingMatrix = atts.getPath();
+          }
+        }
+        
+        // Match vcf files to bam files
+        boolean vcfFoundOnce = false;
+        for (String bam : this.inputFiles.split(",")) {
+            String bamBase = bam.substring(bam.lastIndexOf("/")+1,bam.lastIndexOf(".bam"));
+            boolean vcfFound = false;
+            for (String vcfPath : vcfFiles) {
+                if (vcfPath.contains(bamBase)) {
+                   if (!this.genotypes.isEmpty()) {
+                     this.genotypes += ",";
+                   }
+                   this.genotypes += vcfPath; 
+                   vcfFound = true;
+                   vcfFoundOnce = true;
+                }
+            }
+            this.genotypes += vcfFound ? "" : ",";
+        }
+        
+        if (!vcfFoundOnce) {
+            this.genotypes = " ";
+        }
          
         //setting testmode for excluded stuff (I am not sure if it is necessery though, but just to be safe):
-	if (commaSeparatedFilePaths.isEmpty()) {
+	if (this.inputFiles.isEmpty()) {
 	    this.setTest(true);
 	}
         
-        ReturnValue r = pathToAttributes.get(commaSeparatedFilePaths);
-               
-	Map<String, String> iniFileMap = new TreeMap<String, String>();
-        iniFileMap.put("input_bams", commaSeparatedFilePaths);
-        iniFileMap.put("output_prefix",this.output_prefix);
-	iniFileMap.put("output_dir", this.output_dir);
+        run.addProperty("input_files", this.inputFiles);
+        run.addProperty("output_prefix",this.output_prefix);
+	run.addProperty("output_dir", this.output_dir);
             
-        //TODO genotypes=
     
         if (null != this.checkedSNPs) {
-          iniFileMap.put("checked_snps", this.checkedSNPs);
-          iniFileMap.put("check_points", "" + this.checkPoints);
+          run.addProperty("checked_snps", this.checkedSNPs);
+          run.addProperty("check_points", "" + this.checkPoints);
         }
         
         if (null != this.genomeFile) {
-          iniFileMap.put("genome_file", this.genomeFile);  
-        }
+          run.addProperty("genome_file", this.genomeFile);  
+        } 
         
         if (null != this.genotypes && !this.genotypes.isEmpty()) {
-          iniFileMap.put("genotypes", this.genotypes);
-        } else {
-          iniFileMap.put("genotypes", "");  
-        }
+          run.addProperty("genotypes", this.genotypes);
+        } // genotypes set to 'space' if there are no vcfs, so the case when this is supposed to be empty handled already
         
         if (null != this.existingMatrix && !this.existingMatrix.isEmpty()) {
-          iniFileMap.put("existing_matrix", this.existingMatrix);
+          run.addProperty("existing_matrix", this.existingMatrix);
         } else {
-          iniFileMap.put("existing_matrix", "");  
-        }
-
-        if (null != this.watchersList && !this.watchersList.isEmpty()) {
-          iniFileMap.put("watchers_list", this.watchersList);
+          run.addProperty("existing_matrix", " ");
         }
         
-        return iniFileMap;
+        if (this.provisionVcfs) {
+          run.addProperty("provision_vcfs", "TRUE");  
+        } 
+        
+        if (null != this.watchersList && !this.watchersList.isEmpty()) {
+          run.addProperty("watchers_list", this.watchersList);
+        }
+        
+        return new ReturnValue();
     }
     
     private boolean configFromParsedXML(String fileName, String templateType, String resequencingType) {
@@ -353,5 +438,70 @@ public class SampleFingerprintingDecider extends OicrDecider {
         }
         return false;
       }
+    
+    public static void main(String args[]){
+ 
+        List<String> params = new ArrayList<String>();
+        params.add("--plugin");
+        params.add(SampleFingerprintingDecider.class.getCanonicalName());
+        params.add("--");
+        params.addAll(Arrays.asList(args));
+        System.out.println("Parameters: " + Arrays.deepToString(params.toArray()));
+        net.sourceforge.seqware.pipeline.runner.PluginRunner.main(params.toArray(new String[params.size()]));
+         
+    }
+    
+    private class BeSmall {
+
+        private Date   date = null;
+        private String iusDetails = null;
+        private String groupByAttribute = null;
+        private String path = null;
+
+        public BeSmall(ReturnValue rv) {
+            try {
+                date = format.parse(rv.getAttribute(Header.PROCESSING_DATE.getTitle()));
+            } catch (ParseException ex) {
+                Log.error("Bad date!", ex);
+                ex.printStackTrace();
+            }
+            FileAttributes fa = new FileAttributes(rv, rv.getFiles().get(0));
+            iusDetails = fa.getSequencerRun() + fa.getLane() + fa.getBarcode() + fa.getMetatype();
+            groupByAttribute = fa.getDonor() + fa.getLimsValue(Lims.LIBRARY_TEMPLATE_TYPE) + fa.getLimsValue(Lims.GROUP_ID);
+            path = rv.getFiles().get(0).getFilePath() + "";
+        }
+
+        public Date getDate() {
+            return date;
+        }
+
+        public void setDate(Date date) {
+            this.date = date;
+        }
+
+        public String getGroupByAttribute() {
+            return groupByAttribute;
+        }
+
+        public void setGroupByAttribute(String groupByAttribute) {
+            this.groupByAttribute = groupByAttribute;
+        }
+
+        public String getIusDetails() {
+            return iusDetails;
+        }
+
+        public void setIusDetails(String iusDetails) {
+            this.iusDetails = iusDetails;
+        }
+
+        public String getPath() {
+            return path;
+        }
+
+        public void setPath(String path) {
+            this.path = path;
+        }
+    }
    
 }
