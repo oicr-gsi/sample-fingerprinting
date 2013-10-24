@@ -84,7 +84,7 @@ if ($matrix && -e $matrix) {
   my $trimmed_name = $temp[0];
   $trimmed_name=~s/(SWID_\d+)_(.*)/$2\_$1/;
 
-  if ($temp[$snp_index] && $temp[$snp_index] >= THRESHOLD && $temp[0]=~/(\d+)_($studyname.\d+)_/) {
+  if ($temp[$snp_index] && $temp[$snp_index] >= THRESHOLD && ($temp[0]=~/(\d+)_($studyname.\d+)_/ || $temp[0]=~/SWID_(\d+)_([A-Z]+.\d+)_/)) {
     $ids{$temp[0]} = join("_",($2,$1));
     $samples{$ids{$temp[0]}} = {sample=>$2,file=>$temp[0],name=>$trimmed_name}; # register a file as pertaining to a certain sample (studyname_sampleid)
     $sample_counter{$2}++; 
@@ -470,7 +470,7 @@ sub printout_slice {
  my $png = $datadir.$filecard.".png";
  print STDERR "Will Rscript $Bin/create_heatmap.r $outfile $pngtitle $refsnps $png $pngsize $flagged\n" if DEBUG;
  my $clustered_ids = `Rscript $Bin/create_heatmap.r $outfile $pngtitle $refsnps $png $pngsize $flagged`;
- my @clustered_ids = grep {/$studyname/} split(" ",$clustered_ids);
+ my @clustered_ids = grep {/\S+/} split(" ",$clustered_ids); # grep {/$studyname/}
  
  my @fingers = ();
  my %seen_sample = (); # Re-use this hash for calculating
@@ -499,9 +499,10 @@ sub printout_slice {
   ID:
   foreach my $id (keys %ids) {
    if($ids{$id} eq $clustered_ids[$cl]){
-    $png = $datadir.$ids{$id}.".fp".".png";
+    $png = $ids{$id}.".fp".".png";
     push(@fingers,{img=>$png,
                    name=>$samples{$ids{$id}}->{name}});
+    $png = $datadir.$png;
     my $fin = $id.".fin";
     $fin =~s!.*/!!;
      print STDERR "Will Rscript $Bin/create_fingerprints.r $tempdir $fin $colors{$samples{$clustered_ids[$cl]}->{sample}} $refsnps $png\n" if DEBUG;

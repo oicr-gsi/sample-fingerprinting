@@ -36,7 +36,6 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
     private String vcftoolsVersion;
     private String samtoolsVersion;
     private String genomeFile;
-    //private String dbSNP_data;
     private String checkedSNPs;
     private String check_points;
     private String queue;
@@ -48,16 +47,17 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
     private String dcov = "50";
     private int jChunkSize = 50; // Maximum allowed number of vcf files when jaccard_indexing step doesn't fork into multiple sub-jobs
     private boolean manualOutput;
+    private boolean provisionVcfs;
     
     @Override
     public Map<String, SqwFile> setupFiles() {
      // Set up reference, bam and vcf files here     
      try {
-       if (getProperty("bam_files") == null) {
-           Logger.getLogger(SampleFingerprintingWorkflow.class.getName()).log(Level.SEVERE, "bam_files is not set, we need at least one bam file");
+       if (getProperty("input_files") == null) {
+           Logger.getLogger(SampleFingerprintingWorkflow.class.getName()).log(Level.SEVERE, "input_files is not set, we need at least one bam file");
            return (null);
        } else {
-           this.bam_files = getProperty("bam_files").split(",");
+           this.bam_files = getProperty("input_files").split(",");
        }
        
        if (getProperty("genotypes") == null) {
@@ -162,6 +162,12 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
             this.studyName = getProperty("study_name");         
         }
         
+        if (getProperty("provision_vcfs") == null) {
+           Logger.getLogger(SampleFingerprintingWorkflow.class.getName()).log(Level.WARNING, "provision_vcfs flag is not set, will not provision vcf files");
+       } else {
+           this.provisionVcfs = getProperty("provision_vcfs").toString().isEmpty() ? false : true;
+       }
+        
         if (getProperty("manual_output") == null) {
             this.manualOutput = false;
             Logger.getLogger(SampleFingerprintingWorkflow.class.getName()).log(Level.WARNING, "No manual output requested, will append a random dir to the output path");
@@ -171,7 +177,7 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
         }
        
         this.vcf_files = new String[this.bam_files.length];
-
+        
         // iterate over inputs
         boolean haveNewVcfs = false;
         for (int i = 0; i< this.bam_files.length; i++) {
@@ -190,8 +196,6 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
            }
         }
         
-        SqwFile file_vcf = this.createFile("vcf_inputs_" + i);
-        file_vcf.setType("text/vcf-4");
         String basename = this.bam_files[i].substring(this.bam_files[i].lastIndexOf("/")+1, this.bam_files[i].lastIndexOf(".bam"));
         if (basename.contains(".")) {
          basename = basename.substring(0, basename.indexOf("."));
@@ -199,19 +203,21 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
         String vcfName  = basename + ".snps.raw.vcf";
         
         
-        //If we don't have a vcf file we need to set it as an output
-	if (null == this.genotypes || this.genotypes[i].isEmpty() || this.genotypes[i].equals("NA")) {
-          file_vcf.setSourcePath(this.dataDir + vcfName);
-          file_vcf.setIsOutput(true);
+        // If we don't have a vcf file we need to set it as an output
+        // vcf files are in the same order as bam files, decider need to make sure
+	if (null == this.genotypes || this.genotypes[i].isEmpty() || this.genotypes[i].equals("NA") || !this.genotypes[i].contains(vcfName)) {
 	  haveNewVcfs = true;
-	  this.vcf_files[i] = file_vcf.getSourcePath();
+	  this.vcf_files[i] = this.dataDir + vcfName;
         } else {
+          SqwFile file_vcf = this.createFile("vcf_inputs_" + i);
+          file_vcf.setType("text/vcf-4");
           file_vcf.setSourcePath(this.genotypes[i]);
           file_vcf.setIsInput(true);
 	  this.vcf_files[i] = file_vcf.getProvisionedPath();
+          file_vcf.setOutputPath(finalOutDir + vcfName);
+          file_vcf.setForceCopy(true);
 	}
-        file_vcf.setOutputPath(finalOutDir + vcfName);
-        file_vcf.setForceCopy(true);
+        
         
       }
 
@@ -227,7 +233,6 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
         file_matrix.setForceCopy(true);  
       } 
         
-      // provision reference files
     
       //Set up the output (we have to set up only those which don't exist yet)
       SqwFile report_file = this.createFile("report_zip");
@@ -312,7 +317,7 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
            if (basename.contains(".")) {
                basename = basename.substring(0, basename.indexOf("."));
            }
-           if (vcf.isOutput()) {
+           if (null == vcf) { 
              Job job_gatk = workflow.createBashJob("call_snps_" + i);
              job_gatk.setCommand("java -Xmx2g -jar " + getWorkflowBaseDir() + "/bin/GenomeAnalysisTK-" + this.gatkVersion + "/GenomeAnalysisTK.jar "
                                + "-R " + this.genomeFile + " "
@@ -329,6 +334,13 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
              job_gatk.setQueue(this.queue);
             }
             
+            if (this.provisionVcfs) {
+             SqwFile vcf_file = this.createOutFile("text/vcf-4",
+                                                   this.vcf_files[i],
+                                                   this.finalOutDir + this.vcf_files[i].substring(this.vcf_files[i].lastIndexOf("/")+1),
+                                                   true);              
+             job_gatk.addFile(vcf_file);
+            }
             job_gatk.addParent(job_index);
             gatk_jobs.add(job_gatk);
             newVcfs++; // Used only to track the number of newly generated vcf files
@@ -396,7 +408,6 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
            // (when running this workflow on a study for the very first time)
            
            if (this.existingMatrix.isEmpty() && this.vcf_files.length > this.jChunkSize) {
-              // int currentChunkSize = this.jChunkSize;
                int chunkMultiplier = 1;
 
                StringBuilder chunkedResults = new StringBuilder();
@@ -562,6 +573,17 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
             Logger.getLogger(getClass().getName()).log(Level.SEVERE, null, e);
           }
         
+    }
+    
+    private SqwFile createOutFile (String meta,String source,String outpath,boolean force) {
+        SqwFile file = new SqwFile();
+        file.setType(meta);
+        file.setSourcePath(source);
+        file.setIsOutput(true);
+        file.setOutputPath(outpath);
+        file.setForceCopy(force);
+        
+        return file;
     }
    
 }

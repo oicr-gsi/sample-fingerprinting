@@ -10,7 +10,7 @@ use Data::Dumper;
 use strict;
 
 
-use constant DEBUG =>0;
+use constant DEBUG =>1;
 # Below is the dafault for vcf_compare, should not be used when workflow runs
 my $vcf_compare = "vcftools/bin/vcf-compare";
 
@@ -177,12 +177,12 @@ sub id_file {
  $file=~s!\..*!!;
  $file = $` if $file =~/.snps.raw.vcf.gz$/;
 
- if ($file=~/(\d+)_($studyname.\d+_)/) {
+ if ($file=~/(\d+)_($studyname.\d+)_/ || $file=~/(\d+)_([A-Z]+.\d+)_/) {
   #print STDERR "Studyname $studyname detected\n" if DEBUG;
   my $id = $2.$1;
   $ids{$id} = $file;
   $files{$file} = $id;
- } elsif ($file=~/($studyname.{0,1}\d+)\.(\S+)/) {
+ } elsif ($file=~/($studyname.{0,1}\d+)\.(\S+)/ || $file=~/([A-Z]+.\d+)\.(\S+)/) {
   #print STDERR "Studyname $studyname detected\n" if DEBUG;
   my $id = join("_",($1,$2));
   $ids{$id} = $file;
