@@ -38,8 +38,6 @@ public class SampleFingerprintingDecider extends OicrDecider {
     
     //these params should come from settings xml file
     private String genomeFile;
-    private String checkedSNPs;
-    private int    checkPoints;
     
     //GATK params
     private double standCallConf = 50.0;
@@ -47,13 +45,15 @@ public class SampleFingerprintingDecider extends OicrDecider {
     private int    dcov          = 50;
     
     //Previous workflow runs and input files
-    private String existingMatrix;
-    private String genotypes;
-    private String inputFiles;
+    private String  existingMatrix;
+    private String  genotypes;
+    private String  inputFiles;
     private boolean provisionVcfs;
     
-    private String currentRType; // resequencing type
-    private String currentTType; // template type
+
+    private String templateTypeFilter = "";
+    private String reseqTypeFilter = "";
+    private Map<String, Map> reseqType;
     private String SNPConfigFile = "/.mounts/labs/PDE/data/SampleFingerprinting/hotspots.config.xml";
     private Map<String, BeSmall> fileSwaToSmall;
     
@@ -86,7 +86,7 @@ public class SampleFingerprintingDecider extends OicrDecider {
         Log.debug("INIT");
         String [] metaTypes = {"application/bam","text/vcf-4","text/plain"}; 
         this.setMetaType(Arrays.asList(metaTypes));
-        
+        this.reseqType = new HashMap<String, Map>();
 	//Group by template type if no other grouping selected
         if (!this.options.has("group-by")) {
             this.setGroupingStrategy(Header.STUDY_SWA);
@@ -154,6 +154,7 @@ public class SampleFingerprintingDecider extends OicrDecider {
               this.standCallConf = Double.valueOf(options.valueOf("stand_conf_call").toString());
             } catch (NumberFormatException nf) {
               Log.error("stand_conf_call failed to pass as double, make sure you supply a valid number");
+              System.exit(1);
             }
 	}
         
@@ -162,6 +163,7 @@ public class SampleFingerprintingDecider extends OicrDecider {
               this.standEmitConf = Double.valueOf(options.valueOf("stand_emit_call").toString());
             } catch (NumberFormatException nf) {
               Log.error("stand_emit_call failed to pass as double, make sure you supply a valid number");  
+              System.exit(1);
             }
 	}
         
@@ -170,23 +172,27 @@ public class SampleFingerprintingDecider extends OicrDecider {
               this.dcov = Integer.valueOf(options.valueOf("dcov").toString());
             } catch (NumberFormatException nf) {
               Log.error("dcov failed to pass as int, make sure you supply a valid number");  
+              System.exit(1);
             }
 	}
                                
         if (this.options.has("template-type")) {
-          this.currentTType = options.valueOf("template-type").toString();
-          this.currentRType = this.options.has("rsconfig-file") ? this.options.valueOf("rsconfig-file").toString() : "NA";
-         
-          boolean snpOK = this.configFromParsedXML(this.SNPConfigFile, this.currentTType, this.currentRType);
-          if (!snpOK) {
-              Log.error("Genotyping parameters not set up properly, aborting");
-              System.exit(1);
-          }
+          this.templateTypeFilter = options.valueOf("template-type").toString();
         } else {
-              Log.error("template-type parameter needs to be set, aborting");
-              System.exit(1);
+          Log.debug("template-type parameter ids not set, will include all available types from the study");
         }
         
+        // Setting resequencing type works like setting up a filter, the decider should fiure out reseq. type automatically
+        if (this.options.has("resequencing_type")) {
+          this.reseqTypeFilter = this.options.valueOf("resequencing-type").toString();
+        } else {
+          Log.debug("resequencing_type parameter ids not set, will include all available types from the study");
+        }
+        
+        
+        if (this.options.has("rsconfig-file")) {
+          this.SNPConfigFile = this.options.valueOf("rsconfig-file").toString();
+        }       
         
         //allows anything defined on the command line to override the defaults here.
         ReturnValue val = super.init();
@@ -194,55 +200,32 @@ public class SampleFingerprintingDecider extends OicrDecider {
     }    
     
     
-    
-
-
-    protected String handleGroupByAttribute(String attribute, String group_id, String template_type) {
-        String groupBy = this.getGroupingStrategy().getTitle();
-        String[] parentNames = attribute.split(":");
-        List <String> groupBySet = new ArrayList<String>();
-        
-        groupBySet.add(parentNames[parentNames.length - 1]);
-        if (null != template_type) {
-            groupBySet.add(template_type);
-        } 
-               
-        if (null != group_id) {
-            groupBySet.add(group_id);
-        }
-
-        String[] myFilters = groupBySet.toArray(new String[0]);
-        
-        for (int i = 0; i < myFilters.length; i++) {
-         if (null != myFilters[i]) {
-          if (groupBy.length() > 1)
-             groupBy = groupBy.concat(":" + myFilters[i]);
-          else
-             groupBy = groupBy.concat(myFilters[i]);
-         }
-        }
-        return groupBy;
-    }
 
     @Override
     protected boolean checkFileDetails(ReturnValue returnValue, FileMetadata fm) {
               
         String targetResequencingType = returnValue.getAttribute(Header.SAMPLE_TAG_PREFIX.getTitle() + "geo_targeted_resequencing");
         String targetTemplateType     = returnValue.getAttribute(Header.SAMPLE_TAG_PREFIX.getTitle() + "geo_library_source_template_type");
+        // If nulls, set to NA
+        if (null == targetResequencingType || targetResequencingType.isEmpty())
+            targetResequencingType = "NA";
+        if (null == targetTemplateType || targetTemplateType.isEmpty())
+            targetTemplateType = "NA";
+
+        // Check filters
+        if (!this.reseqTypeFilter.isEmpty() && !this.reseqTypeFilter.equals(targetResequencingType))
+            return false;
+        if (!this.templateTypeFilter.isEmpty() && !this.templateTypeFilter.equals(targetTemplateType))
+            return false;
         
-        if (fm.getMetaType().equals("application/bam")) {
-            if (null == targetResequencingType && !this.currentRType.equals("NA")) {
-                return false;
-            }
-            if (null == targetTemplateType || !targetTemplateType.equals(this.currentTType)) {
-                return false;
-            }
-            
-        } else if (fm.getMetaType().equals("text/vcf-4") || fm.getMetaType().equals("text/plain")) {
-            if (null == targetTemplateType || !this.currentTType.equals(targetTemplateType)) {
-                return false;
-            }
-        }
+        // Get config if don't have it yet
+        if (!this.reseqType.containsKey(targetTemplateType + targetResequencingType)) {
+          boolean refsOK = this.configFromParsedXML(this.SNPConfigFile, targetTemplateType, targetResequencingType);
+          if (!refsOK) {
+              Log.error("References are not set for " + targetResequencingType + ", skipping");
+              return false;
+          }
+        } 
 
         return super.checkFileDetails(returnValue, fm);
     }
@@ -255,14 +238,11 @@ public class SampleFingerprintingDecider extends OicrDecider {
         //group files according to the designated header (e.g. sample SWID)
         for (ReturnValue r : vals) {
             String currentRV  = r.getAttributes().get(groupBy);
-            String group_id = r.getAttribute(Header.SAMPLE_TAG_PREFIX.getTitle() + "geo_group_id");
             String template_type = r.getAttribute(Header.SAMPLE_TAG_PREFIX.getTitle() + "geo_library_source_template_type");
-            if (null == currentRV || null == template_type || !template_type.equals(this.currentTType)) {
+            if (null == currentRV || null == template_type || (!this.templateTypeFilter.isEmpty() && !template_type.equals(this.templateTypeFilter))) {
                 continue;
             }
-           
-            currentRV = null != group_id ? handleGroupByAttribute(currentRV, group_id, template_type) : handleGroupByAttribute(currentRV, null, template_type);       
-            
+                
             if (null != currentRV) {
                 BeSmall currentSmall = new BeSmall(r);
                 fileSwaToSmall.put(r.getAttribute(Header.FILE_SWA.getTitle()), currentSmall);
@@ -300,7 +280,20 @@ public class SampleFingerprintingDecider extends OicrDecider {
         }
 
      List<ReturnValue> newValues = new ArrayList<ReturnValue>(iusDeetsToRV.values());
-     return super.separateFiles(newValues, groupBy);
+     Map<String, List<ReturnValue>> map = new HashMap<String, List<ReturnValue>>();
+
+        //group files according to the designated header (in the case of this workflow, by template type)
+        for (ReturnValue r : newValues) {
+            String currVal = fileSwaToSmall.get(r.getAttribute(Header.FILE_SWA.getTitle())).groupByAttribute;
+            List<ReturnValue> vs = map.get(currVal);
+            if (vs == null) {
+                vs = new ArrayList<ReturnValue>();
+            }
+            vs.add(r);
+            map.put(currVal, vs);
+        }
+        
+     return map;
     }
 
     
@@ -315,8 +308,20 @@ public class SampleFingerprintingDecider extends OicrDecider {
         Set<String> vcfFiles = new HashSet<String>();
         this.inputFiles = "";
         this.genotypes  = "";
+        String checkedSNPs = "";
+        String checkPoints = "";
         
         for (FileAttributes atts : run.getFiles()) {
+          if (checkedSNPs.isEmpty()) {
+           String fileKey = fileSwaToSmall.get(atts.getOtherAttribute(Header.FILE_SWA.getTitle())).getGroupByAttribute();
+           if (this.reseqType.containsKey(fileKey)) {
+             checkedSNPs = this.reseqType.get(fileKey).get("file").toString();
+             checkPoints = this.reseqType.get(fileKey).get("points").toString();
+           } else {
+                
+           }
+          }
+          
           if (atts.getMetatype().equals("application/bam")) {
             if (!this.inputFiles.isEmpty()) {
                 this.inputFiles += ",";
@@ -360,20 +365,25 @@ public class SampleFingerprintingDecider extends OicrDecider {
         run.addProperty("output_prefix",this.output_prefix);
 	run.addProperty("output_dir", this.output_dir);
             
-    
-        if (null != this.checkedSNPs) {
-          run.addProperty("checked_snps", this.checkedSNPs);
-          run.addProperty("check_points", "" + this.checkPoints);
+        if (null != checkedSNPs) {
+          run.addProperty("checked_snps", checkedSNPs);
+          run.addProperty("check_points", checkPoints);
         }
         
         if (null != this.genomeFile) {
           run.addProperty("genome_file", this.genomeFile);  
         } 
         
+        run.addProperty("stand_call_conf", "" + this.standCallConf);
+        run.addProperty("stand_emit_conf", "" + this.standEmitConf);
+        run.addProperty("dcov", "" + this.dcov);
+        
         if (null != this.genotypes && !this.genotypes.isEmpty()) {
           run.addProperty("genotypes", this.genotypes);
         } // genotypes set to 'space' if there are no vcfs, so the case when this is supposed to be empty handled already
         
+        run.addProperty("study_name", this.studyName);
+                
         if (null != this.existingMatrix && !this.existingMatrix.isEmpty()) {
           run.addProperty("existing_matrix", this.existingMatrix);
         } else {
@@ -420,15 +430,17 @@ public class SampleFingerprintingDecider extends OicrDecider {
                                   Element cElement = (Element) cNode;
                                   if (!resequencingType.equals(cElement.getAttribute("id")))
                                       continue;
-                                  this.checkedSNPs = cElement.getElementsByTagName("checked_snps").item(0).getTextContent();
-                                  this.checkPoints = Integer.parseInt(cElement.getElementsByTagName("check_points").item(0).getTextContent());
+                                  Map<String, String> rtypeData = new HashMap<String, String>();
+                                  rtypeData.put("file", cElement.getElementsByTagName("checked_snps").item(0).getTextContent());
+                                  rtypeData.put("points", cElement.getElementsByTagName("check_points").item(0).getTextContent());
+                                  this.reseqType.put(templateType.concat(resequencingType), rtypeData);
                                   return true;
                               }                   
                     }   
                 }	
 	  }
         } catch(FileNotFoundException fnf) {
-            System.err.println("File is not found");
+            Log.error("File is not found");
         } catch (NullPointerException np) {
             Log.error("A value in config file for " + resequencingType + " is not initialized");
         } catch (NumberFormatException nf) {
@@ -467,8 +479,15 @@ public class SampleFingerprintingDecider extends OicrDecider {
             }
             FileAttributes fa = new FileAttributes(rv, rv.getFiles().get(0));
             iusDetails = fa.getSequencerRun() + fa.getLane() + fa.getBarcode() + fa.getMetatype();
-            groupByAttribute = fa.getDonor() + fa.getLimsValue(Lims.LIBRARY_TEMPLATE_TYPE) + fa.getLimsValue(Lims.GROUP_ID);
-            path = rv.getFiles().get(0).getFilePath() + "";
+            // We are going to group by template type only (if we did not receive template type as a parameter)
+            groupByAttribute = fa.getLimsValue(Lims.LIBRARY_TEMPLATE_TYPE);
+            String tgtReseq  = fa.getLimsValue(Lims.TARGETED_RESEQUENCING);
+            if (null != tgtReseq) {
+                groupByAttribute = groupByAttribute.concat(tgtReseq);
+            } else {
+                groupByAttribute = groupByAttribute.concat("NA");
+            }
+            path = rv.getFiles().get(0).getFilePath().toString();
         }
 
         public Date getDate() {
