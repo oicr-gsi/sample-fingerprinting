@@ -19,7 +19,7 @@
     </properties>
     
     <build>
-	<finalName>Decider_1.0_decider-sample-fingerprinting_${workflow-version}_SeqWare_${seqware-version}</finalName>
+	<finalName>Decider_1.0_sample-fingerprinting_${workflow-version}_SeqWare_${seqware-version}</finalName>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
