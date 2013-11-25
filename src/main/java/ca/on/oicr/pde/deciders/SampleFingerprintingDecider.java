@@ -33,7 +33,7 @@ public class SampleFingerprintingDecider extends OicrDecider {
     private String output_prefix = "./";
     private String output_dir = "seqware-results";
     private String studyName;
-    private String watchersList;
+    private String watchersList = "";
     
     
     //these params should come from settings xml file
@@ -62,7 +62,7 @@ public class SampleFingerprintingDecider extends OicrDecider {
         fileSwaToSmall  = new HashMap<String, BeSmall>();
         parser.acceptsAll(Arrays.asList("ini-file"), "Optional: the location of the INI file.").withRequiredArg();
         parser.accepts("study-name", "Required: name of the study that we need to analyze.").withRequiredArg();
-        parser.accepts("template-type", "Required: name of the study that we need to analyze.").withRequiredArg();
+        parser.accepts("template-type", "Optional: name of the study that we need to analyze.").withRequiredArg();
         parser.accepts("resequencing-type", "Optional: resequencing type for templates other than WG").withRequiredArg();
         parser.accepts("existing-matrix", "Optional: existing matrix from previous workflow run(s)").withRequiredArg();
         parser.accepts("provision-vcfs", "Optional: set to non-null re-using vcf files from the runs this decider will launch").withRequiredArg();
@@ -121,14 +121,15 @@ public class SampleFingerprintingDecider extends OicrDecider {
         
         if (this.options.has("watchers-list")) {
           String commaSepWatchers = options.valueOf("watchers-list").toString();
-          
+          if (null != commaSepWatchers && !commaSepWatchers.isEmpty())
+            Log.warn("We have " + commaSepWatchers + " for watchers");
           String[] watchers = commaSepWatchers.split(",");
           for (String email : watchers) {
               if (email.contains("@oicr.on.ca")) {
                   this.watchersList += this.watchersList.isEmpty() ? email : "," + email;
               }
           }
-          if (this.watchersList.contains("@"))
+          if (this.watchersList.isEmpty() || !this.watchersList.contains("@"))
               this.watchersList = "";
 	}
        
