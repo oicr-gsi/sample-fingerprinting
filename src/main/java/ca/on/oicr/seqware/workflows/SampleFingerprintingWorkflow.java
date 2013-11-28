@@ -40,6 +40,7 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
     private String check_points;
     private String queue;
     private String reportName = "sample_fingerprint";
+    private String gatk_java;
     
     //GATK parameters
     private String stand_call_conf = "50.0";
@@ -66,6 +67,13 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
        } else {
            this.genotypes = getProperty("genotypes").split(",");
            if (this.genotypes.length <= 1){this.genotypes = null;}
+       }
+       
+       if (getProperty("gatk_java") == null) {
+           Logger.getLogger(SampleFingerprintingWorkflow.class.getName()).log(Level.SEVERE, "gatk_java is not set, we need it to run GATK since it requires 1.7 java and we cannot rely on the defaul");
+           return (null);
+       } else {
+           this.gatk_java = getProperty("gatk_java");
        }
        
        if (getProperty("genome_file") == null) {
@@ -192,7 +200,7 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
              String tempName = bam_files[i].substring(bam_files[i].lastIndexOf("SWID_"));
              this.studyName = tempName.substring(0, tempName.indexOf("_") - 1);
            } else {
-             this.studyName = "INDEF";
+             this.studyName = "UNDEF";
            }
         }
         
@@ -319,7 +327,7 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
            }
            if (null == vcf) { 
              Job job_gatk = workflow.createBashJob("call_snps_" + i);
-             job_gatk.setCommand("java -Xmx2g -jar " + getWorkflowBaseDir() + "/bin/GenomeAnalysisTK-" + this.gatkVersion + "/GenomeAnalysisTK.jar "
+             job_gatk.setCommand(gatk_java + " -Xmx2g -jar " + getWorkflowBaseDir() + "/bin/GenomeAnalysisTK-" + this.gatkVersion + "/GenomeAnalysisTK.jar "
                                + "-R " + this.genomeFile + " "
                                + "-T UnifiedGenotyper "
                                + "-I " + bam.getProvisionedPath() + " "
@@ -348,7 +356,7 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
             
             
             Job job_gatk2 = workflow.createBashJob("calculate_depth_" + i);
-            job_gatk2.setCommand("java -Xmx3g -jar " + getWorkflowBaseDir() + "/bin/GenomeAnalysisTK-" + this.gatkVersion + "/GenomeAnalysisTK.jar "
+            job_gatk2.setCommand(gatk_java + " -Xmx3g -jar " + getWorkflowBaseDir() + "/bin/GenomeAnalysisTK-" + this.gatkVersion + "/GenomeAnalysisTK.jar "
                             + "-R " + this.genomeFile + " "
                             + "-T DepthOfCoverage "
                             + "-I " + bam.getProvisionedPath() + " "
