@@ -42,7 +42,7 @@ public class SampleFingerprintingDecider extends OicrDecider {
     //GATK params
     private double standCallConf = 50.0;
     private double standEmitConf = 10.0;
-    private int    dcov          = 50;
+    private int    dcov          = 200;
     
     //Previous workflow runs and input files
     private String  existingMatrix;
