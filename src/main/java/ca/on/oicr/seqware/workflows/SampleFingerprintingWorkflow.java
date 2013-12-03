@@ -542,7 +542,7 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
            Job zip_fins = workflow.createBashJob("zip_finfiles");
            zip_fins.setCommand("zip -r " + this.dataDir + "customize.me.zip "
                            + this.dataDir + "finfiles "
-                           + this.dataDir + matrix.getSourcePath());
+                           + matrix.getSourcePath());
            zip_fins.addParent(make_pics);
            zip_fins.setMaxMemory("2000");
            if (!this.queue.isEmpty()) {
