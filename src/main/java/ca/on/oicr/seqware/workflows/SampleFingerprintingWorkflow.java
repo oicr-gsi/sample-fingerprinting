@@ -30,6 +30,8 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
     private String finalOutDir;
     private String dataDir;
     private String tempDir = "tempfiles/";
+    //Additional one for GATK:
+    private String tmpDir  = "temp";
     private String finDir  = "finfiles/";
     private String gatkVersion;
     private String tabixVersion;
@@ -45,7 +47,7 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
     //GATK parameters
     private String stand_call_conf = "50.0";
     private String stand_emit_conf = "10.0";
-    private String dcov = "50";
+    private String dcov = "200";
     private int jChunkSize = 50; // Maximum allowed number of vcf files when jaccard_indexing step doesn't fork into multiple sub-jobs
     private boolean manualOutput;
     private boolean provisionVcfs;
@@ -327,7 +329,8 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
            }
            if (null == vcf) { 
              Job job_gatk = workflow.createBashJob("call_snps_" + i);
-             job_gatk.setCommand(gatk_java + " -Xmx2g -jar " + getWorkflowBaseDir() + "/bin/GenomeAnalysisTK-" + this.gatkVersion + "/GenomeAnalysisTK.jar "
+             job_gatk.setCommand(gatk_java + " -Xmx2g -Djava.io.tmpdir=" + tmpDir 
+                               + " -jar " + getWorkflowBaseDir() + "/bin/GenomeAnalysisTK-" + this.gatkVersion + "/GenomeAnalysisTK.jar "
                                + "-R " + this.genomeFile + " "
                                + "-T UnifiedGenotyper "
                                + "-I " + bam.getProvisionedPath() + " "
@@ -356,7 +359,8 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
             
             
             Job job_gatk2 = workflow.createBashJob("calculate_depth_" + i);
-            job_gatk2.setCommand(gatk_java + " -Xmx3g -jar " + getWorkflowBaseDir() + "/bin/GenomeAnalysisTK-" + this.gatkVersion + "/GenomeAnalysisTK.jar "
+            job_gatk2.setCommand(gatk_java + " -Xmx3g -Djava.io.tmpdir=" + tmpDir 
+                            + " -jar " + getWorkflowBaseDir() + "/bin/GenomeAnalysisTK-" + this.gatkVersion + "/GenomeAnalysisTK.jar "
                             + "-R " + this.genomeFile + " "
                             + "-T DepthOfCoverage "
                             + "-I " + bam.getProvisionedPath() + " "

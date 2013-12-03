@@ -14,10 +14,17 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-        <seqware-version>0.13.6.10</seqware-version>
+        <seqware-version>0.13.6.11</seqware-version>
     </properties>
 
     <dependencies>
+        <dependency>
+            <groupId>com.sun</groupId>
+            <artifactId>tools</artifactId>
+            <version>1.6</version>
+            <scope>system</scope>
+            <systemPath>/u/pruzanov/.m2/repository/jdk/tools/jdk.tools/1.6/jdk.tools-1.6.jar</systemPath>
+        </dependency>
         <dependency>
             <groupId>net.sourceforge.seqware</groupId>
             <artifactId>seqware-bin-linux-x86-64-jre-6.0.29</artifactId>
@@ -43,6 +50,12 @@
             <artifactId>seqware-bin-linux-x86-64-echo-5.67</artifactId>
             <version>1.0.0</version>
         </dependency>
+       	<dependency>
+	    <groupId>com.oracle</groupId>
+	    <artifactId>jre</artifactId>
+	    <version>1.7.0_40</version>
+	    <type>zip</type>
+	</dependency>
         <dependency>
 	    <groupId>samtools</groupId>
 	    <artifactId>samtools</artifactId>
@@ -63,8 +76,8 @@
         <dependency>
             <groupId>org.broadinstitute</groupId>
             <artifactId>GenomeAnalysisTK</artifactId>
-            <version>2.4-9</version>
-            <classifier>g532efad</classifier>
+            <version>2.7-2</version>
+            <classifier>g6bda569</classifier>
             <type>zip</type>
         </dependency>
     </dependencies>
