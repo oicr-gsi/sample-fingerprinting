@@ -554,9 +554,9 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
            zip_report.setCommand("zip -r " + getFiles().get("report_zip").getSourcePath() + " "
                            + this.dataDir + "*.png "
                            + this.dataDir + "images "
-                           + this.dataDir + "*_genotype_report.csv "
-                           + this.dataDir + "*_similarity_matrix.csv "
-                           + this.dataDir + matrix.getSourcePath() + " "
+                           + this.dataDir + "*_genotype_report*.csv "
+                           + this.dataDir + "*_similarity_matrix*.csv "
+                           + matrix.getSourcePath() + " "
                            + this.dataDir + "customize.me.zip "
                            + this.dataDir + "*.html");
            zip_report.addParent(zip_fins);
