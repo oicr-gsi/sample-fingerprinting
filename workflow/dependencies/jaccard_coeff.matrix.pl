@@ -14,7 +14,7 @@ use constant DEBUG =>1;
 # Below is the dafault for vcf_compare, should not be used when workflow runs
 my $vcf_compare = "vcftools/bin/vcf-compare";
 
-my(%ids,%files,%matrix,%seen,$list,$studyname,$vcf_path,$oldmatrix,$datadir);
+my(%ids,%files,%matrix,%seen,$list,$studyname,$vcf_path,$oldmatrix,$datadir,$path_to_tabix);
 my(%snps,%cols,%scols); # For assigning colors and number of snps (scols for assigning a color to a sample (like PCSI_006)
 my @colors = qw/red orange yellow green lightblue blue purple darkgreen brown black/;
 
@@ -22,13 +22,30 @@ my $USAGE="jaccard_coef.matrix.pl --list=[req] --studyname=[req] --datadir=[opti
 
 my $result = GetOptions ('list=s'            => \$list, # list with filenames
                          'existing_matrix=s' => \$oldmatrix, # file with previously calculater indexes
-                         'datadir=s'        => \$datadir, # directory with vcf files
+                         'datadir=s'         => \$datadir, # directory with vcf files
+                         'tabix=s'           => \$path_to_tabix, # path to tabix dir
                          'vcf_compare=s'     => \$vcf_path, # path to vcftools vcf-compare script
                          'studyname=s'       => \$studyname);
 
 if (!$list || !$studyname) {die $USAGE;}
 $datadir ||=".";
 $vcf_compare = $vcf_path if $vcf_path;
+
+#===========================================================
+# If tabix is not in the PATH, add its location to $PATH
+#===========================================================
+my $PATH = `echo \$PATH`;
+my $reset_path;
+my $tabix_check = `which tabix`;
+
+if (!$tabix_check) {
+ print STDERR "tabix not found, adding [$path_to_tabix] to the PATH...\n" if DEBUG;
+ $ENV{PATH} = "$path_to_tabix:$PATH";
+ $reset_path = 1;
+} else {
+ print STDERR "Found tabix, proceeding...\n" if DEBUG;
+}
+
 
 # ==========================================================
 # First, if we have exisiting matrix, read values from there
@@ -165,6 +182,9 @@ print "\n";
  print $snps{$sample} ? "\t$snps{$sample}" : "\t0";
  print "\n";
  }
+
+
+$ENV{PATH} = $PATH if $reset_path;
 
 # ==================================================
 # Subroutine for processing (registering) a vcf file

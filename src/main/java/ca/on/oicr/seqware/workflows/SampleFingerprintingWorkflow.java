@@ -467,6 +467,7 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
                             + "--list=" + this.dataDir + chunkList + " "
                             + "--vcf_compare=" + getWorkflowBaseDir() + "/bin/vcftools_" + this.vcftoolsVersion + "/bin/vcf-compare "
                             + "--datadir=" + this.dataDir + " "
+                            + "--tabix=" + getWorkflowBaseDir() + "/bin/tabix-" + this.tabixVersion + " "
                             + "--studyname=" + this.studyName + " "
                             + "> " + this.dataDir + chunkName);
            
@@ -504,6 +505,7 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
                             + "--list=" + this.dataDir + chunkList + " "
                             + "--vcf_compare=" + getWorkflowBaseDir() + "/bin/vcftools_" + this.vcftoolsVersion + "/bin/vcf-compare "
                             + "--datadir=" + this.dataDir + " "
+                            + "--tabix=" + getWorkflowBaseDir() + "/bin/tabix-" + this.tabixVersion + " "
                             + "--studyname=" + this.studyName + " "
                             + "> " + matrix.getSourcePath());
            if (!this.existingMatrix.isEmpty()) {
