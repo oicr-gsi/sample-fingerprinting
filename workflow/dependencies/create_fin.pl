@@ -4,6 +4,29 @@
 # Script for prepering the data and plotting individual genotype fingerprints of .bam files
 #
 
+=head2 SYNOPSIS
+
+create_fin.pl script is for parsing genotype and coverage data into a little .fin file that is
+used to produce a B<fin>gerprint image for a file.
+
+create_fin.pl --refvcf=dbsnp137.hg19.vcf.gz --genotype=0000.snps.raw.vcf --coverage=tmp/0000.sample_interval_summary --datadir=tmp/ --outdir=data/finfiles/ --basename=0000
+
+=head2 OPTIONS
+
+B<--refvcf=>   ref vcf file                 - a gzipped with annotaed SNPs (for example, data from dbSNP database) - used to extract coordinates of individual SNPs
+
+B<--genotype=> genotype vcf file            - input SNPs in vcf format, to be comapared with reference data and marked accordingly in .fin file
+
+B<--coverage=> sample interval summary file - coverage file produced with BEDtools
+
+B<--datadir=>  data dir                     - that's where all input files are
+
+B<--outdir=>   output dir (optional)        - optional destination for output files, becomes the same as datadir if not set 
+
+B<--basename=> base name                    - this is to be used as the basename for .fin file
+
+=cut
+
 use strict;
 use Getopt::Long;
 use constant DEBUG=>0;
