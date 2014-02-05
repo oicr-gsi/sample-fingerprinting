@@ -51,11 +51,12 @@ sub new {
     my $self = bless { matrix    => $args[0],
                        fmatrix   => "",         # filtered matrix file
                        donors    => \%donors,
+                     # repname   => $args[2],
                        reports   => {},
                        samples   => {},
                        ids       => {},
                        snpindex  => 0,
-                       studyname => {},
+                       studyname => "",
                        datadir   => "./",
                        filtered  => {},
                        finfiles  => 0}, ref $class || $class;    # will set finfiles flag to 1 if we have it (and if we do, genotype file and fingerprint popup will be created)
@@ -93,10 +94,9 @@ sub loadInput {
  $self->{datadir} = $dir;
  
  # find directories finfiles and fingerprints and check that they have .fin and .png files
- my $numfin = `ls $dir/finfiles/\*fin | wc -l`;
+ my $numfin = `find $dir -name \*\.fin | wc -l`;
  chomp($numfin);
- if ($numfin > 0) {$self->finfiles(1);
-                   print STDERR "Got finfiles\n" if DEBUG;}
+ if ($numfin > 0) {$self->finfiles(1);}
 
 }
 
@@ -122,14 +122,15 @@ sub loadMatrix {
 
  # Find what is the index of 'SNPs' column and use it later to remove those entries with fewer than THRESHOLD SNPs
  while (<$fh>) {
+  #chomp;
   my @temp = split("\t");
   my $trimmed_name = $temp[0];
   $trimmed_name=~s/(SWID_\d+)_(.*)/$2\_$1/;
   my($don,$studyname);
-  if ($trimmed_name=~/^((\D+)_\d+)/) {
-    $self->{studyname}->{$2}++;
-    $studyname = $2;
+  if ($trimmed_name=~/^((\S+?)_\d+)/) {
+    $self->{studyname} ||= $2;
     $don = $1;
+   
   } 
 
   # TODO If there are no donors, we should not use self->{donors} in filtering
@@ -138,7 +139,6 @@ sub loadMatrix {
     $self->{ids}->{$temp[0]} = join("_",($don,$1));
     $self->{samples}->{$self->{ids}->{$temp[0]}} = {sample=>$don,
                                                     file  =>$temp[0],
-                                                    studyname=>$studyname,  # this is needed especially for the cases where we look at multiple studies
                                                     name  =>$trimmed_name}; # register a file as pertaining to a certain sample (studyname_sampleid)
     push(@lines,join("\t",@temp));
   } else {
@@ -197,8 +197,6 @@ sub createHeatmap {
  my $self = shift;
  my $matrix = $self->{fmatrix};
  my %colors;
- my %has_donors = ();
-
  my @colors = qw/red orange yellow green lightblue blue purple darkgreen black pink/;
 
  # Just use the file here, make heatmap 
@@ -224,8 +222,6 @@ sub createHeatmap {
  if ($self->{ids}->{$names[$i]}) {
   $names[$i]=~s!.*/!!;
   print $fo "\t".$self->{samples}->{$self->{ids}->{$names[$i]}}->{name};
-  $has_donors{$self->{samples}->{$self->{ids}->{$names[$i]}}->{sample}}++;
- 
   $indexes{$i} = $self->{ids}->{$names[$i]};
   $colors{$self->{samples}->{$self->{ids}->{$names[$i]}}->{sample}} ||= $colors[$colcount++];
   }
@@ -256,45 +252,40 @@ sub createHeatmap {
 
  # Produce images
  my $flagged = 'FALSE';
- my $title = join(",",(keys %has_donors));
+ my $title = join(",",(keys %{$self->{donors}}));
 
  print STDERR "Will Rscript create_heatmap.r $matfile \"$title\" 400 $pngfile ".PNGSIZE." $flagged\n" if DEBUG;
  my $size = PNGSIZE;
- my $clustered_ids = `Rscript create_heatmap.r $matfile \"$title\" 400 $pngfile $size $flagged`;
- my @temp_cids = grep {/_/} split(" ",$clustered_ids);
- my @clustered_ids;
- 
- foreach my $c(@temp_cids) {
-  map{if($c=~/$_/){push(@clustered_ids,$c)}} (keys %{$self->{studyname}}); 
- }
+ my $clustered_ids =  `Rscript create_heatmap.r $matfile \"$title\" 400 $pngfile $size $flagged`;
+ my @clustered_ids = grep {/$self->{studyname}/} split(" ",$clustered_ids); 
+
  my @fingers = ();
 
  for (my $cl = 0; $cl < @clustered_ids; $cl++) { 
   ID:
   foreach my $id (keys %{$self->{ids}}) {
-
     if ($clustered_ids[$cl] eq $self->{samples}->{$self->{ids}->{$id}}->{name}) {
-     
-     # Depending on wheather we have finfiles dir or not, create fingerprint images
+
+    # Depending on wheather we have finfiles dir or not, create fingerprint images
+
      if ($self->finfiles()) {
      print STDERR "Creating $cl of ".scalar(@clustered_ids)." fingerprint images\n" if DEBUG;
      my $png = $self->{datadir}.$self->{ids}->{$id}.".fp.".$cl.".png";
+     
      my $fin = $id.".fin";
      $fin =~s!.*/!!;
 
      print STDERR "Will Rscript create_fingerprints.r $self->{datadir}finfiles/ $fin $colors{$self->{samples}->{$self->{ids}->{$id}}->{sample}} 400 $png \n" if DEBUG;
      `Rscript create_fingerprints.r $self->{datadir}finfiles/ $fin $colors{$self->{samples}->{$self->{ids}->{$id}}->{sample}} 400 $png`;
      $png=~s!.*(report_\d+)/!!;
+     $png=~s!.*/!!;
      push(@fingers,{img=>$png,
-                   name=>$self->{samples}->{$self->{ids}->{$id}}->{name}});
+                    name=>$self->{samples}->{$self->{ids}->{$id}}->{name}});
      last ID;
-     } else {
-       print STDERR "Have no finfiles" if DEBUG;
      }
     }
   }
  }
-
 
  # Register the image name in the report hash
  $pngfile=~s!.*(report_\d+)!../../html/sampleswap/reports/$1!;
@@ -312,7 +303,10 @@ sub createHeatmap {
 
 # ============================================================================
 # Multi-heatmap code gets removed from here temporary, to be implemented later
+# Using R (heatmap) cluster samples, 
+# we need the re-arranged list for next step
 # ============================================================================
+
 # =================================================================
 # make HTML report (will call a couple of subroutines)
 # =================================================================
@@ -339,10 +333,7 @@ sub createHtml {
  print button(-onClick=>"window.location.href=\'$matrix_link\'",
               -name=>"download_button",
               -value=>"Download Data");
- my $sname;
- map{$sname.=",".$_} (keys %{$self->{studyname}});
- $sname=~s/^,//;
- print h2("Sample Fingerprinting for ".$sname);
+ print h2("Sample Fingerprinting for ".$self->{studyname}." study");
  print br;
  #1. Suspicious samples
  if (scalar(keys %{$self->{flagged}->{files}}) > 0) {
@@ -498,8 +489,7 @@ sub printout_snps {
  }
 
  # Having collected all snp calls from the .fin files let's create a genotype report file
- 
- my $fname = $self->{datadir}."Custom_genotype_report_$$.csv";
+ my $fname = $self->{datadir}.join("_",($self->{studyname},"genotype_report_$$.csv"));
  $fh_fin->open(">$fname") or die "Couldn't write genotype report to [$fname]";
  print $fh_fin join("\t",@titles[0..2]);
  my @fnames = grep {/\S+/} map{$self->{samples}->{$_}->{name}} (sort keys %{$self->{samples}});

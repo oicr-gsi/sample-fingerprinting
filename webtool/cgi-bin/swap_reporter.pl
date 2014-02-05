@@ -64,6 +64,7 @@ sub handle_fileUpload {
  $newdir=~s/\s*$//;
  $newdir.="/reports/".$datadir;
  `mkdir -p $newdir`;
+ $newdir.="/" if $newdir!~m!/$!;
  
  my $upfile = $file;
  my $basename = GetBasename($upfile);
@@ -91,6 +92,7 @@ sub handle_fileUpload {
   binmode($upfile);
 
   while ( $nBytes = read($upfile, $buffer, 1024) ) {
+ #while ( $nBytes = read($fh, $buffer, 1024) ) {
 	print ZIPFILE $buffer;
 	$totBytes += $nBytes;
  }
@@ -106,9 +108,12 @@ sub handle_fileUpload {
   }
 
   # find the matrix file and set self->matrix to that value
-  my @files = grep {/csv|txt/} `ls --color="none" $datadir\*matrix\* | perl -ne '{chomp;s/.* //g;print \$_}'`;
+  warn "Looking for similarity matrix in $datadir";
+  my @files = grep {/csv|txt/} `find $datadir -name \*jaccard.matrix\*`; #`ls --color="none" $datadir\*matrix\* | perl -ne '{chomp;s/.* //g;print \$_}'`;
+  map{chomp($_)} @files; 
   if ($files[0] =~ /matrix/) {
    $localfile = $files[0];
+   warn "Got matrix file $localfile";
   } else {
    die "Couldn't find any similarity matrix files in your input";
   }  
@@ -162,7 +167,8 @@ sub handle_fileUpload {
  close OUTFILE;
  my $list = join(",",(keys %donors)); 
  $file = $localfile;
- $file =~s!.*/!!;
+ $file =~s!$datadir!!;
+
  &show_customTool($list,"options",$newdir,$file);
  
 }
@@ -174,8 +180,8 @@ sub handle_fileUpload {
 sub show_customTool {
 
  my($list,$options,$dir,$matrix) = @_;
- my %donors = map {$_=>1} split(",",$list);
- return if scalar(keys %donors) == 0;
+ my @donors = grep{/\S+/} split(",",$list);
+ return if @donors == 0;
  
  print header;
  print start_html(-title=>'Custom Report Creation',
@@ -190,13 +196,12 @@ sub show_customTool {
  print br;
  my @inputs = ();
 
- my $chk = 0;
- foreach my $d(sort keys %donors) {
-  push(@inputs,(checkbox({-id=>'check'.$chk++,
-                         -name=>"$d",
+ for (my $d=0; $d<@donors; $d++) {
+  push(@inputs,(checkbox({-id=>'check'.$d,
+                         -name=>"$donors[$d]",
                          -checked=>0,
-                         -value=>"$d",
-                         -onclick=>"countDonors(".scalar(keys %donors).",\'$options\',".SAMPLESPERSLICE.")",
+                         -value=>"$donors[$d]",
+                         -onclick=>"countDonors(".scalar(@donors).",\'$options\',".SAMPLESPERSLICE.")",
                          -height=>"32"}),br));
  }
  
