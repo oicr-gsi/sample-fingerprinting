@@ -1,7 +1,7 @@
 #!/usr/bin/perl 
 
 #
-# This is a development version of webtool that creates a custom report for TargetedSequencing QC workflow
+# This is a development version of webtool that creates a custom report for Sample Fingerprinting workflow
 #
 
 use strict;
