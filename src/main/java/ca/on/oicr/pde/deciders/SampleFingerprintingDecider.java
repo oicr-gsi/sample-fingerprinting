@@ -5,21 +5,21 @@
 package ca.on.oicr.pde.deciders;
 
 
-import java.util.*;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.*;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
-import net.sourceforge.seqware.common.module.FileMetadata;
 import net.sourceforge.seqware.common.hibernate.FindAllTheFiles.Header;
+import net.sourceforge.seqware.common.module.FileMetadata;
 import net.sourceforge.seqware.common.module.ReturnValue;
 import net.sourceforge.seqware.common.util.Log;
 import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
-import org.w3c.dom.Element;
 
 /**
  *
@@ -61,7 +61,6 @@ public class SampleFingerprintingDecider extends OicrDecider {
         super();
         fileSwaToSmall  = new HashMap<String, BeSmall>();
         parser.acceptsAll(Arrays.asList("ini-file"), "Optional: the location of the INI file.").withRequiredArg();
-        parser.accepts("study-name", "Required: name of the study that we need to analyze.").withRequiredArg();
         parser.accepts("template-type", "Optional: name of the study that we need to analyze.").withRequiredArg();
         parser.accepts("resequencing-type", "Optional: resequencing type for templates other than WG").withRequiredArg();
         parser.accepts("existing-matrix", "Optional: existing matrix from previous workflow run(s)").withRequiredArg();
@@ -89,9 +88,14 @@ public class SampleFingerprintingDecider extends OicrDecider {
         this.reseqType = new HashMap<String, Map>();
 	//Group by template type if no other grouping selected
         if (!this.options.has("group-by")) {
-            this.setGroupingStrategy(Header.STUDY_SWA);
+            if (this.options.has("study-name"))
+                this.setGroupingStrategy(Header.STUDY_SWA);
+            if (this.options.has("sample-name"))
+                this.setGroupingStrategy(Header.SAMPLE_SWA);
+            if (this.options.has("sequencer-run-name"))
+                this.setGroupingStrategy(Header.SEQUENCER_RUN_SWA);
         } else {
-            Log.warn("Passing group-by parameter overrides the default (STUDY_SWA) I hope you know what you are doing");
+            Log.warn("Passing group-by parameter overrides the defaults, I hope you know what you are doing");
         }
         
         if (this.options.has("output-path")) {
@@ -121,13 +125,14 @@ public class SampleFingerprintingDecider extends OicrDecider {
         
         if (this.options.has("watchers-list")) {
           String commaSepWatchers = options.valueOf("watchers-list").toString();
-          if (null != commaSepWatchers && !commaSepWatchers.isEmpty())
+          
+          if (null != commaSepWatchers && !commaSepWatchers.isEmpty()) {
             Log.warn("We have " + commaSepWatchers + " for watchers");
-          String[] watchers = commaSepWatchers.split(",");
-          for (String email : watchers) {
-              if (email.contains("@oicr.on.ca")) {
+            String[] watchers = commaSepWatchers.split(",");
+            for (String email : watchers) {
+              if (email.contains("@oicr.on.ca")) 
                   this.watchersList += this.watchersList.isEmpty() ? email : "," + email;
-              }
+            }
           }
           if (this.watchersList.isEmpty() || !this.watchersList.contains("@"))
               this.watchersList = "";
@@ -136,8 +141,7 @@ public class SampleFingerprintingDecider extends OicrDecider {
         if (this.options.has("study-name")) {
             this.studyName = options.valueOf("study-name").toString();
 	} else {
-            Log.error("study-name parameter needs to be set, aborting");
-            System.exit(1);
+            Log.warn("study-name parameter is not set, will try to determine it automatically");
         }
         
         if (this.options.has("config-file")) {
@@ -237,19 +241,29 @@ public class SampleFingerprintingDecider extends OicrDecider {
 
         Map<String, ReturnValue> iusDeetsToRV = new HashMap<String, ReturnValue>();
         //group files according to the designated header (e.g. sample SWID)
+        List myTypes = this.getMetaType();
         for (ReturnValue r : vals) {
+            if (!myTypes.contains(r.getFiles().get(0).getMetaType().toString()))
+                continue;
+
             String currentRV  = r.getAttributes().get(groupBy);
             String template_type = r.getAttribute(Header.SAMPLE_TAG_PREFIX.getTitle() + "geo_library_source_template_type");
+            if (null == this.studyName || this.studyName.isEmpty()) {
+                FileAttributes fa = new FileAttributes(r, r.getFiles().get(0));
+                String t = fa.getDonor();
+                this.studyName = t.substring(0, t.indexOf("_"));
+                Log.debug("Extracted Study Name " + this.studyName);
+            }
             if (null == currentRV || null == template_type || (!this.templateTypeFilter.isEmpty() && !template_type.equals(this.templateTypeFilter))) {
                 continue;
             }
                 
-            if (null != currentRV) {
-                BeSmall currentSmall = new BeSmall(r);
-                fileSwaToSmall.put(r.getAttribute(Header.FILE_SWA.getTitle()), currentSmall);
-                
-                String fileDeets = currentSmall.getIusDetails();
-                Date currentDate = currentSmall.getDate();
+
+            BeSmall currentSmall = new BeSmall(r);
+            fileSwaToSmall.put(r.getAttribute(Header.FILE_SWA.getTitle()), currentSmall);
+
+            String fileDeets = currentSmall.getIusDetails();
+            Date currentDate = currentSmall.getDate();
             
             //if there is no entry yet, add it
             if (iusDeetsToRV.get(fileDeets) == null) {
@@ -277,7 +291,7 @@ public class SampleFingerprintingDecider extends OicrDecider {
                 }
             }
                 
-            }
+            
         }
 
      List<ReturnValue> newValues = new ArrayList<ReturnValue>(iusDeetsToRV.values());
