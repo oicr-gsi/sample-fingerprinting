@@ -4,13 +4,13 @@
  */
 package ca.on.oicr.seqware.workflows;
 
+import ca.on.oicr.pde.utilities.workflows.OicrWorkflow;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import net.sourceforge.seqware.common.util.Log;
-import net.sourceforge.seqware.pipeline.workflowV2.AbstractWorkflowDataModel;
 import net.sourceforge.seqware.pipeline.workflowV2.model.Job;
 import net.sourceforge.seqware.pipeline.workflowV2.model.Workflow;
 import net.sourceforge.seqware.pipeline.workflowV2.model.SqwFile;
@@ -19,7 +19,7 @@ import net.sourceforge.seqware.pipeline.workflowV2.model.SqwFile;
  *
  * @author pruzanov
  */
-public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
+public class SampleFingerprintingWorkflow extends OicrWorkflow {
 
     private String [] bam_files;
     private String [] genotypes;
@@ -191,10 +191,6 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
         // iterate over inputs
         boolean haveNewVcfs = false;
         for (int i = 0; i< this.bam_files.length; i++) {
-         SqwFile file = this.createFile("bam_inputs_" + i);
-         file.setSourcePath(this.bam_files[i]);
-         file.setType("application/bam");
-	 file.setIsInput(true);
         
         //Using first file, try to guess the study name if it was not provided as an argument in .ini file
         if (i == 0 && this.studyName.isEmpty()) {
@@ -226,32 +222,12 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
 	  this.vcf_files[i] = file_vcf.getProvisionedPath();
           file_vcf.setOutputPath(finalOutDir + vcfName);
           file_vcf.setForceCopy(true);
-	}
-        
+	} 
         
       }
 
-      Log.stdout("Created vcf files array of length " + this.vcf_files.length);
-      
-      // We will need to have a STUDYNAME_jaccard.matrix.csv output file setup here
-      if (haveNewVcfs) {
-        SqwFile file_matrix = this.createFile("jaccard_matrix");
-        file_matrix.setType("text/plain");
-        file_matrix.setSourcePath(this.dataDir + this.studyName + "_jaccard.matrix.csv");
-        file_matrix.setIsOutput(true);
-        file_matrix.setOutputPath(finalOutDir + this.studyName + "_jaccard.matrix.csv");
-        file_matrix.setForceCopy(true);  
-      } 
-        
-    
-      //Set up the output (we have to set up only those which don't exist yet)
-      SqwFile report_file = this.createFile("report_zip");
-      String report_name = this.reportName + "." + this.studyName;    
-      report_file.setSourcePath(this.dataDir + report_name + ".report.zip");
-      report_file.setType("application/zip-report-bundle");
-      report_file.setIsOutput(true);
-      report_file.setOutputPath(this.finalOutDir + report_name + ".report.zip");
-      report_file.setForceCopy(true);
+      Log.stdout("Created vcf files array of length " + this.vcf_files.length);        
+      //Set up the output (we have to set up only those which don't exist yet)   
               
      } catch (Exception e) {
        Logger.getLogger(SampleFingerprintingWorkflow.class.getName()).log(Level.SEVERE, null, e);     
@@ -307,22 +283,25 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
              job_copy.setQueue(this.queue);
             }
           
-          
           for (int i = 0; i < this.bam_files.length; i++) {
            SqwFile vcf = this.getFiles().get("vcf_inputs_" + i);
-           SqwFile bam = this.getFiles().get("bam_inputs_" + i);
 
            // First Step: Find which vcf files we need to generate
            if (null == this.genotypes || this.genotypes[i].isEmpty() || this.genotypes[i].equals("NA")) {
              //Preparation: we need to index all bam files before making vcfs
+             SqwFile bamFile = this.createInFile("application/bam", this.bam_files[i], false);
+             
              Job job_index = workflow.createBashJob("index_bams_" + i);
+             job_index.addFile(bamFile);
              job_index.setCommand(getWorkflowBaseDir() + "/bin/samtools-" + this.samtoolsVersion 
-                                + "/samtools index " + bam.getProvisionedPath());
+                                + "/samtools index " + bamFile.getProvisionedPath());
              job_index.setMaxMemory("2000");
              if (!this.queue.isEmpty()) {
               job_index.setQueue(this.queue);
              }  
-          
+           
+           
+           
            String basename = this.bam_files[i].substring(this.bam_files[i].lastIndexOf("/")+1,this.bam_files[i].lastIndexOf(".bam"));
            if (basename.contains(".")) {
                basename = basename.substring(0, basename.indexOf("."));
@@ -333,7 +312,7 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
                                + " -jar " + getWorkflowBaseDir() + "/bin/GenomeAnalysisTK-" + this.gatkVersion + "/GenomeAnalysisTK.jar "
                                + "-R " + this.genomeFile + " "
                                + "-T UnifiedGenotyper "
-                               + "-I " + bam.getProvisionedPath() + " "
+                               + "-I " + bamFile.getProvisionedPath() + " "
                                + "-o " + this.vcf_files[i] + " "
                                + "-stand_call_conf " + this.stand_call_conf + " "
                                + "-stand_emit_conf " + this.stand_emit_conf + " "
@@ -363,7 +342,7 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
                             + " -jar " + getWorkflowBaseDir() + "/bin/GenomeAnalysisTK-" + this.gatkVersion + "/GenomeAnalysisTK.jar "
                             + "-R " + this.genomeFile + " "
                             + "-T DepthOfCoverage "
-                            + "-I " + bam.getProvisionedPath() + " "
+                            + "-I " + bamFile.getProvisionedPath() + " "
                             + "-o " + this.tempDir + basename + " " 
                             + "-L " + this.checkedSNPs);
             job_gatk2.setMaxMemory(getProperty("gatk_memory"));
@@ -459,7 +438,7 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
                    Job job_jchunk = workflow.createBashJob("make_matrix_" + resultID);
                    String chunkName = "jaccard.chunk." + resultID + ".csv";
                    String sep = chunkedResults.toString().isEmpty() ? "" : ",";
-                   chunkedResults.append(sep).append(this.dataDir + chunkName);
+                   chunkedResults.append(sep).append(this.dataDir).append(chunkName);
                    
                    resultID+=1;
 
@@ -499,7 +478,8 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
                            }
                            job_list_writer2.addParent(job_vcfprep);
 
-           SqwFile matrix = this.getFiles().get("jaccard_matrix");
+           SqwFile matrix = this.createOutFile("text/plain",this.dataDir + this.studyName + "_jaccard.matrix.csv",
+                                                finalOutDir + this.studyName + "_jaccard.matrix.csv",true);
            Job job_jaccard = workflow.createBashJob("make_matrix");          
            job_jaccard.setCommand(getWorkflowBaseDir() + "/dependencies/jaccard_coeff.matrix.pl "
                             + "--list=" + this.dataDir + chunkList + " "
@@ -552,8 +532,10 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
            }
            
            // Zip everything into a report bundle for provisioning
+           String report_name = this.reportName + "." + this.studyName;
+           SqwFile report_file = this.createOutFile("application/zip-report-bundle", this.dataDir + report_name + ".report.zip", this.finalOutDir + report_name + ".report.zip", true);
            Job zip_report = workflow.createBashJob("zip_everything");
-           zip_report.setCommand("zip -r " + getFiles().get("report_zip").getSourcePath() + " "
+           zip_report.setCommand("zip -r " + report_file.getSourcePath() + " "
                            + this.dataDir + "*.png "
                            + this.dataDir + "images "
                            + this.dataDir + "*_genotype_report*.csv "
@@ -563,6 +545,9 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
                            + this.dataDir + "*.html");
            zip_report.addParent(zip_fins);
            zip_report.setMaxMemory("2000");
+           
+           zip_report.addFile(report_file);
+           
            if (!this.queue.isEmpty()) {
              zip_report.setQueue(this.queue);
            }
@@ -575,7 +560,7 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
                           + "--watchers=" + this.watchersList + " "
                           + "--report=" + this.dataDir + "index.html "
                           + "--studyname=" + this.studyName + " "
-                          + "--bundle=" + getFiles().get("report_zip").getOutputPath());
+                          + "--bundle=" + report_file.getOutputPath());
             job_alert.setMaxMemory("2000");
             job_alert.addParent(zip_report);
             if (!this.queue.isEmpty()) {
@@ -589,12 +574,22 @@ public class SampleFingerprintingWorkflow extends AbstractWorkflowDataModel {
         
     }
     
-    private SqwFile createOutFile (String meta,String source,String outpath,boolean force) {
+    private SqwFile createOutFile (String meta, String source, String outpath, boolean force) {
         SqwFile file = new SqwFile();
         file.setType(meta);
         file.setSourcePath(source);
         file.setIsOutput(true);
         file.setOutputPath(outpath);
+        file.setForceCopy(force);
+        
+        return file;
+    }
+    
+    private SqwFile createInFile (String meta, String source, boolean force) {
+        SqwFile file = new SqwFile();
+        file.setType(meta);
+        file.setSourcePath(source);
+        file.setIsInput(true);
         file.setForceCopy(force);
         
         return file;
