@@ -352,7 +352,7 @@ public class SampleFingerprintingDecider extends OicrDecider {
         // Match vcf files to bam files
         boolean vcfFoundOnce = false;
         for (String bam : this.inputFiles.split(",")) {
-            String bamBase = bam.substring(bam.lastIndexOf("/")+1,bam.lastIndexOf(".bam"));
+            String bamBase = bam.substring(bam.lastIndexOf("/") + 1,bam.lastIndexOf(".bam"));
             boolean vcfFound = false;
             for (String vcfPath : vcfFiles) {
                 if (vcfPath.contains(bamBase)) {
@@ -493,7 +493,7 @@ public class SampleFingerprintingDecider extends OicrDecider {
                 ex.printStackTrace();
             }
             FileAttributes fa = new FileAttributes(rv, rv.getFiles().get(0));
-            iusDetails = fa.getSequencerRun() + fa.getLane() + fa.getBarcode() + fa.getMetatype();
+            iusDetails = fa.getLibrarySample() + fa.getSequencerRun() + fa.getLane() + fa.getBarcode() + fa.getMetatype();
             // We are going to group by template type only (if we did not receive template type as a parameter)
             groupByAttribute = fa.getLimsValue(Lims.LIBRARY_TEMPLATE_TYPE);
             String tgtReseq  = fa.getLimsValue(Lims.TARGETED_RESEQUENCING);
