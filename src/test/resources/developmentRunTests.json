@@ -1,0 +1,24 @@
+{
+    "defaultDescription": "SampleFingerprinting decider test",
+    "defaultMetricsDirectory": "/.mounts/labs/PDE/data/RegressionTests/SampleFingerprinting/decider/development",
+    "defaultParameters": {
+        "--output-path": "./"
+    },
+    "defaultIniExclusions": ["parent-accessions", "workflow_run_accession", "workflow-run-accession",
+        "unique_string", "parent_accessions", "parent_accession", "input_file", "input_files", "workflow_bundle_dir",
+        "output_prefix"],
+    "tests": [
+        {
+            "id": "AshPC study test",
+            "studies": ["AshPC"]
+        },
+        {
+            "id": "ABIRC study test",
+            "studies": ["ABvsInvitrogenReagentComp"]
+        },
+        {
+            "id": "SequencerRun test",
+            "sequencerRuns": ["121011_SN802_0091_AD1DDBACXX"]
+        }
+    ]
+}
