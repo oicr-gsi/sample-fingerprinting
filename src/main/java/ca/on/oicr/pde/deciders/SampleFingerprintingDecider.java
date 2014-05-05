@@ -88,12 +88,18 @@ public class SampleFingerprintingDecider extends OicrDecider {
         this.reseqType = new HashMap<String, Map>();
 	//Group by template type if no other grouping selected
         if (!this.options.has("group-by")) {
-            if (this.options.has("study-name"))
+            if (this.options.has("study-name")) {
                 this.setGroupingStrategy(Header.STUDY_SWA);
-            if (this.options.has("sample-name"))
-                this.setGroupingStrategy(Header.SAMPLE_SWA);
-            if (this.options.has("sequencer-run-name"))
+            }
+            if (this.options.has("root-sample-name")) {
+                //TODO: net.sourceforge.seqware.common.hibernate.FindAllTheFiles.Header needs to be updated to support ROOT_SAMPLE_SWA
+                //uncomment when fixed... this.setGroupingStrategy(Header.ROOT_SAMPLE_SWA);
+                //error out until the above TODO is implemented
+                throw new RuntimeException("ROOT_SAMPLE_SWA needs to be implemented in FindAllTheFiles.Header");
+            }
+            if (this.options.has("sequencer-run-name")) {
                 this.setGroupingStrategy(Header.SEQUENCER_RUN_SWA);
+            }
         } else {
             Log.warn("Passing group-by parameter overrides the defaults, I hope you know what you are doing");
         }
