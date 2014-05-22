@@ -8,6 +8,7 @@ import ca.on.oicr.pde.utilities.workflows.OicrWorkflow;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import net.sourceforge.seqware.common.util.Log;
@@ -24,10 +25,11 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
     private String [] bam_files;
     private String [] genotypes;
     private String [] vcf_files;
+    private String [] GATK_dirs;
     private String existingMatrix = "";
     private String studyName = "";
     private String watchersList = "";
-    private String finalOutDir;
+    //private String finalOutDir;
     private String dataDir;
     private String tempDir = "tempfiles/";
     //Additional one for GATK:
@@ -48,7 +50,8 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
     private String stand_call_conf = "50.0";
     private String stand_emit_conf = "10.0";
     private String dcov = "200";
-    private int jChunkSize = 50; // Maximum allowed number of vcf files when jaccard_indexing step doesn't fork into multiple sub-jobs
+    private final int  jChunkSize = 50; // Maximum allowed number of vcf files when jaccard_indexing step doesn't fork into multiple sub-jobs
+    private final int  batchCount = 100; // Use for job batching, this many jobs 
     private boolean manualOutput;
     private boolean provisionVcfs;
     
@@ -187,48 +190,30 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
         }
        
         this.vcf_files = new String[this.bam_files.length];
-        
-        // iterate over inputs
-        boolean haveNewVcfs = false;
-        for (int i = 0; i< this.bam_files.length; i++) {
-        
-        //Using first file, try to guess the study name if it was not provided as an argument in .ini file
-        if (i == 0 && this.studyName.isEmpty()) {
-          if (bam_files[i].matches("SWID_\\d+_\\D+_\\d+")) {
-             String tempName = bam_files[i].substring(bam_files[i].lastIndexOf("SWID_"));
-             this.studyName = tempName.substring(0, tempName.indexOf("_") - 1);
-           } else {
-             this.studyName = "UNDEF";
-           }
-        }
-        
-        String basename = this.bam_files[i].substring(this.bam_files[i].lastIndexOf("/")+1, this.bam_files[i].lastIndexOf(".bam"));
-        if (basename.contains(".")) {
-         basename = basename.substring(0, basename.indexOf("."));
-        }
-        String vcfName  = basename + ".snps.raw.vcf";
-        
-        
-        // If we don't have a vcf file we need to set it as an output
-        // vcf files are in the same order as bam files, decider need to make sure
-	if (null == this.genotypes || this.genotypes[i].isEmpty() || this.genotypes[i].equals("NA") || !this.genotypes[i].contains(vcfName)) {
-	  haveNewVcfs = true;
-	  this.vcf_files[i] = this.dataDir + vcfName;
-        } else {
-          SqwFile file_vcf = this.createFile("vcf_inputs_" + i);
-          file_vcf.setType("text/vcf-4");
-          file_vcf.setSourcePath(this.genotypes[i]);
-          file_vcf.setIsInput(true);
-	  this.vcf_files[i] = file_vcf.getProvisionedPath();
-          file_vcf.setOutputPath(finalOutDir + vcfName);
-          file_vcf.setForceCopy(true);
-	} 
-        
-      }
 
-      Log.stdout("Created vcf files array of length " + this.vcf_files.length);        
-      //Set up the output (we have to set up only those which don't exist yet)   
-              
+         for (int i = 0; i < this.bam_files.length; i++) {
+             //Using first file, try to guess the study name if it was not provided as an argument in .ini file
+             if (i == 0 && this.studyName.isEmpty()) {
+                 if (bam_files[i].matches("SWID_\\d+_\\D+_\\d+")) {
+                     String tempName = bam_files[i].substring(bam_files[i].lastIndexOf("SWID_"));
+                     this.studyName = tempName.substring(0, tempName.indexOf("_") - 1);
+                 } else {
+                     this.studyName = "UNDEF";
+                 }
+             }
+
+             String basename = this.bam_files[i].substring(this.bam_files[i].lastIndexOf("/") + 1, this.bam_files[i].lastIndexOf(".bam"));
+             if (basename.contains(".")) {
+                 basename = basename.substring(0, basename.indexOf("."));
+             }
+             String vcfName = basename + ".snps.raw.vcf";
+             this.vcf_files[i] = this.dataDir + vcfName;
+
+             // If we don't have a vcf file we need to set it as an output (Obsolete)
+             // vcf files are in the same order as bam files, the decider needs to ensure this
+
+         }
+         Log.stdout("Created array of " + this.vcf_files.length + " vcf files of length ");               
      } catch (Exception e) {
        Logger.getLogger(SampleFingerprintingWorkflow.class.getName()).log(Level.SEVERE, null, e);     
      }
@@ -254,9 +239,16 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
          this.addDirectory(outdir);      
          this.addDirectory(this.tempDir);
          this.addDirectory(this.dataDir + this.finDir);        
-         this.finalOutDir = outdir;
-
-                 
+         //this.finalOutDir = outdir;
+         
+         //Make a pool of tmp directories for GATK:
+         this.GATK_dirs = new String[this.bam_files.length];
+         int seed = this.makeRandom(8);
+         for (int b = 0; b < this.bam_files.length; b++) {
+             this.GATK_dirs[b] = this.tmpDir + seed++;
+             this.addDirectory(GATK_dirs[b]);
+         }
+    
        } catch (Exception e) {
          Logger.getLogger(SampleFingerprintingWorkflow.class.getName()).log(Level.WARNING, null, e);
        }
@@ -283,89 +275,103 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
              job_copy.setQueue(this.queue);
             }
           
-          for (int i = 0; i < this.bam_files.length; i++) {
-           SqwFile vcf = this.getFiles().get("vcf_inputs_" + i);
+          // TODO Entry point for Job batching modifications
+          int batchLength   = this.bam_files.length/this.batchCount;
+          String[] bam_path = new String[this.bam_files.length];
+          //for (int i = 0; i < this.bam_files.length; i++) {
+          for (int i = 0; i < this.bam_files.length + batchLength; i+=batchLength) {
 
-           // First Step: Find which vcf files we need to generate
-           if (null == this.genotypes || this.genotypes[i].isEmpty() || this.genotypes[i].equals("NA")) {
-             //Preparation: we need to index all bam files before making vcfs
-             SqwFile bamFile = this.createInFile("application/bam", this.bam_files[i], false);
-             
              Job job_index = workflow.createBashJob("index_bams_" + i);
-             job_index.addFile(bamFile);
-             job_index.setCommand(getWorkflowBaseDir() + "/bin/samtools-" + this.samtoolsVersion 
-                                + "/samtools index " + bamFile.getProvisionedPath());
-             job_index.setMaxMemory("2000");
-             if (!this.queue.isEmpty()) {
-              job_index.setQueue(this.queue);
-             }  
+             //BATCHING Job1 series
+             for (int bj1 = i; bj1 < i + batchLength; bj1++) {
+                  if (bj1 >= this.bam_files.length)
+                      break;
+
+                  SqwFile bamFile = this.createInFile("application/bam", this.bam_files[bj1], false);
+                  bam_path[bj1] = bamFile.getProvisionedPath();
+                  job_index.addFile(bamFile);
+                  job_index.getCommand().addArgument(getWorkflowBaseDir() + "/bin/samtools-" + this.samtoolsVersion
+                          + "/samtools index " + bamFile.getProvisionedPath() + ";");
+              } //Batching ENDs
+             job_index.setMaxMemory("4000");
+             if (!this.queue.isEmpty()) 
+               job_index.setQueue(this.queue);
+            
            
-           
-           
-           String basename = this.bam_files[i].substring(this.bam_files[i].lastIndexOf("/")+1,this.bam_files[i].lastIndexOf(".bam"));
+           /*String basename = this.bam_files[i].substring(this.bam_files[i].lastIndexOf("/")+1,this.bam_files[i].lastIndexOf(".bam"));
            if (basename.contains(".")) {
                basename = basename.substring(0, basename.indexOf("."));
-           }
-           if (null == vcf) { 
+           }*/
+
              Job job_gatk = workflow.createBashJob("call_snps_" + i);
-             job_gatk.setCommand(gatk_java + " -Xmx2g -Djava.io.tmpdir=" + tmpDir + i
+             //BATCHING Job2 series
+             for (int bj2 = i; bj2 < i + batchLength; bj2++) {
+                  if (bj2 >= this.bam_files.length)
+                      break;
+             job_gatk.getCommand().addArgument(gatk_java + " -Xmx2g -Djava.io.tmpdir=" + this.GATK_dirs[bj2]
                                + " -jar " + getWorkflowBaseDir() + "/bin/GenomeAnalysisTK-" + this.gatkVersion + "/GenomeAnalysisTK.jar "
                                + "-R " + this.genomeFile + " "
                                + "-T UnifiedGenotyper "
-                               + "-I " + bamFile.getProvisionedPath() + " "
+                               + "-I " + bam_path[bj2] + " "
                                + "-o " + this.vcf_files[i] + " "
                                + "-stand_call_conf " + this.stand_call_conf + " "
                                + "-stand_emit_conf " + this.stand_emit_conf + " "
                                + "-dcov " + this.dcov + " "
-                               + "-L " + this.checkedSNPs);
-
+                               + "-L " + this.checkedSNPs + ";");
+                 if (this.provisionVcfs) {
+                     SqwFile vcf_file = this.createOutputFile(this.vcf_files[bj2], "text/vcf-4", this.manualOutput);
+                     job_gatk.addFile(vcf_file);
+                 }
+             } //Batching ENDs
             job_gatk.setMaxMemory(getProperty("gatk_memory"));
             if (!this.queue.isEmpty()) {
              job_gatk.setQueue(this.queue);
             }
             
-            if (this.provisionVcfs) {
-             SqwFile vcf_file = this.createOutFile("text/vcf-4",
-                                                   this.vcf_files[i],
-                                                   this.finalOutDir + this.vcf_files[i].substring(this.vcf_files[i].lastIndexOf("/")+1),
-                                                   true);              
-             job_gatk.addFile(vcf_file);
-            }
             job_gatk.addParent(job_index);
             gatk_jobs.add(job_gatk);
             newVcfs++; // Used only to track the number of newly generated vcf files
-            }
-            
             
             Job job_gatk2 = workflow.createBashJob("calculate_depth_" + i);
-            job_gatk2.setCommand(gatk_java + " -Xmx3g -Djava.io.tmpdir=" + tmpDir + i
-                            + " -jar " + getWorkflowBaseDir() + "/bin/GenomeAnalysisTK-" + this.gatkVersion + "/GenomeAnalysisTK.jar "
-                            + "-R " + this.genomeFile + " "
-                            + "-T DepthOfCoverage "
-                            + "-I " + bamFile.getProvisionedPath() + " "
-                            + "-o " + this.tempDir + basename + " " 
-                            + "-L " + this.checkedSNPs);
-            job_gatk2.setMaxMemory(getProperty("gatk_memory"));
-            if (!this.queue.isEmpty()) {
-              job_gatk2.setQueue(this.queue);
-            }
-            job_gatk2.addParent(job_index);
+            //BATCHING Job3 series
+             for (int bj3 = i; bj3 < i + batchLength; bj3++) {
+                  if (bj3 >= this.bam_files.length) {
+                      break;
+                  }
+                  job_gatk2.getCommand().addArgument(gatk_java + " -Xmx3g -Djava.io.tmpdir=" + this.GATK_dirs[bj3]
+                          + " -jar " + getWorkflowBaseDir() + "/bin/GenomeAnalysisTK-" + this.gatkVersion + "/GenomeAnalysisTK.jar "
+                          + "-R " + this.genomeFile + " "
+                          + "-T DepthOfCoverage "
+                          + "-I " + bam_path[bj3] + " "
+                          + "-o " + this.tempDir + this.makeBasename(this.bam_files[bj3]) + " "
+                          + "-L " + this.checkedSNPs + ";");
+              }// BATCHING ENDs
+              job_gatk2.setMaxMemory(getProperty("gatk_memory"));
+              if (!this.queue.isEmpty()) {
+                  job_gatk2.setQueue(this.queue);
+              }
+              job_gatk2.addParent(job_index);
             
             //Additional step to create depth of coverage data - for individual fingerprint image generation
             Job job_fin = workflow.createBashJob("make_fingerprint_file_" + i);
-            job_fin.setCommand(getWorkflowBaseDir() + "/dependencies/create_fin.pl "
+            //BATCHING Job4 series
+             for (int bj4 = i; bj4 < i + batchLength; bj4++) {
+                  if (bj4 >= this.bam_files.length)
+                      break;
+           
+            String basename = this.makeBasename(this.bam_files[bj4]);
+            job_fin.getCommand().addArgument(getWorkflowBaseDir() + "/dependencies/create_fin.pl "
                           + "--refvcf="   + this.checkedSNPs + " "
-                          + "--genotype=" + this.vcf_files[i] + " "
+                          + "--genotype=" + this.vcf_files[bj4] + " "
                           + "--coverage=" + this.tempDir + basename + ".sample_interval_summary "
                           + "--datadir="  + this.tempDir + " "
                           + "--outdir="   + this.dataDir + this.finDir + " "
-                          + "--basename=" + basename);
-            
+                          + "--basename=" + basename + ";");
+            } //BATCHING ENDs
             job_fin.setMaxMemory("4000");
             job_fin.addParent(job_gatk2);
-            gatk_jobs.add(job_fin);         
-            } 
-           }
+            gatk_jobs.add(job_fin);
+           } // END OF job Batching loop
            
            // We don't need to continue if there are no new vcf files to generate
            if (newVcfs == 0) {
@@ -412,7 +418,6 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
                 chunkMultiplier += 1;
                 }                
                 vcf_chunks.add(new Integer(1));
-                
                 int resultID = 1;
                 
                 // Combine chunks and run the jobs, registering results for later use
@@ -461,128 +466,113 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
                 }
                // The result of the last job will be existingMatrix
                this.existingMatrix = chunkedResults.toString();
-           }             
+            }             
            
            
-           // Next job is jaccard_coeff.matrix script, need to create|update giant matrix of jaccard indexes
-           // using vcftools, colors should not be assigned at his step. Will be final jaccard index job          
-           Job job_list_writer2 = workflow.createBashJob("make_Final_list");
-           String chunkList = "jaccard.chunks.list";
-           job_list_writer2.setCommand(getWorkflowBaseDir() + "/dependencies/write_list.pl "
-                            + "--datadir=" + this.dataDir + " "
-                            + "> " + this.dataDir + chunkList);
+            // Next job is jaccard_coeff.matrix script, need to create|update giant matrix of jaccard indexes
+            // using vcftools, colors should not be assigned at his step. Will be final jaccard index job          
+            Job job_list_writer2 = workflow.createBashJob("make_Final_list");
+            String chunkList = "jaccard.chunks.list";
+            job_list_writer2.setCommand(getWorkflowBaseDir() + "/dependencies/write_list.pl "
+                    + "--datadir=" + this.dataDir + " "
+                    + "> " + this.dataDir + chunkList);
 
-                           job_list_writer2.setMaxMemory("2000");
-                           if (!this.queue.isEmpty()) {
-                            job_list_writer2.setQueue(this.queue);
-                           }
-                           job_list_writer2.addParent(job_vcfprep);
-
-           SqwFile matrix = this.createOutFile("text/plain",this.dataDir + this.studyName + "_jaccard.matrix.csv",
-                                                finalOutDir + this.studyName + "_jaccard.matrix.csv",true);
-           Job job_jaccard = workflow.createBashJob("make_matrix");          
-           job_jaccard.setCommand(getWorkflowBaseDir() + "/dependencies/jaccard_coeff.matrix.pl "
-                            + "--list=" + this.dataDir + chunkList + " "
-                            + "--vcf_compare=" + getWorkflowBaseDir() + "/bin/vcftools_" + this.vcftoolsVersion + "/bin/vcf-compare "
-                            + "--datadir=" + this.dataDir + " "
-                            + "--tabix=" + getWorkflowBaseDir() + "/bin/tabix-" + this.tabixVersion + " "
-                            + "--studyname=" + this.studyName + " "
-                            + "> " + matrix.getSourcePath());
-           if (!this.existingMatrix.isEmpty()) {
-             job_jaccard.getCommand().addArgument("--existing_matrix=" + this.existingMatrix);
-           }
-           
-           job_jaccard.setMaxMemory("3000");
-           if (!this.queue.isEmpty()) {
-            job_jaccard.setQueue(this.queue);
-           }
-           job_jaccard.addFile(matrix);
-           job_jaccard.addParent(job_list_writer2);
-           for(Job parent: upstream_jobs) {
-               job_jaccard.addParent(parent);
-           }
-           
-           // Images generated here: matrix slicing/color assignment, flagging suspicious files, wrapper for R script
-           Job make_pics = workflow.createBashJob("make_report");
-           make_pics.setCommand("perl " + getWorkflowBaseDir() + "/dependencies/make_report.pl "
-                          + "--matrix=" + matrix.getSourcePath() + " "
-                          + "--refsnps=" + this.check_points + " "
-                          + "--tempdir=" + this.dataDir + this.finDir + " "
-                          + "--datadir=" + this.dataDir + " "
-                          + "--studyname=" + this.studyName + " "
-                          + "> " + this.dataDir + "index.html");
-           make_pics.addParent(job_copy);
-           make_pics.addParent(job_jaccard);
-           make_pics.setMaxMemory("4000");
-           if (!this.queue.isEmpty()) {
-            make_pics.setQueue(this.queue);
-           }
-           
-           
-           
-           // Zip finfiles and similarity matrix for customization in the webtool
-           Job zip_fins = workflow.createBashJob("zip_finfiles");
-           zip_fins.setCommand("zip -r " + this.dataDir + "customize.me.zip "
-                           + this.dataDir + "finfiles "
-                           + matrix.getSourcePath());
-           zip_fins.addParent(make_pics);
-           zip_fins.setMaxMemory("2000");
-           if (!this.queue.isEmpty()) {
-             zip_fins.setQueue(this.queue);
-           }
-           
-           // Zip everything into a report bundle for provisioning
-           String report_name = this.reportName + "." + this.studyName;
-           SqwFile report_file = this.createOutFile("application/zip-report-bundle", this.dataDir + report_name + ".report.zip", this.finalOutDir + report_name + ".report.zip", true);
-           Job zip_report = workflow.createBashJob("zip_everything");
-           zip_report.setCommand("zip -r " + report_file.getSourcePath() + " "
-                           + this.dataDir + "*.png "
-                           + this.dataDir + "images "
-                           + this.dataDir + "*_genotype_report*.csv "
-                           + this.dataDir + "*_similarity_matrix*.csv "
-                           + matrix.getSourcePath() + " "
-                           + this.dataDir + "customize.me.zip "
-                           + this.dataDir + "*.html");
-           zip_report.addParent(zip_fins);
-           zip_report.setMaxMemory("2000");
-           
-           zip_report.addFile(report_file);
-           
-           if (!this.queue.isEmpty()) {
-             zip_report.setQueue(this.queue);
-           }
-           
-           // Next job is report-emailing script (check html for flagged samples, send email(s) to interested people)
-           // Attach zipped report? Maybe NO
-           if (!this.watchersList.isEmpty()) {
-            Job job_alert = workflow.createBashJob("send_alert");
-            job_alert.setCommand("perl " + getWorkflowBaseDir() + "/dependencies/plotReporter.pl "
-                          + "--watchers=" + this.watchersList + " "
-                          + "--report=" + this.dataDir + "index.html "
-                          + "--studyname=" + this.studyName + " "
-                          + "--bundle=" + report_file.getOutputPath());
-            job_alert.setMaxMemory("2000");
-            job_alert.addParent(zip_report);
+            job_list_writer2.setMaxMemory("2000");
             if (!this.queue.isEmpty()) {
-             job_alert.setQueue(this.queue);
+                job_list_writer2.setQueue(this.queue);
             }
-           }
+            job_list_writer2.addParent(job_vcfprep);
+
+            SqwFile matrix = this.createOutputFile(this.dataDir + this.studyName + "_jaccard.matrix.csv", "text/plain", this.manualOutput);
+            Job job_jaccard = workflow.createBashJob("make_matrix");
+            job_jaccard.setCommand(getWorkflowBaseDir() + "/dependencies/jaccard_coeff.matrix.pl "
+                    + "--list=" + this.dataDir + chunkList + " "
+                    + "--vcf_compare=" + getWorkflowBaseDir() + "/bin/vcftools_" + this.vcftoolsVersion + "/bin/vcf-compare "
+                    + "--datadir=" + this.dataDir + " "
+                    + "--tabix=" + getWorkflowBaseDir() + "/bin/tabix-" + this.tabixVersion + " "
+                    + "--studyname=" + this.studyName + " "
+                    + "> " + matrix.getSourcePath());
+            if (!this.existingMatrix.isEmpty()) {
+                job_jaccard.getCommand().addArgument("--existing_matrix=" + this.existingMatrix);
+            }
+
+            job_jaccard.setMaxMemory("3000");
+            if (!this.queue.isEmpty()) {
+                job_jaccard.setQueue(this.queue);
+            }
+            job_jaccard.addFile(matrix);
+            job_jaccard.addParent(job_list_writer2);
+            for (Job parent : upstream_jobs) {
+                job_jaccard.addParent(parent);
+            }
+
+            // Images generated here: matrix slicing/color assignment, flagging suspicious files, wrapper for R script
+            Job make_pics = workflow.createBashJob("make_report");
+            make_pics.setCommand("perl " + getWorkflowBaseDir() + "/dependencies/make_report.pl "
+                    + "--matrix=" + matrix.getSourcePath() + " "
+                    + "--refsnps=" + this.check_points + " "
+                    + "--tempdir=" + this.dataDir + this.finDir + " "
+                    + "--datadir=" + this.dataDir + " "
+                    + "--studyname=" + this.studyName + " "
+                    + "> " + this.dataDir + "index.html");
+            make_pics.addParent(job_copy);
+            make_pics.addParent(job_jaccard);
+            make_pics.setMaxMemory("4000");
+            if (!this.queue.isEmpty()) {
+                make_pics.setQueue(this.queue);
+            }
+
+            // Zip finfiles and similarity matrix for customization in the webtool
+            Job zip_fins = workflow.createBashJob("zip_finfiles");
+            zip_fins.setCommand("zip -r " + this.dataDir + "customize.me.zip "
+                    + this.dataDir + "finfiles "
+                    + matrix.getSourcePath());
+            zip_fins.addParent(make_pics);
+            zip_fins.setMaxMemory("2000");
+            if (!this.queue.isEmpty()) {
+                zip_fins.setQueue(this.queue);
+            }
+
+            // Zip everything into a report bundle for provisioning
+            String report_name = this.reportName + "." + this.studyName;
+            SqwFile report_file = this.createOutputFile(this.dataDir + report_name + ".report.zip", "application/zip-report-bundle", manualOutput);
+            Job zip_report = workflow.createBashJob("zip_everything");
+            zip_report.setCommand("zip -r " + report_file.getSourcePath() + " "
+                    + this.dataDir + "*.png "
+                    + this.dataDir + "images "
+                    + this.dataDir + "*_genotype_report*.csv "
+                    + this.dataDir + "*_similarity_matrix*.csv "
+                    + matrix.getSourcePath() + " "
+                    + this.dataDir + "customize.me.zip "
+                    + this.dataDir + "*.html");
+            zip_report.addParent(zip_fins);
+            zip_report.setMaxMemory("2000");
+
+            zip_report.addFile(report_file);
+
+            if (!this.queue.isEmpty()) {
+                zip_report.setQueue(this.queue);
+            }
+           
+            // Next job is report-emailing script (check html for flagged samples, send email(s) to interested people)
+            if (!this.watchersList.isEmpty()) {
+                Job job_alert = workflow.createBashJob("send_alert");
+                job_alert.setCommand("perl " + getWorkflowBaseDir() + "/dependencies/plotReporter.pl "
+                        + "--watchers=" + this.watchersList + " "
+                        + "--report=" + this.dataDir + "index.html "
+                        + "--studyname=" + this.studyName + " "
+                        + "--bundle=" + report_file.getOutputPath());
+                job_alert.setMaxMemory("2000");
+                job_alert.addParent(zip_report);
+                if (!this.queue.isEmpty()) {
+                    job_alert.setQueue(this.queue);
+                }
+            }
            
           } catch (Exception e) {
             Logger.getLogger(getClass().getName()).log(Level.SEVERE, null, e);
           }
         
-    }
-    
-    private SqwFile createOutFile (String meta, String source, String outpath, boolean force) {
-        SqwFile file = new SqwFile();
-        file.setType(meta);
-        file.setSourcePath(source);
-        file.setIsOutput(true);
-        file.setOutputPath(outpath);
-        file.setForceCopy(force);
-        
-        return file;
     }
     
     private SqwFile createInFile (String meta, String source, boolean force) {
@@ -593,6 +583,23 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
         file.setForceCopy(force);
         
         return file;
+    }
+    
+    private int makeRandom(int digits) {
+        Random rnd = new Random();
+        String randomString = "1"; // start each string from 1 to prevent zero at the beginning 
+        for (int i = 1; i < digits; i++) {
+         randomString += rnd.nextInt(9);
+        }
+        return Integer.parseInt(randomString);
+    }
+    
+    private String makeBasename(String name) {
+        String basename = name.substring(name.lastIndexOf("/") + 1, name.lastIndexOf(".bam"));
+           if (basename.contains(".")) {
+               basename = basename.substring(0, basename.indexOf("."));
+           }
+         return basename;
     }
    
 }
