@@ -214,6 +214,13 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
 
          }
          Log.stdout("Created array of " + this.vcf_files.length + " vcf files of length ");               
+         
+         //Construct GATK_dirs array with random names for later use with GATK
+         this.GATK_dirs = new String[this.bam_files.length];
+         int seed = this.makeRandom(8);
+         for (int b = 0; b < this.bam_files.length; b++) {
+             this.GATK_dirs[b] = this.tmpDir + seed++;
+         }
      } catch (Exception e) {
        Logger.getLogger(SampleFingerprintingWorkflow.class.getName()).log(Level.SEVERE, null, e);     
      }
