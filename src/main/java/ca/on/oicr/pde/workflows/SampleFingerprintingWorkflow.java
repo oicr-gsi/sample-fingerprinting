@@ -29,7 +29,6 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
     private String existingMatrix = "";
     private String studyName = "";
     private String watchersList = "";
-    //private String finalOutDir;
     private String dataDir;
     private String tempDir = "tempfiles/";
     //Additional one for GATK:
@@ -232,7 +231,7 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
     public void setupDirectory() {
         try {
             // String outdir = null;
-         /* if (getProperty("output_dir") != null && getProperty("output_prefix") != null) {
+            /* if (getProperty("output_dir") != null && getProperty("output_prefix") != null) {
              outdir = getProperty("output_prefix") + getProperty("output_dir");
              if (!this.manualOutput)
              outdir += "/seqware-" + this.getSeqware_version() + "_" + this.getName() + "_" + this.getVersion() + "/" + this.getRandom() + "/";
