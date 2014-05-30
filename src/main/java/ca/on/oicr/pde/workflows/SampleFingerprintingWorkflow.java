@@ -230,13 +230,6 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
     @Override
     public void setupDirectory() {
         try {
-            // String outdir = null;
-            /* if (getProperty("output_dir") != null && getProperty("output_prefix") != null) {
-             outdir = getProperty("output_prefix") + getProperty("output_dir");
-             if (!this.manualOutput)
-             outdir += "/seqware-" + this.getSeqware_version() + "_" + this.getName() + "_" + this.getVersion() + "/" + this.getRandom() + "/";
-             }*/
-
             this.dataDir = getProperty("data_dir");
             if (this.dataDir == null || this.dataDir.isEmpty()) {
                 this.dataDir = "data/";
@@ -283,80 +276,63 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
             }
 
             // TODO Entry point for Job batching modifications
-            //int batchLength = this.bam_files.length / this.batchCount;
-            int batchLength = 15; // For debugging
+            int batchLength = this.bam_files.length / this.batchCount;
+            //int batchLength = 15; //DEBUG
             String[] bam_path = new String[this.bam_files.length];
 
             for (int i = 0; i < this.bam_files.length; i += batchLength) {
-
-                prov_jobs.clear();
-                StringBuilder idxCommand = new StringBuilder();
-
                 //BATCHING Job1 series
-                int stop = i + batchLength < this.bam_files.length ? i + batchLength : this.bam_files.length;
+                int stop = i + batchLength >= this.bam_files.length ? this.bam_files.length : i + batchLength;
+                prov_jobs.clear();
+                
+                for (int bj0 = i; bj0 < stop; bj0++) {  
+                    
+                  Job job_provide = workflow.createBashJob("provide_bams_" + i);
+                  job_provide.setCommand("echo Provisioning File in Batch " + i);
+                  StringBuilder provCommand = new StringBuilder();
 
-                for (int bj1 = i; bj1 < stop; bj1++) {
-                    // if (bj1 >= this.bam_files.length) {
-                    //      break;
-                    // }
-                    //Testing samtools index in un-batched mode
-                    //Job job_index = workflow.createBashJob("index_bams_" + bj1);
-                    Job job_provision = workflow.createBashJob("provision_bam_" + bj1);
-                    StringBuilder provCommand = new StringBuilder();
+                  SqwFile bamFile = this.createInFile("application/bam", this.bam_files[bj0]);
+                  bam_path[bj0] = bamFile.getProvisionedPath();
+                  job_provide.addFile(bamFile);
 
-                    SqwFile bamFile = this.createInFile("application/bam", this.bam_files[bj1]);
-                    bam_path[bj1] = bamFile.getProvisionedPath();
+                  provCommand.append("echo Provisioning File ").append(bj0);
 
-                    provCommand.append("echo Provisioning bam file ").append(bj1);
-                    job_provision.setCommand(provCommand.toString());
-                    job_provision.addFile(bamFile);
-                    job_provision.setMaxMemory("2000");
-                    //job_provision.addParent(job_copy);
-                    prov_jobs.add(job_provision);
+                  job_provide.setCommand(provCommand.toString());
+                  job_provide.addParent(job_copy);
+                  job_provide.setMaxMemory("2000");
+                  if (!this.queue.isEmpty()) {
+                    job_provide.setQueue(this.queue);
+                  }
+                  prov_jobs.add(job_provide);
+                } //Batching ENDs
+                
+                Job job_index = workflow.createBashJob("index_bams_" + i);
+                StringBuilder idxCommand = new StringBuilder();
+                for (int bj1 = i; bj1 < stop; bj1++) {  
 
-                    if (bj1 > i) {
-                        idxCommand.append(" && ");
-                    }
+                  if (bj1 > i)
+                      idxCommand.append(" && ");
 
-                    idxCommand.append(getWorkflowBaseDir())
+                  idxCommand.append(getWorkflowBaseDir())
                             .append("/bin/samtools-")
                             .append(this.samtoolsVersion)
                             .append("/samtools index ")
                             .append(bam_path[bj1]);
-
-                    //job_index.addParent(job_provision);
-                    //job_index.addFile(bamFile);
-
+               
                 } //Batching ENDs
-                //
-                Job job_index = workflow.createBashJob("index_bams_" + i);
                 job_index.setCommand(idxCommand.toString());
-                job_index.setMaxMemory("6000");
-                
-                //idx_jobs.add(job_index);
+                job_index.setMaxMemory("4000");
                 if (!this.queue.isEmpty()) {
                     job_index.setQueue(this.queue);
                 }
-                
-                for (Job prov : prov_jobs) {
-                    job_index.addParent(prov);
+                for (Job pj : prov_jobs) {
+                    job_index.addParent(pj);
                 }
-
-
-                /*String basename = this.bam_files[i].substring(this.bam_files[i].lastIndexOf("/")+1,this.bam_files[i].lastIndexOf(".bam"));
-                 if (basename.contains(".")) {
-                 basename = basename.substring(0, basename.indexOf("."));
-                 }*/
-
+                
                 Job job_gatk = workflow.createBashJob("call_snps_" + i);
                 StringBuilder gatkCommand = new StringBuilder();
                 //BATCHING Job2 series
-                //stop = i + batchLength < this.bam_files.length ? i + batchLength : this.bam_files.length;
                 for (int bj2 = i; bj2 < stop; bj2++) {
-                    // if (bj2 >= this.bam_files.length) {
-                    //     break;
-                    // }
-
                     if (bj2 > i) {
                         gatkCommand.append(" && ");
                     }
@@ -372,16 +348,6 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
                             .append("-dcov ").append(this.dcov).append(" ")
                             .append("-L ").append(this.checkedSNPs);
                     newVcfs++; // Used only to track the number of newly generated vcf files 
-                    /*job_gatk.getCommand().addArgument(gatk_java + " -Xmx2g -Djava.io.tmpdir=" + this.GATK_dirs[bj2]
-                     + " -jar " + getWorkflowBaseDir() + "/bin/GenomeAnalysisTK-" + this.gatkVersion + "/GenomeAnalysisTK.jar "
-                     + "-R " + this.genomeFile + " "
-                     + "-T UnifiedGenotyper "
-                     + "-I " + bam_path[bj2] + " "
-                     + "-o " + this.vcf_files[i] + " "
-                     + "-stand_call_conf " + this.stand_call_conf + " "
-                     + "-stand_emit_conf " + this.stand_emit_conf + " "
-                     + "-dcov " + this.dcov + " "
-                     + "-L " + this.checkedSNPs);*/
                     if (this.provisionVcfs) {
                         SqwFile vcf_file = this.createOutputFile(this.vcf_files[bj2], "text/vcf-4", this.manualOutput);
                         job_gatk.addFile(vcf_file);
@@ -393,15 +359,11 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
                     job_gatk.setQueue(this.queue);
                 }
                 job_gatk.addParent(job_index);
-                //for (Job ij : idx_jobs) {
-                //    job_gatk.addParent(ij);
-                //}
                 gatk_jobs.add(job_gatk);
 
                 Job job_gatk2 = workflow.createBashJob("calculate_depth_" + i);
                 StringBuilder gatk2Command = new StringBuilder();
                 //BATCHING Job3 series
-                //stop = i + batchLength < this.bam_files.length ? i + batchLength : this.bam_files.length;
                 for (int bj3 = i; bj3 < stop; bj3++) {
 
                     if (bj3 > i) {
@@ -414,32 +376,18 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
                             .append("-o ").append(this.tempDir).append(this.makeBasename(this.bam_files[bj3])).append(" ")
                             .append("-L ").append(this.checkedSNPs);
 
-                    /*job_gatk2.getCommand().addArgument(gatk_java + " -Xmx3g -Djava.io.tmpdir=" + this.GATK_dirs[bj3]
-                     + " -jar " + getWorkflowBaseDir() + "/bin/GenomeAnalysisTK-" + this.gatkVersion + "/GenomeAnalysisTK.jar "
-                     + "-R " + this.genomeFile + " "
-                     + "-T DepthOfCoverage "
-                     + "-I " + bam_path[bj3] + " "
-                     + "-o " + this.tempDir + this.makeBasename(this.bam_files[bj3]) + " "
-                     + "-L " + this.checkedSNPs);*/
                 }// BATCHING ENDs
                 job_gatk2.setCommand(gatk2Command.toString());
                 job_gatk2.setMaxMemory(getProperty("gatk_memory"));
                 if (!this.queue.isEmpty()) {
                     job_gatk2.setQueue(this.queue);
                 }
-
                 job_gatk2.addParent(job_index);
-                //for (Job ij : idx_jobs) {
-                //    job_gatk2.addParent(ij);
-                //}
 
                 //Additional step to create depth of coverage data - for individual fingerprint image generation
                 Job job_fin = workflow.createBashJob("make_fingerprint_file_" + i);
                 //BATCHING Job4 series
-                for (int bj4 = i; bj4 < i + batchLength; bj4++) {
-                    if (bj4 >= this.bam_files.length) {
-                        break;
-                    }
+                for (int bj4 = i; bj4 < stop; bj4++) {
 
                     String basename = this.makeBasename(this.bam_files[bj4]);
                     job_fin.getCommand().addArgument(getWorkflowBaseDir() + "/dependencies/create_fin.pl "
