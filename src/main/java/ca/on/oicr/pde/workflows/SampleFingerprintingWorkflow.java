@@ -383,7 +383,6 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
                     job_gatk2.setQueue(this.queue);
                 }
                 job_gatk2.addParent(job_index);
-
                 //Additional step to create depth of coverage data - for individual fingerprint image generation
                 Job job_fin = workflow.createBashJob("make_fingerprint_file_" + i);
                 StringBuilder finCommand = new StringBuilder();
