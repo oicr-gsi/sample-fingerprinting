@@ -386,18 +386,23 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
 
                 //Additional step to create depth of coverage data - for individual fingerprint image generation
                 Job job_fin = workflow.createBashJob("make_fingerprint_file_" + i);
+                StringBuilder finCommand = new StringBuilder();
                 //BATCHING Job4 series
                 for (int bj4 = i; bj4 < stop; bj4++) {
 
+                    if (bj4 > i) {
+                        finCommand.append(" && ");
+                    }
                     String basename = this.makeBasename(this.bam_files[bj4]);
-                    job_fin.getCommand().addArgument(getWorkflowBaseDir() + "/dependencies/create_fin.pl "
-                            + "--refvcf=" + this.checkedSNPs + " "
-                            + "--genotype=" + this.vcf_files[bj4] + " "
-                            + "--coverage=" + this.tempDir + basename + ".sample_interval_summary "
-                            + "--datadir=" + this.tempDir + " "
-                            + "--outdir=" + this.dataDir + this.finDir + " "
-                            + "--basename=" + basename);
+                    finCommand.append(getWorkflowBaseDir()).append("/dependencies/create_fin.pl")
+                              .append(" --refvcf=").append(this.checkedSNPs)
+                              .append(" --genotype=").append(this.vcf_files[bj4])
+                              .append(" --coverage=").append(this.tempDir).append(basename).append(".sample_interval_summary")
+                              .append(" --datadir=").append(this.tempDir)
+                              .append(" --outdir=").append(this.dataDir).append(this.finDir)
+                              .append(" --basename=").append(basename);
                 } //BATCHING ENDs
+                job_fin.setCommand(finCommand.toString());
                 job_fin.setMaxMemory("4000");
                 job_fin.addParent(job_gatk2);
                 gatk_jobs.add(job_fin);
