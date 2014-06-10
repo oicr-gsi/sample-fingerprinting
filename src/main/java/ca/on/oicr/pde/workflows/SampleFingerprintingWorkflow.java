@@ -298,7 +298,6 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
                   provCommand.append("echo Provisioning File ").append(bj0);
 
                   job_provide.setCommand(provCommand.toString());
-                  job_provide.addParent(job_copy);
                   job_provide.setMaxMemory("2000");
                   if (!this.queue.isEmpty()) {
                     job_provide.setQueue(this.queue);
