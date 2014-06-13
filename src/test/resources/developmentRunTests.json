@@ -10,15 +10,24 @@
     "tests": [
         {
             "id": "AshPC study test",
-            "studies": ["AshPC"]
+            "studies": ["AshPC"],
+            "parameters": {
+                "--before-date": "2013-11-19"
+             }
         },
         {
             "id": "ABIRC study test",
-            "studies": ["ABvsInvitrogenReagentComp"]
+            "studies": ["ABvsInvitrogenReagentComp"],
+            "parameters": {
+                "--before-date": "2013-11-19"
+             }
         },
         {
             "id": "SequencerRun test",
-            "sequencerRuns": ["121011_SN802_0091_AD1DDBACXX"]
+            "sequencerRuns": ["121011_SN802_0091_AD1DDBACXX"],
+            "parameters": {
+                "--before-date": "2013-11-19"
+             }
         }
     ]
 }
