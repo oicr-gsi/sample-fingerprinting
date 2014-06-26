@@ -287,7 +287,7 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
                 
                 for (int bj0 = i; bj0 < stop; bj0++) {  
                     
-                  Job job_provide = workflow.createBashJob("provide_bams_" + i);
+                  Job job_provide = workflow.createBashJob("provide_bams_" + bj0);
                   job_provide.setCommand("echo Provisioning File in Batch " + i);
                   StringBuilder provCommand = new StringBuilder();
 
@@ -341,7 +341,7 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
                             .append("-R ").append(this.genomeFile).append(" ")
                             .append("-T UnifiedGenotyper -I ")
                             .append(bam_path[bj2]).append(" ")
-                            .append("-o ").append(this.vcf_files[i]).append(" ")
+                            .append("-o ").append(this.vcf_files[bj2]).append(" ")
                             .append("-stand_call_conf ").append(this.stand_call_conf).append(" ")
                             .append("-stand_emit_conf ").append(this.stand_emit_conf).append(" ")
                             .append("-dcov ").append(this.dcov).append(" ")
