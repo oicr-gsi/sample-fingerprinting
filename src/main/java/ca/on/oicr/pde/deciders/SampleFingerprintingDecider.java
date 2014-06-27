@@ -413,7 +413,9 @@ public class SampleFingerprintingDecider extends OicrDecider {
         
         if (this.provisionVcfs) {
           run.addProperty("provision_vcfs", "TRUE");  
-        } 
+        } else {
+          run.addProperty("provision_vcfs", " ");
+        }
         
         if (null != this.watchersList && !this.watchersList.isEmpty()) {
           run.addProperty("watchers_list", this.watchersList);
