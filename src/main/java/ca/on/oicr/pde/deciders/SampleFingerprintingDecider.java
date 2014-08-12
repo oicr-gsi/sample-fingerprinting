@@ -32,6 +32,7 @@ public class SampleFingerprintingDecider extends OicrDecider {
     private SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.S");
     private String output_prefix = "./";
     private String output_dir = "seqware-results";
+    private String gatk_prefix = "./";
     private String studyName;
     private String watchersList = "";
     
@@ -71,6 +72,8 @@ public class SampleFingerprintingDecider extends OicrDecider {
 	        + "the output-path. Corresponds to output-dir in INI file. Default: seqware-results").withRequiredArg();
         parser.accepts("config-file","Optional. Path to a config file in .xml format "
                 + "Default: /.mounts/labs/PDE/data/SampleFingerprinting/hotspots.config.xml").withRequiredArg();
+        parser.accepts("gatk-prefix", "Optional: the path to a dir on a low-latency filesystem for writing " 
+                + "GATK temporary data. May prevent possible failures of a workflow run. Default: ./").withRequiredArg();
         parser.accepts("stand-call-conf", "Optional: GATK parameter, The minimum phred-scaled confidence threshold "
                 + "at which variants should be called, Default: 50.0").withRequiredArg();
         parser.accepts("stand-emit-conf", "Optional: GATK parameter, Default: 10.0"
@@ -111,6 +114,14 @@ public class SampleFingerprintingDecider extends OicrDecider {
           else if (!this.output_prefix.endsWith("/"))
               this.output_prefix += "/";
               
+        }
+        
+        if (this.options.has("gatk-prefix")) {
+          this.gatk_prefix = options.valueOf("gatk-prefix").toString();
+          if (this.gatk_prefix.isEmpty())
+	      this.gatk_prefix = "./";
+          else if (!this.gatk_prefix.endsWith("/"))
+              this.gatk_prefix += "/";
         }
         
         if (this.options.has("output-folder")) {
@@ -384,6 +395,7 @@ public class SampleFingerprintingDecider extends OicrDecider {
         
         run.addProperty("input_files", this.inputFiles);
         run.addProperty("output_prefix",this.output_prefix);
+        run.addProperty("gatk_prefix",this.gatk_prefix);
 	run.addProperty("output_dir", this.output_dir);
             
         if (null != checkedSNPs) {
