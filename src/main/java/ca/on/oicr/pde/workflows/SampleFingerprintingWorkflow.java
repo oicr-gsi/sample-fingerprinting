@@ -31,8 +31,9 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
     private String watchersList = "";
     private String dataDir;
     private String tempDir = "tempfiles/";
+    private String gatkPrefix = "./";
     //Additional one for GATK:
-    private String tmpDir = "temp";
+    private String gatkTmp = "temp";
     private String finDir = "finfiles/";
     private String gatkVersion;
     private String tabixVersion;
@@ -57,7 +58,7 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
     public Map<String, SqwFile> setupFiles() {
         // Set up reference, bam and vcf files here     
         try {
-            if (getProperty("input_files") == null) {
+           if (getProperty("input_files") == null) {
                 Logger.getLogger(SampleFingerprintingWorkflow.class.getName()).log(Level.SEVERE, "input_files is not set, we need at least one bam file");
                 return (null);
             } else {
@@ -80,7 +81,7 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
             } else {
                 this.gatk_java = getProperty("gatk_java");
             }
-
+            
             if (getProperty("genome_file") == null) {
                 Logger.getLogger(SampleFingerprintingWorkflow.class.getName()).log(Level.SEVERE, "genome_file (reference assembly fasta) is not set, we need it to generate a genotype");
                 return (null);
@@ -214,13 +215,6 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
 
             }
             Log.stdout("Created array of " + this.vcf_files.length + " vcf files of length ");
-
-            //Construct GATK_dirs array with random names for later use with GATK
-            this.GATK_dirs = new String[this.bam_files.length];
-            int seed = this.makeRandom(8);
-            for (int b = 0; b < this.bam_files.length; b++) {
-                this.GATK_dirs[b] = this.tmpDir + seed++;
-            }
         } catch (Exception e) {
             Logger.getLogger(SampleFingerprintingWorkflow.class.getName()).log(Level.SEVERE, null, e);
         }
@@ -230,13 +224,18 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
     @Override
     public void setupDirectory() {
         try {
-            this.dataDir = getProperty("data_dir");
-            if (this.dataDir == null || this.dataDir.isEmpty()) {
-                this.dataDir = "data/";
-            }
+            //Setup data dir
+            this.dataDir = getOptionalProperty("data_dir", "data/");
             if (!this.dataDir.endsWith("/")) {
                 this.dataDir += "/";
             }
+            //Setup gatk prefix
+            this.gatkPrefix = getOptionalProperty("gatk_prefix", "./");
+            if (!this.gatkPrefix.endsWith("/")) {
+                     this.gatkPrefix += "/";
+            }
+
+
             this.addDirectory(this.dataDir);
             this.addDirectory(this.tempDir);
             this.addDirectory(this.dataDir + this.finDir);
@@ -245,7 +244,7 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
             this.GATK_dirs = new String[num_of_files];
             int seed = this.makeRandom(8);
             for (int b = 0; b < num_of_files; b++) {
-                this.GATK_dirs[b] = this.tmpDir + seed++;
+                this.GATK_dirs[b] = this.gatkPrefix + this.gatkTmp + seed++;
                 this.addDirectory(GATK_dirs[b]);
             }
 
