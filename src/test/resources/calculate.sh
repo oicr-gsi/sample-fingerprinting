@@ -1,3 +1,3 @@
 #!/bin/bash
 cd $1
-find . -type f -exec wc -l {} +
+ls | grep -v SWID | grep \. | grep -v total | grep -v finfiles | grep -v images | sed 's/.*\.//' | sort | uniq -c
