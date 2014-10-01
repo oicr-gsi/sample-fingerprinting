@@ -431,33 +431,38 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
             upstream_jobs.add(job_vcfprep);
 
 
-            // We use simple reasoning here - if existingMatrix is unavailable, we will need to run a loooong job
-            // of calculting jaccard indexes if the list of vcf files is long. So, we will break the list into smaller chunks
-            // And use the results as exisitngMatrix in the next step Likely to run only once
-            // (when running this workflow on a study for the very first time)
+            /* We use simple reasoning here - if existingMatrix is unavailable, we will need to run a loooong job
+               of calculting jaccard indexes if the list of vcf files is long. So, we will break the list into smaller chunks
+               the number of chunks should be determined by chunk_size,
+               if N/chunk_size = n of matrix 'tiles' then there should be (n^2 + n)/2 chunk jobs
+               Also, use the results as exisitngMatrix in the next step Likely to run only once
+               (when running this workflow on a study for the very first time)
+            */
 
             if (this.existingMatrix.isEmpty() && this.vcf_files.length > this.jChunkSize) {
                 int chunkMultiplier = 1;
 
                 StringBuilder chunkedResults = new StringBuilder();
-                List<Integer> vcf_chunks = new ArrayList<Integer>(this.vcf_files.length);
+                /*int vcf_chunks = 0;
 
                 for (int vc = 1; vc < this.vcf_files.length; vc++) {
                     if (vc < this.jChunkSize * chunkMultiplier) {
                         continue;
                     }
-                    vcf_chunks.add(new Integer(1));
+                    vcf_chunks++;
                     chunkMultiplier += 1;
                 }
-                vcf_chunks.add(new Integer(1));
+                vcf_chunks++;*/
+                int vcf_chunks = (int) Math.ceil(this.vcf_files.length / this.jChunkSize);
+                //vcf_chunks = ((int) Math.pow(tiles_across, 2) + tiles_across)/2;
                 int resultID = 1;
 
                 // Combine chunks and run the jobs, registering results for later use
-                for (int c = 0; c < vcf_chunks.size(); c++) {
-                    for (int cc = c; cc < vcf_chunks.size(); cc++) {
-                        if (c == cc) {
-                            continue;
-                        }
+                for (int c = 0; c < vcf_chunks; c++) {
+                    for (int cc = c; cc < vcf_chunks; cc++) {
+                        //if (c == cc) {
+                        //    continue; // Do we need this?
+                        //}
 
                         Job job_list_writer = workflow.createBashJob("make_list" + resultID);
                         String chunkList = "jaccard.chunk." + resultID + ".list";
@@ -479,7 +484,7 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
                         String sep = chunkedResults.toString().isEmpty() ? "" : ",";
                         chunkedResults.append(sep).append(this.dataDir).append(chunkName);
 
-                        resultID += 1;
+                        resultID++;
 
                         job_jchunk.setCommand(getWorkflowBaseDir() + "/dependencies/jaccard_coeff.matrix.pl "
                                 + "--list=" + this.dataDir + chunkList + " "
@@ -508,8 +513,8 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
             Job job_list_writer2 = workflow.createBashJob("make_Final_list");
             String chunkList = "jaccard.chunks.list";
             job_list_writer2.setCommand(getWorkflowBaseDir() + "/dependencies/write_list.pl "
-                    + "--datadir=" + this.dataDir + " "
-                    + "> " + this.dataDir + chunkList);
+                    + "--datadir=" + this.dataDir
+                    + " > " + this.dataDir + chunkList);
 
             job_list_writer2.setMaxMemory("2000");
             if (!this.queue.isEmpty()) {
