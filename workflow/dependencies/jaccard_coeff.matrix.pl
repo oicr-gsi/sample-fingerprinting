@@ -14,13 +14,13 @@ use constant DEBUG =>1;
 # Below is the dafault for vcf_compare, should not be used when workflow runs
 my $vcf_compare = "vcftools/bin/vcf-compare";
 
-my(%ids,%files,%matrix,%seen,$list,$studyname,$vcf_path,$oldmatrix,$datadir,$path_to_tabix);
+my(%ids,@sublists,%files,%matrix,%seen,$list,$studyname,$vcf_path,$oldmatrix,$datadir,$path_to_tabix);
 my(%snps,%cols,%scols); # For assigning colors and number of snps (scols for assigning a color to a sample (like PCSI_006)
 my @colors = qw/red orange yellow green lightblue blue purple darkgreen brown black/;
 
 my $USAGE="jaccard_coef.matrix.pl --list=[req] --studyname=[req] --datadir=[optional] --existing_matrix=[optional] --vcf-compare=[]";
 
-my $result = GetOptions ('list=s'            => \$list, # list with filenames
+my $result = GetOptions ('list=s'            => \$list, # list with filenames (empty line may devide subset 1 from subset 2, so sub1 compared to sub2 but not to itself) 
                          'existing_matrix=s' => \$oldmatrix, # file with previously calculater indexes
                          'datadir=s'         => \$datadir, # directory with vcf files
                          'tabix=s'           => \$path_to_tabix, # path to tabix dir
@@ -106,16 +106,37 @@ if ($list=~/\,/) {
  # We have a comma-delimited list of files
  my @files = split(",",$list);
  map{&id_file($_)} @files; 
+ $sublists[0] = [];
+ map {push (@{$sublists[0]}, $_)} (keys %ids);
+ $sublists[1] = $sublists[0];
 } else {
  open(LIST,"<$list") or die "Cannot read from the list file [$list]";
- map{chomp;&id_file($_)} (<LIST>);
+ # make two sublists, depending on presence of empty line in the middle
+ my $subidx = 0;
+ $sublists[0] = []; 
+ while(<LIST>) {
+  chomp;
+  # Split the list if there's an empty line
+  if (!/\w/) {
+   $subidx = 1;
+   $sublists[1] = [];
+   next;
+  }
+  push($sublists[$subidx], &id_file($_));
+ }
+
+ if ($subidx == 0 && ! defined $sublists[1]) {
+   $sublists[1] = $sublists[0];
+ } 
+
+ #map{chomp;&id_file($_)} (<LIST>);
  close LIST;
 }
 
 print STDERR scalar(keys %ids)." genotypes collected\n" if DEBUG;
 
 my $count = 1;
-foreach my $id(keys %ids) {
+foreach my $id(@{$sublists[0]}) { #keys %ids) {
  # Take care of SNP number calculation
  $snps{$id} ||= &calculate_snps($ids{$id});
   
@@ -123,10 +144,10 @@ foreach my $id(keys %ids) {
 
  print STDERR "Working on ".$count++." of ".scalar(keys %ids)." samples\n";
  SM:
- foreach my $s(keys %ids) {
-    if ($s eq $id) {
-   $matrix{$id}->{$s} = 1;
-   next SM;
+ foreach my $s(@{$sublists[1]}) { #keys %ids) {
+   if ($s eq $id) {
+    $matrix{$id}->{$s} = 1;
+    next SM;
   }
   
   my $file1 = $datadir.$ids{$id};
@@ -196,15 +217,16 @@ sub id_file {
  $file=~s!.*/!!; 
  $file=~s!\..*!!;
  $file = $` if $file =~/.snps.raw.vcf.gz$/;
+ my $id;
 
  if ($file=~/(\d+)_($studyname.\d+)_/ || $file=~/(\d+)_([A-Z]+.\d+)_/) {
   #print STDERR "Studyname $studyname detected\n" if DEBUG;
-  my $id = $2.$1;
+  $id = $2.$1;
   $ids{$id} = $file;
   $files{$file} = $id;
  } elsif ($file=~/($studyname.{0,1}\d+)\.(\S+)/ || $file=~/([A-Z]+.\d+)\.(\S+)/) {
   #print STDERR "Studyname $studyname detected\n" if DEBUG;
-  my $id = join("_",($1,$2));
+  $id = join("_",($1,$2));
   $ids{$id} = $file;
   $files{$file} = $id;
  } else {
@@ -213,6 +235,7 @@ sub id_file {
   $ids{$file} = $file;
   $files{$file} = $file;
  }
+ return $id ? $id : $file;
 }
 
 # ==================================================

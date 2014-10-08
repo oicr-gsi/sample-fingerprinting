@@ -23,7 +23,8 @@ my @segments;
 
 if ($segments) {
  my @chunks = split(",",$segments);
- for (my $i=0; $i<@chunks; $i++) {
+ my $end = @chunks < 2 ? scalar(@chunks) : 2; # Do not accept more than one segment
+ for (my $i=0; $i < $end; $i++) {
   my @coords = split(":",$chunks[$i]);
   if (@coords == 2) {
    push(@segments,[$coords[0],$coords[1]]);
@@ -46,5 +47,6 @@ foreach my $s (@segments) {
        print $vcfs[$v]."\n";
      }
   }
+  print "\n";
 }
 

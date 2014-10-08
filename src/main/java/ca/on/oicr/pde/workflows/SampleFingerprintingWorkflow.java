@@ -469,7 +469,7 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
                         job_list_writer.setCommand(getWorkflowBaseDir() + "/dependencies/write_list.pl "
                                 + "--datadir=" + this.dataDir + " "
                                 + "--segments=\"" + c * this.jChunkSize + ":" + ((c + 1) * this.jChunkSize - 1) + ","
-                                + cc * this.jChunkSize + ":" + (cc + 1) * this.jChunkSize + "\" "
+                                + cc * this.jChunkSize + ":" + ((cc + 1) * this.jChunkSize - 1) + "\" "
                                 + "> " + this.dataDir + chunkList);
 
                         job_list_writer.setMaxMemory("2000");
