@@ -72,6 +72,7 @@ foreach my $old (@old_matrices) {
   while (<OLD>) {
    chomp;
    my @temp = split("\t");
+   &id_file($temp[0]);
    $temp[0] = $` if $temp[0] =~/.snps.raw.vcf.gz$/;
    $temp[0] =~s!.*/!!;
    next if !$files{$temp[0]};
@@ -192,10 +193,10 @@ map {/.snps.raw.vcf.gz/ ? push(@heads,$`) : push(@heads,$ids{$_})} (sort keys %m
 print join("\t",("",@heads,"SNPs")); #,"Color","SNPs"));
 print "\n";
 
- foreach my $sample(sort keys %matrix) {
+ foreach my $sample(sort @sublists[0]) { # keys %matrix) {
  print $sample=~/.snps.raw.vcf.gz/ ? $` : $ids{$sample};
  TF:
- foreach my $ss(sort keys %matrix) {
+ foreach my $ss(sort @sublists[1]) { #keys %matrix) {
    my $value = $matrix{$sample}->{$ss} || $matrix{$ss}->{$sample};
    print $value ? "\t$value" : "\t0";
  }
