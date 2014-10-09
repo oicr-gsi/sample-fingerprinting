@@ -116,24 +116,10 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
                 this.watchersList = getProperty("watchers_list");
             }
 
-            if (getProperty("stand_call_conf") == null) {
-                Logger.getLogger(SampleFingerprintingWorkflow.class.getName()).log(Level.WARNING, "stand_call_conf is not set, will use the default value of 50.0");
-            } else {
-                this.stand_call_conf = getProperty("stand_call_conf");
-            }
-
-            if (getProperty("stand_emit_conf") == null) {
-                Logger.getLogger(SampleFingerprintingWorkflow.class.getName()).log(Level.WARNING, "stand_emit_conf is not set, will use the default value of 10.0");
-            } else {
-                this.stand_emit_conf = getProperty("stand_emit_conf");
-            }
-
-            if (getProperty("dcov") == null) {
-                Logger.getLogger(SampleFingerprintingWorkflow.class.getName()).log(Level.WARNING, "dcov is not set, will use the default value of 50");
-            } else {
-                this.dcov = getProperty("dcov");
-            }
-
+            this.stand_call_conf = getOptionalProperty("stand_call_conf", "50.0");
+            this.stand_emit_conf = getOptionalProperty("stand_emit_conf", "10.0");
+            this.dcov            = getOptionalProperty("dcov", "200");
+            
             if (getProperty("gatk_version") == null) {
                 Logger.getLogger(SampleFingerprintingWorkflow.class.getName()).log(Level.SEVERE, "gatk_version is not set, we need it to call GATK correctly");
                 return (null);
@@ -235,7 +221,6 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
                      this.gatkPrefix += "/";
             }
 
-
             this.addDirectory(this.dataDir);
             this.addDirectory(this.tempDir);
             this.addDirectory(this.dataDir + this.finDir);
@@ -266,8 +251,8 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
             // A small copy job
             Job job_copy = workflow.createBashJob("copy_resources");
             job_copy.setCommand("cp -R " + getWorkflowBaseDir()
-                    + "/data/* "
-                    + this.dataDir);
+                              + "/data/* "
+                              + this.dataDir);
 
             job_copy.setMaxMemory("2000");
             if (!this.queue.isEmpty()) {
@@ -408,7 +393,7 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
             // We don't need to continue if there are no new vcf files to generate
             if (newVcfs == 0) {
                 Logger.getLogger(getClass().getName()).log(Level.INFO, "There are no new genotypes to generate, to avoid duplicate calculation the workflow will terminate");
-                System.exit(0);
+                throw new RuntimeException("Terminating: No new fingerprints can be generated");
             }
 
             // At his point we need to stage, bgzip and tabix all vcf files we would need to create a jaccard matrix          
