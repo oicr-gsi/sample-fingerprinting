@@ -10,7 +10,7 @@ use Data::Dumper;
 use strict;
 
 
-use constant DEBUG =>1;
+use constant DEBUG =>0;
 # Below is the dafault for vcf_compare, should not be used when workflow runs
 my $vcf_compare = "vcftools/bin/vcf-compare";
 
@@ -114,23 +114,25 @@ if ($list=~/\,/) {
  open(LIST,"<$list") or die "Cannot read from the list file [$list]";
  # make two sublists, depending on presence of empty line in the middle
  my $subidx = 0;
- $sublists[0] = []; 
+ $sublists[0] = [];
+ $sublists[1] = [];
  while(<LIST>) {
   chomp;
   # Split the list if there's an empty line
-  if (!/\w/) {
+  if (/^$/) {
    $subidx = 1;
-   $sublists[1] = [];
    next;
   }
-  push($sublists[$subidx], &id_file($_));
+  push(@{$sublists[$subidx]}, &id_file($_));
  }
 
- if ($subidx == 0 && ! defined $sublists[1]) {
+ if ($subidx == 0 && (!defined $sublists[1] || @{$sublists[1]} == 0)) {
+   print STDERR "List is not split, will synchronize sublists\n" if DEBUG;
    $sublists[1] = $sublists[0];
  } 
 
  #map{chomp;&id_file($_)} (<LIST>);
+ print STDERR "Got ".scalar(@{$sublists[0]})." and ".scalar(@{$sublists[1]})." elements in sublists\n" if DEBUG;
  close LIST;
 }
 
@@ -193,10 +195,10 @@ map {/.snps.raw.vcf.gz/ ? push(@heads,$`) : push(@heads,$ids{$_})} (sort keys %m
 print join("\t",("",@heads,"SNPs")); #,"Color","SNPs"));
 print "\n";
 
- foreach my $sample(sort @sublists[0]) { # keys %matrix) {
+ foreach my $sample(sort @{$sublists[0]}) { # keys %matrix) {
  print $sample=~/.snps.raw.vcf.gz/ ? $` : $ids{$sample};
  TF:
- foreach my $ss(sort @sublists[1]) { #keys %matrix) {
+ foreach my $ss(sort @{$sublists[1]}) { #keys %matrix) {
    my $value = $matrix{$sample}->{$ss} || $matrix{$ss}->{$sample};
    print $value ? "\t$value" : "\t0";
  }
