@@ -38,6 +38,7 @@ my @vcfs = map{$_ if(/\.vcf$/)} @entries;
 print "Got ".scalar(@vcfs)." vcfs\n" if DEBUG;
 print STDERR Dumper(@segments) if DEBUG;
 
+my $split = 0;
 foreach my $s (@segments) {
   VCF:
   for (my $v=0; $v<@vcfs; $v++) {
@@ -47,6 +48,6 @@ foreach my $s (@segments) {
        print $vcfs[$v]."\n";
      }
   }
-  print "\n";
+  print "\n" if 0 < $split++;
 }
 

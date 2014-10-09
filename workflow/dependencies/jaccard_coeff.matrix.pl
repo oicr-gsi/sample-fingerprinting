@@ -59,6 +59,7 @@ foreach my $old (@old_matrices) {
   open(OLD,"<$old") or die "Couldn't read from the file with previously calculated indexes";
   my $sindex; # index of number of snps
   my $idstring = <OLD>;
+  $idstring=~s/^0*//; # Funny entries should be removed by this command
   chomp($idstring);
   my @tempids = ();
   @tempids = grep {/\S+/} split("\t",$idstring);

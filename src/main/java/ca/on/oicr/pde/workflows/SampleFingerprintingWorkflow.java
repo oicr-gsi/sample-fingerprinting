@@ -443,26 +443,12 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
                 int chunkMultiplier = 1;
 
                 StringBuilder chunkedResults = new StringBuilder();
-                /*int vcf_chunks = 0;
-
-                for (int vc = 1; vc < this.vcf_files.length; vc++) {
-                    if (vc < this.jChunkSize * chunkMultiplier) {
-                        continue;
-                    }
-                    vcf_chunks++;
-                    chunkMultiplier += 1;
-                }
-                vcf_chunks++;*/
-                int vcf_chunks = (int) Math.ceil(this.vcf_files.length / this.jChunkSize);
-                //vcf_chunks = ((int) Math.pow(tiles_across, 2) + tiles_across)/2;
+                int vcf_chunks = (int) Math.ceil((double) this.vcf_files.length / (double) this.jChunkSize);
                 int resultID = 1;
 
                 // Combine chunks and run the jobs, registering results for later use
                 for (int c = 0; c < vcf_chunks; c++) {
                     for (int cc = c; cc < vcf_chunks; cc++) {
-                        //if (c == cc) {
-                        //    continue; // Do we need this?
-                        //}
 
                         Job job_list_writer = workflow.createBashJob("make_list" + resultID);
                         String chunkList = "jaccard.chunk." + resultID + ".list";
