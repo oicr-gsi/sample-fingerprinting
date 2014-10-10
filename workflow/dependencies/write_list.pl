@@ -16,7 +16,7 @@ my $USAGE = "write_list --datadir=[dir with vcf files] --segments=[optional, seg
 die $USAGE if (!$datadir);
 
 opendir(DIR,"$datadir") or die "Couldn't read from directory [$datadir]";
-my @entries = grep{/vcf/} grep {!/\.gz/} sort readdir DIR; 
+my @entries = grep{/.vcf$/} grep {!/.vcf.idx/} grep {!/\.gz/} sort readdir DIR; 
 closedir(DIR);
 
 my @segments;
@@ -35,7 +35,7 @@ if ($segments) {
 }
 
 my @vcfs = map{$_ if(/\.vcf$/)} @entries;
-print "Got ".scalar(@vcfs)." vcfs\n" if DEBUG;
+print STDERR "Got ".scalar(@vcfs)." vcfs\n" if DEBUG;
 print STDERR Dumper(@segments) if DEBUG;
 
 my $split = 0;
