@@ -48,6 +48,6 @@ foreach my $s (@segments) {
        print $vcfs[$v]."\n";
      }
   }
-  print "\n" if 0 < $split++;
+  print "\n" if 0 == $split++;
 }
 
