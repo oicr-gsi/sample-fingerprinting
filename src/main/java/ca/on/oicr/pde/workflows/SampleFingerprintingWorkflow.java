@@ -393,7 +393,7 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
             // We don't need to continue if there are no new vcf files to generate
             if (newVcfs == 0) {
                 Logger.getLogger(getClass().getName()).log(Level.INFO, "There are no new genotypes to generate, to avoid duplicate calculation the workflow will terminate");
-                throw new RuntimeException("Terminating: No new fingerprints can be generated");
+                System.exit(0);
             }
 
             // At his point we need to stage, bgzip and tabix all vcf files we would need to create a jaccard matrix          
