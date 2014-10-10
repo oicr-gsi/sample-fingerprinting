@@ -13,13 +13,10 @@ use strict;
 use constant DEBUG =>0;
 # Below is the dafault for vcf_compare, should not be used when workflow runs
 my $vcf_compare = "vcftools/bin/vcf-compare";
-
 my(%ids,@sublists,%files,%matrix,%seen,$list,$studyname,$vcf_path,$oldmatrix,$datadir,$path_to_tabix);
 my(%snps,%cols,%scols); # For assigning colors and number of snps (scols for assigning a color to a sample (like PCSI_006)
 my @colors = qw/red orange yellow green lightblue blue purple darkgreen brown black/;
-
 my $USAGE="jaccard_coef.matrix.pl --list=[req] --studyname=[req] --datadir=[optional] --existing_matrix=[optional] --vcf-compare=[]";
-
 my $result = GetOptions ('list=s'            => \$list, # list with filenames (empty line may devide subset 1 from subset 2, so sub1 compared to sub2 but not to itself) 
                          'existing_matrix=s' => \$oldmatrix, # file with previously calculater indexes
                          'datadir=s'         => \$datadir, # directory with vcf files
@@ -53,9 +50,12 @@ if (!$tabix_check) {
 
 my @old_matrices = $oldmatrix ? grep{/\S+/} split(",",$oldmatrix) : undef;
 if (@old_matrices && @old_matrices > 0) {
+print STDERR "Found ".scalar(@old_matrices)." old matrices\n" if DEBUG;
+my $interact = 0;
 foreach my $old (@old_matrices) {
+ my %id_added = ();
  if ($old && -e $old) {
-  print STDERR "We have some older data, will append our results to the existing matrix\n" if DEBUG;
+  print STDERR "We have data in ".$old." , will append our results to the existing matrix\n" if DEBUG;
   open(OLD,"<$old") or die "Couldn't read from the file with previously calculated indexes";
   my $sindex; # index of number of snps
   my $idstring = <OLD>;
@@ -67,13 +67,15 @@ foreach my $old (@old_matrices) {
    $sindex = $#tempids;
    pop @tempids;
   }
-   
+  print STDERR "Header has ".scalar(@tempids)." ids\n" if DEBUG;
   map {&id_file($_)} (@tempids);
+  map {$id_added{$_}++} (@tempids);
 
   while (<OLD>) {
    chomp;
    my @temp = split("\t");
    &id_file($temp[0]);
+   $id_added{$temp[0]}++;
    $temp[0] = $` if $temp[0] =~/.snps.raw.vcf.gz$/;
    $temp[0] =~s!.*/!!;
    next if !$files{$temp[0]};
@@ -84,6 +86,7 @@ foreach my $old (@old_matrices) {
      $t =~s!\..*!!;
      if (!$files{$t}) {next T;} # We should get rid of all funny entries here (like random 00 appering in files randomly)
      $t = $` if $t=~/.snps.raw.vcf.gz$/;
+     $interact++ if ($temp[0] ne $t);
      $seen{$files{$temp[0]}}->{$files{$t}}++;
      $seen{$files{$t}}->{$files{$temp[0]}}++;
 
@@ -92,14 +95,17 @@ foreach my $old (@old_matrices) {
    
    $snps{$files{$temp[0]}} = $sindex ? $temp[$#temp] : &calculate_snps($temp[0]);
   }
+  print STDERR "Identified ".$interact." interactions using old matrices\n" if DEBUG;
   close OLD;
+  #print STDERR "We saw ".scalar(keys %id_added)." ids in this matrix\n" if DEBUG;
+  #print STDERR "We have ".scalar(keys %matrix)." unique ids in similarity matrix now...\n" if DEBUG;
+  #print STDERR "We have ".scalar(keys %files)." Files identified\n" if DEBUG;
  } else {
    next;
  }
 }
-print STDERR "Identified ".scalar(keys %seen)." interactions using old matrices\n" if DEBUG;
+print STDERR "Identified ".$interact." total interactions using old matrices\n" if DEBUG;
 }
-
 # =================================================================================
 # Collect information on files, build matrix using new (and old, if available) data
 # =================================================================================
@@ -132,7 +138,6 @@ if ($list=~/\,/) {
    $sublists[1] = $sublists[0];
  } 
 
- #map{chomp;&id_file($_)} (<LIST>);
  print STDERR "Got ".scalar(@{$sublists[0]})." and ".scalar(@{$sublists[1]})." elements in sublists\n" if DEBUG;
  close LIST;
 }
@@ -164,7 +169,7 @@ foreach my $id(@{$sublists[0]}) { #keys %ids) {
   $file1 .= ".snps.raw.vcf.gz" if $file1 !~/gz$/;
   $file2 .= ".snps.raw.vcf.gz" if $file2 !~/gz$/;
   print STDERR "Will check files $file1 and $file2\n" if DEBUG;
-  if (! -e $file1 || ! -e $file2){print STDERR "File(s) $file1 or $file2 not FOUND!";next;}
+  if (! -e $file1 || ! -e $file2){print STDERR "File(s) $file1 or $file2 not FOUND!\n";next;}
   print STDERR "Will run $vcf_compare $file1 $file2 ...\n" if DEBUG;
   my @compares = `$vcf_compare $file1 $file2 | grep \"^VN\"`;
   my @numbers = (0,0,0);
@@ -192,14 +197,14 @@ foreach my $id(@{$sublists[0]}) { #keys %ids) {
 # ====================================
 
 my @heads = ();
-map {/.snps.raw.vcf.gz/ ? push(@heads,$`) : push(@heads,$ids{$_})} (sort keys %matrix);
+map {/.snps.raw.vcf.gz/ ? push(@heads,$`) : push(@heads,$ids{$_})} (sort @{$sublists[0]}); 
 print join("\t",("",@heads,"SNPs")); #,"Color","SNPs"));
 print "\n";
 
- foreach my $sample(sort @{$sublists[0]}) { # keys %matrix) {
+ foreach my $sample(sort @{$sublists[1]}) { 
  print $sample=~/.snps.raw.vcf.gz/ ? $` : $ids{$sample};
  TF:
- foreach my $ss(sort @{$sublists[1]}) { #keys %matrix) {
+ foreach my $ss(sort @{$sublists[0]}) { 
    my $value = $matrix{$sample}->{$ss} || $matrix{$ss}->{$sample};
    print $value ? "\t$value" : "\t0";
  }
@@ -224,18 +229,18 @@ sub id_file {
  my $id;
 
  if ($file=~/(\d+)_($studyname.\d+)_/ || $file=~/(\d+)_([A-Z]+.\d+)_/) {
-  #print STDERR "Studyname $studyname detected\n" if DEBUG;
+  #print STDERR "Studyname $studyname detected by cond.1\n" if DEBUG;
   $id = $2.$1;
   $ids{$id} = $file;
   $files{$file} = $id;
- } elsif ($file=~/($studyname.{0,1}\d+)\.(\S+)/ || $file=~/([A-Z]+.\d+)\.(\S+)/) {
-  #print STDERR "Studyname $studyname detected\n" if DEBUG;
+ } elsif ($file=~/^($studyname\_[0-1]\d+).(\S+)/ || $file=~/([A-Z]+.\d+)\.(\S+)/) {
+  #print STDERR "Studyname $studyname detected by cond.2\n" if DEBUG;
   $id = join("_",($1,$2));
   $ids{$id} = $file;
   $files{$file} = $id;
  } else {
   #print STDERR "Studyname $studyname NOT detected\n" if DEBUG;
-  return;
+  #return;
   $ids{$file} = $file;
   $files{$file} = $file;
  }
@@ -259,21 +264,4 @@ sub calculate_snps {
  my $result = `zcat $file | grep -v ^# | wc -l`;
  chomp($result);
  return $result;
-}
-
-sub load_matrix {
- my $matrix = shift @_;
- print STDERR "Reading from [$matrix]\n" if DEBUG; 
- if ($matrix=~/\.list$/) {
-  open(LIST,"$matrix") or die "Couldn't read from list of old matrices [$matrix]";
-  my @temp = ();
-  map{chomp; push(@temp,$_)} (<LIST>);
-  close LIST;
-  print STDERR "Returning ".scalar(@temp)." files\n" if DEBUG;
-  return @temp;
- } else {
-   my @temp = split(",",$matrix);
-   return @temp;
- }
- 
 }
