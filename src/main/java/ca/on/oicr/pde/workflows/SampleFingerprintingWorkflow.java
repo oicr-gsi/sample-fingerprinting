@@ -393,7 +393,7 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
             // We don't need to continue if there are no new vcf files to generate
             if (newVcfs == 0) {
                 Logger.getLogger(getClass().getName()).log(Level.INFO, "There are no new genotypes to generate, to avoid duplicate calculation the workflow will terminate");
-                System.exit(0);
+                throw new RuntimeException("There is not enough of new data, terminating...");
             }
 
             // At his point we need to stage, bgzip and tabix all vcf files we would need to create a jaccard matrix          
@@ -425,7 +425,6 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
             */
 
             if (this.existingMatrix.isEmpty() && this.vcf_files.length > this.jChunkSize) {
-                int chunkMultiplier = 1;
 
                 StringBuilder chunkedResults = new StringBuilder();
                 int vcf_chunks = (int) Math.ceil((double) this.vcf_files.length / (double) this.jChunkSize);
@@ -595,11 +594,12 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
 
     private int makeRandom(int digits) {
         Random rnd = new Random();
-        String randomString = "1"; // start each string from 1 to prevent zero at the beginning 
+        StringBuilder sb = new StringBuilder();
+        sb.append("1"); // start each string from 1 to prevent zero at the beginning 
         for (int i = 1; i < digits; i++) {
-            randomString += rnd.nextInt(9);
+            sb.append(rnd.nextInt(9));
         }
-        return Integer.parseInt(randomString);
+        return Integer.parseInt(sb.toString());
     }
 
     private String makeBasename(String name) {
