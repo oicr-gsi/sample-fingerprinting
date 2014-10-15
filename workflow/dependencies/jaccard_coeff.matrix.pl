@@ -10,12 +10,11 @@ use Data::Dumper;
 use strict;
 
 
-use constant DEBUG =>0;
+use constant DEBUG =>1;
 # Below is the dafault for vcf_compare, should not be used when workflow runs
 my $vcf_compare = "vcftools/bin/vcf-compare";
 my(%ids,@sublists,%files,%matrix,%seen,$list,$studyname,$vcf_path,$oldmatrix,$datadir,$path_to_tabix);
-my(%snps,%cols,%scols); # For assigning colors and number of snps (scols for assigning a color to a sample (like PCSI_006)
-my @colors = qw/red orange yellow green lightblue blue purple darkgreen brown black/;
+my(%snps); # For assigning number of snps 
 my $USAGE="jaccard_coef.matrix.pl --list=[req] --studyname=[req] --datadir=[optional] --existing_matrix=[optional] --vcf-compare=[]";
 my $result = GetOptions ('list=s'            => \$list, # list with filenames (empty line may devide subset 1 from subset 2, so sub1 compared to sub2 but not to itself) 
                          'existing_matrix=s' => \$oldmatrix, # file with previously calculater indexes
@@ -48,9 +47,14 @@ if (!$tabix_check) {
 # First, if we have exisiting matrix, read values from there
 # ==========================================================
 
-my @old_matrices = $oldmatrix ? grep{/\S+/} split(",",$oldmatrix) : undef;
+my @old_matrices;
+
+if (defined $oldmatrix && $oldmatrix=~/\S+/) {
+ @old_matrices = grep{/\S+/} split(",",$oldmatrix);
+}
+ 
 if (@old_matrices && @old_matrices > 0) {
-print STDERR "Found ".scalar(@old_matrices)." old matrices\n" if DEBUG;
+print STDERR "Found ".scalar(@old_matrices)." old matrices [$oldmatrix]\n" if DEBUG;
 my $interact = 0;
 foreach my $old (@old_matrices) {
  my %id_added = ();
@@ -97,15 +101,16 @@ foreach my $old (@old_matrices) {
   }
   print STDERR "Identified ".$interact." interactions using old matrices\n" if DEBUG;
   close OLD;
-  #print STDERR "We saw ".scalar(keys %id_added)." ids in this matrix\n" if DEBUG;
-  #print STDERR "We have ".scalar(keys %matrix)." unique ids in similarity matrix now...\n" if DEBUG;
-  #print STDERR "We have ".scalar(keys %files)." Files identified\n" if DEBUG;
+  print STDERR "We saw ".scalar(keys %id_added)." ids in this matrix\n" if DEBUG;
+  print STDERR "We have ".scalar(keys %matrix)." unique ids in similarity matrix now...\n" if DEBUG;
+  print STDERR "We have ".scalar(keys %files)." Files identified\n" if DEBUG;
  } else {
    next;
  }
 }
 print STDERR "Identified ".$interact." total interactions using old matrices\n" if DEBUG;
 }
+
 # =================================================================================
 # Collect information on files, build matrix using new (and old, if available) data
 # =================================================================================
@@ -133,7 +138,7 @@ if ($list=~/\,/) {
   push(@{$sublists[$subidx]}, &id_file($_));
  }
 
- if ($subidx == 0 && (!defined $sublists[1] || @{$sublists[1]} == 0)) {
+ if (!defined $sublists[1] || scalar(@{$sublists[1]}) == 0) {
    print STDERR "List is not split, will synchronize sublists\n" if DEBUG;
    $sublists[1] = $sublists[0];
  } 
@@ -147,13 +152,13 @@ print STDERR scalar(keys %ids)." genotypes collected\n" if DEBUG;
 my $count = 1;
 foreach my $id(@{$sublists[0]}) { #keys %ids) {
  # Take care of SNP number calculation
- $snps{$id} ||= &calculate_snps($ids{$id});
   
  my $sample = $ids{$id};
 
- print STDERR "Working on ".$count++." of ".scalar(keys %ids)." samples\n";
+ print STDERR "Working on ".$count++." of ".scalar(@{$sublists[1]})." samples\n";
  SM:
- foreach my $s(@{$sublists[1]}) { #keys %ids) {
+ foreach my $s(@{$sublists[1]}) { 
+   $snps{$s} ||= &calculate_snps($ids{$s});
    if ($s eq $id) {
     $matrix{$id}->{$s} = 1;
     next SM;
@@ -198,7 +203,7 @@ foreach my $id(@{$sublists[0]}) { #keys %ids) {
 
 my @heads = ();
 map {/.snps.raw.vcf.gz/ ? push(@heads,$`) : push(@heads,$ids{$_})} (sort @{$sublists[0]}); 
-print join("\t",("",@heads,"SNPs")); #,"Color","SNPs"));
+print join("\t",("",@heads,"SNPs")); 
 print "\n";
 
  foreach my $sample(sort @{$sublists[1]}) { 
@@ -263,5 +268,6 @@ sub calculate_snps {
 
  my $result = `zcat $file | grep -v ^# | wc -l`;
  chomp($result);
+ print STDERR $result." SNPs found\n" if DEBUG;
  return $result;
 }
