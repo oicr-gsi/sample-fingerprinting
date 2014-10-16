@@ -376,8 +376,9 @@ sub printout_snps {
  }
 
  # Having collected all snp calls from the .fin files let's create a genotype report file
- my $fname = $datadir.join("_",($studyname,$slice_id,"genotype_report_$$.csv"));
- $fh_fin->open(">$fname") or die "Couldn't write genotype report to [$fname]";
+ my $fname = join("_",($studyname,$slice_id,"genotype_report_$$.csv"));
+ my $fpath = $datadir.$fname;
+ $fh_fin->open(">$fpath") or die "Couldn't write genotype report to [$fpath]";
  print $fh_fin join("\t",@titles[0..2]);
  my @fnames = map{$samples{$_}->{name}} (sort keys %sliced);
  print $fh_fin "\t",join("\t",@fnames),"\n";
@@ -411,7 +412,8 @@ sub printout_slice {
 
  # Temporary matrix file for a slice
  my $outfile = $datadir.$filecard."_$$.csv";
- my $matfile = $datadir.$filecard."_similarity_matrix_$$.csv";
+ my $matname = $filecard."_similarity_matrix_$$.csv";
+ my $matfile = $datadir.$matname;
  print STDERR "Writing to the file [$outfile] ".(keys %sliced)." datapoints\n" if DEBUG;
  my $fo = new IO::File(">$outfile") or die "Cannot write to file [$outfile]";
  my $fm = new IO::File(">$matfile") or die "Cannot write to file [$matfile]";
@@ -536,7 +538,7 @@ sub printout_slice {
  $reports{$slice_id} = {img=>$filecard.".png",
                         fp=>[@fingers],
                         flagged=>$flagged eq "TRUE" ? "FLAGGED" : "OK",
-                        matrix=>$matfile,
+                        matrix=>$matname,
                         title=>$pngtitle};
 }
 
