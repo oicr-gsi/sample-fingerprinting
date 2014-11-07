@@ -513,6 +513,7 @@ public class SampleFingerprintingDecider extends OicrDecider {
                 ex.printStackTrace();
             }
             FileAttributes fa = new FileAttributes(rv, rv.getFiles().get(0));
+            // Having metatype as part of details is needed since we deal with multiple mime types her
             iusDetails = fa.getLibrarySample() + fa.getSequencerRun() + fa.getLane() + fa.getBarcode() + fa.getMetatype();
             // We are going to group by template type only (if we did not receive template type as a parameter)
             groupByAttribute = fa.getLimsValue(Lims.LIBRARY_TEMPLATE_TYPE);
