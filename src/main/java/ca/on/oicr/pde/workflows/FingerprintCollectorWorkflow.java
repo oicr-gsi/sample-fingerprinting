@@ -6,9 +6,11 @@ package ca.on.oicr.pde.workflows;
 
 import ca.on.oicr.pde.utilities.workflows.OicrWorkflow;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import net.sourceforge.seqware.common.util.Log;
@@ -16,8 +18,17 @@ import net.sourceforge.seqware.pipeline.workflowV2.model.Job;
 import net.sourceforge.seqware.pipeline.workflowV2.model.Workflow;
 import net.sourceforge.seqware.pipeline.workflowV2.model.SqwFile;
 
+/*
+  A trick tested with Bowtie2Alignemr workflow that allows provisioning multiple files into a single dir:
+  //DEBUG
+  file.setOutputPath("provisionfiles/CUSTOMDIR/" + this.input_fastq1[fileIndex].substring(
+                      this.input_fastq1[fileIndex].lastIndexOf("/") + 1, this.input_fastq1[fileIndex].length()));
+  file.getOutputPath() //GET the path in workflow
+*/
+
+
 /**
- * Workflow. For pairing with SampleFingerprinting 2.0 A lighter (split) version
+ * @Description For pairing with SampleFingerprinting 2.0 A lighter (split) version
  * of SampleFingerprinting 1.1
  * 
  * @author pruzanov
@@ -28,34 +39,34 @@ public class FingerprintCollectorWorkflow extends OicrWorkflow {
     private String[] vcfFiles;
     private String[] gatkDirs;
     private String studyName = "";
-    //private String watchersList = "";
     private String dataDir;
-    private String tempDir = "tempfiles/";
+    private final String tempDir = "tempfiles/";
+    private final String gatkTmp = "temp";
+    private final String finDir = "finfiles/";
+    private final int batchCount = 100; // Use for job batching, this many jobs
     private String gatkPrefix = "./";
+    
     //Additional one for GATK:
-    private String gatkTmp = "temp";
-    private String finDir = "finfiles/";
     private String gatkVersion;
     private String tabixVersion;
-    private String vcftoolsVersion;
     private String samtoolsVersion;
     private String genomeFile;
     private String checkedSNPs;
     private String queue;
-    private String reportName = "sample_fingerprint";
     private String gatkJava;
+    
     //GATK parameters
-    private String standCallConf = "50.0";
-    private String standEmitConf = "10.0";
-    private String dcov = "200";
-    //private final int jChunkSize = 50; // Maximum allowed number of vcf files when jaccard_indexing step doesn't fork into multiple sub-jobs
-    private final int batchCount = 100; // Use for job batching, this many jobs
+    private String standCallConf;
+    private String standEmitConf;
+    private String dcov;
     private boolean manualOutput;
-    private boolean provisionVcfs;
 
     //Misc
     private static final int RANDOM_SEED = 8;
     private static final int RANDOM_PICK = 9;
+    private static final String STCALLCONF_DEFAULT = "50.0";
+    private static final String STEMIT_DEFAULT     = "10.0";
+    private static final String DCOV_DEFAULT       = "200";
 
     @Override
     public Map<String, SqwFile> setupFiles() {
@@ -82,7 +93,6 @@ public class FingerprintCollectorWorkflow extends OicrWorkflow {
                 this.genomeFile = getProperty("genome_file");
             }
 
-
             if (getProperty("checked_snps") == null) {
                 Logger.getLogger(FingerprintCollectorWorkflow.class.getName()).log(Level.SEVERE, "checked_snps (checkpoints) is not set, we need it to generate a genotype");
                 return (null);
@@ -90,23 +100,9 @@ public class FingerprintCollectorWorkflow extends OicrWorkflow {
                 this.checkedSNPs = getProperty("checked_snps");
             }
 
-            /*
-            if (getProperty("existing_matrix") == null) {
-                Logger.getLogger(FingerprintCollectorWorkflow.class.getName()).log(Level.WARNING, "existing_matrix not provided, will calclate jaccard indexes for all genotypes");
-            } else {
-                this.existingMatrix = getProperty("existing_matrix");
-            }
-
-            if (getProperty("watchers_list") == null) {
-                Logger.getLogger(FingerprintCollectorWorkflow.class.getName()).log(Level.WARNING, "watchers list not provided, will not send alerts");
-            } else {
-                this.watchersList = getProperty("watchers_list");
-            }
-            */
-
-            this.standCallConf = getOptionalProperty("stand_call_conf", "50.0");
-            this.standEmitConf = getOptionalProperty("stand_emit_conf", "10.0");
-            this.dcov            = getOptionalProperty("dcov", "200");
+            this.standCallConf = getOptionalProperty("stand_call_conf", STCALLCONF_DEFAULT);
+            this.standEmitConf = getOptionalProperty("stand_emit_conf", STEMIT_DEFAULT);
+            this.dcov            = getOptionalProperty("dcov", DCOV_DEFAULT);
 
             if (getProperty("gatk_version") == null) {
                 Logger.getLogger(FingerprintCollectorWorkflow.class.getName()).log(Level.SEVERE, "gatk_version is not set, we need it to call GATK correctly");
@@ -120,13 +116,6 @@ public class FingerprintCollectorWorkflow extends OicrWorkflow {
                 return (null);
             } else {
                 this.tabixVersion = getProperty("tabix_version");
-            }
-
-            if (getProperty("vcftools_version") == null) {
-                Logger.getLogger(FingerprintCollectorWorkflow.class.getName()).log(Level.SEVERE, "vcftools_version is not set, we need it to call vcftools correctly");
-                return (null);
-            } else {
-                this.vcftoolsVersion = getProperty("vcftools_version");
             }
 
             if (getProperty("samtools_version") == null) {
@@ -148,12 +137,6 @@ public class FingerprintCollectorWorkflow extends OicrWorkflow {
                 this.studyName = "";
             } else {
                 this.studyName = getProperty("study_name");
-            }
-
-            if (getProperty("provision_vcfs") == null) {
-                Logger.getLogger(FingerprintCollectorWorkflow.class.getName()).log(Level.WARNING, "provision_vcfs flag is not set, will not provision vcf files");
-            } else {
-                this.provisionVcfs = getProperty("provision_vcfs").toString().isEmpty() ? false : true;
             }
 
             if (getProperty("manual_output") == null) {
@@ -233,13 +216,17 @@ public class FingerprintCollectorWorkflow extends OicrWorkflow {
             //Need the decider to check the headers of the .bam files for the presence of RG and abscence of empty Fields (Field: )
             Workflow workflow = this.getWorkflow();
             int newVcfs = 0;
+            Set<String> baseNames = new HashSet<String>();
             List<Job> provisionJobs = new ArrayList<Job>();
             List<Job> gatkJobs = new ArrayList<Job>();
 
-            // TODO Entry point for Job batching modifications
+            // Entry point for Job batching modifications
+            // (batching may not be needed in here)
             int batchLength = this.bamFiles.length / this.batchCount;
             String[] bamfilePaths = new String[this.bamFiles.length];
 
+            // Decider may be programmed to accept either single .bam 
+            // or set of sample-specific .bam files
             for (int i = 0; i < this.bamFiles.length; i += batchLength) {
                 //BATCHING Job1 series
                 int stop = i + batchLength >= this.bamFiles.length ? this.bamFiles.length : i + batchLength;
@@ -306,17 +293,20 @@ public class FingerprintCollectorWorkflow extends OicrWorkflow {
                             .append("-stand_emit_conf ").append(this.standEmitConf).append(" ")
                             .append("-dcov ").append(this.dcov).append(" ")
                             .append("-L ").append(this.checkedSNPs);
-                    newVcfs++; // Used only to track the number of newly generated vcf files
-                    if (this.provisionVcfs) {
-                        SqwFile vcfFile = this.createOutputFile(this.vcfFiles[bj2], "text/vcf-4", this.manualOutput);
-                        jobGATK.addFile(vcfFile);
-                    }
+                    newVcfs++; // Used to track the number of newly generated vcf files and
+                               // provisioning .vcf.gz nd .vcf.tbi files
+                    
+                 // SqwFile vcfFile = this.createOutputFile(this.vcfFiles[bj2], "text/vcf-4", this.manualOutput);               
+                 // jobGATK.addFile(vcfFile);
+                    
                 } //Batching ENDs
                 jobGATK.setCommand(gatkCommand.toString());
                 jobGATK.setMaxMemory(getProperty("gatk_memory"));
+                
                 if (!this.queue.isEmpty()) {
                     jobGATK.setQueue(this.queue);
                 }
+                
                 jobGATK.addParent(jobIndex);
                 gatkJobs.add(jobGATK);
 
@@ -338,9 +328,11 @@ public class FingerprintCollectorWorkflow extends OicrWorkflow {
                 }
                 jobGATK2.setCommand(gatk2Command.toString());
                 jobGATK2.setMaxMemory(getProperty("gatk_memory"));
+                
                 if (!this.queue.isEmpty()) {
                     jobGATK2.setQueue(this.queue);
                 }
+                
                 jobGATK2.addParent(jobIndex);
                 //Additional step to create depth of coverage data - for individual fingerprint image generation
                 Job jobFin = workflow.createBashJob("make_fingerprint_file_" + i);
@@ -352,6 +344,7 @@ public class FingerprintCollectorWorkflow extends OicrWorkflow {
                         finCommand.append(" && ");
                     }
                     String basename = this.makeBasename(this.bamFiles[bj4]);
+                    baseNames.add(basename);
                     finCommand.append(getWorkflowBaseDir()).append("/dependencies/create_fin.pl")
                               .append(" --refvcf=").append(this.checkedSNPs)
                               .append(" --genotype=").append(this.vcfFiles[bj4])
@@ -359,10 +352,17 @@ public class FingerprintCollectorWorkflow extends OicrWorkflow {
                               .append(" --datadir=").append(this.tempDir)
                               .append(" --outdir=").append(this.dataDir).append(this.finDir)
                               .append(" --basename=").append(basename);
+                // provision .fin file
+                jobFin.addFile(this.createOutputFile(this.dataDir + this.finDir + basename + ".fin", "text/plain", this.manualOutput));
                 } //BATCHING ENDs
                 jobFin.setCommand(finCommand.toString());
                 jobFin.setMaxMemory("4000");
-                jobFin.addParent(jobGATK2);
+                jobFin.addParent(jobGATK2);    
+                
+                if (!this.queue.isEmpty()) {
+                    jobFin.setQueue(this.queue);
+                }
+                
                 gatkJobs.add(jobFin);
             } // END OF job Batching loop
 
@@ -379,17 +379,20 @@ public class FingerprintCollectorWorkflow extends OicrWorkflow {
                     + "--tabix=" + getWorkflowBaseDir() + "/bin/tabix-" + this.tabixVersion + "/tabix "
                     + "--bgzip=" + getWorkflowBaseDir() + "/bin/tabix-" + this.tabixVersion + "/bgzip");
             jobVcfPrep.setMaxMemory("2000");
+            
             if (!this.queue.isEmpty()) {
                 jobVcfPrep.setQueue(this.queue);
+            }
+            
+            for (String base : baseNames) {
+                jobVcfPrep.addFile(this.createOutputFile(this.dataDir + base + ".snps.raw.vcf.tbi", "application/tbi", this.manualOutput));
+                jobVcfPrep.addFile(this.createOutputFile(this.dataDir + base + ".snps.raw.vcf.gz",  "application/vcf-4-gzip", this.manualOutput));
             }
 
             //SET PARENTS FOR VCFPREP JOB
             for (Job parent : gatkJobs) {
                 jobVcfPrep.addParent(parent);
             }
-
-            // TODO Need to set up a provsioning job that may be preceeded by
-            // zipping all needed files into a single archive
 
             /*
              * ======== Next, SampleFingerprinting 2.0 should kick in ==========
