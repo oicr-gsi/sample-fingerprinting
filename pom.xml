@@ -14,10 +14,10 @@
     <version>1.0</version>
     <packaging>jar</packaging>
 
-    <name>decider-mutect-strelka</name>
+    <name>decider-fingerprint-collector</name>
 
     <properties>
-        <workflow-version>1.1</workflow-version>
+        <workflow-version>1.0</workflow-version>
         <main-class>ca.on.oicr.pde.deciders.FingerprintCollectorDecider</main-class>
         <testSuite>src/test/resources/testing.xml</testSuite>
     </properties>

@@ -25,7 +25,7 @@ public class FingerprintCollectorDecider extends OicrDecider {
 
     private final SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.S");
     private Map<String, BeSmall> fileSwaToSmall;
-    private String GatkMemory;
+    private String gatkMemory;
 
     private String outputPrefix = "./";
     private String outputDir = "seqware-results";
@@ -75,7 +75,7 @@ public class FingerprintCollectorDecider extends OicrDecider {
         Log.debug("INIT");
         this.setMetaType(Arrays.asList(BAM_METATYPE));
         this.setGroupingStrategy(Header.FILE_SWA);
-
+        this.reseqType = new HashMap<String, Map>();
         //Handle .ini file - we accept only memory size allocated to different steps
         if (options.has("ini-file")) {
             File file = new File(options.valueOf("ini-file").toString());
@@ -110,8 +110,8 @@ public class FingerprintCollectorDecider extends OicrDecider {
 
         if (this.options.has("gatk-memory")) {
 
-            this.GatkMemory = options.valueOf("gatk-memory").toString();
-            Log.debug("Setting memory allocated for GATK step to " + this.GatkMemory + " Megabytes as requested");
+            this.gatkMemory = options.valueOf("gatk-memory").toString();
+            Log.debug("Setting memory allocated for GATK step to " + this.gatkMemory + " Megabytes as requested");
         }
 
         if (this.options.has("gatk-prefix")) {
@@ -333,8 +333,10 @@ public class FingerprintCollectorDecider extends OicrDecider {
         
         run.addProperty("input_files", inputFiles);
         run.addProperty("output_prefix",this.outputPrefix);
+        run.addProperty("output_dir", this.outputDir);
         run.addProperty("gatk_prefix",this.gatkPrefix);
-	run.addProperty("output_dir", this.outputDir);
+        run.addProperty("manual_output", this.manualOutput);
+	
             
         if (null != checkedSNPs) {
           run.addProperty("checked_snps", checkedSNPs);
