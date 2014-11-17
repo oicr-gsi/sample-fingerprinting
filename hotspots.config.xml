@@ -16,5 +16,9 @@
       <checked_snps>/scratch/user/pruzanov/Data/Lee/dbsnp137.hg19.402.overlap.vcf.gz</checked_snps>
       <check_points>400</check_points>
      </resequencing_type>
+     <resequencing_type id="Agilent SureSelect ICGC/Sanger Exon">
+      <checked_snps>/scratch/user/pruzanov/Data/Lee/dbsnp137.hg19.402.overlap.vcf.gz</checked_snps>
+      <check_points>400</check_points>
+     </resequencing_type>
    </template_type>
 </references> 
