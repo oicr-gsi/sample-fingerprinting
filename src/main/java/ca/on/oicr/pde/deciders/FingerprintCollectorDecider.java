@@ -30,8 +30,9 @@ public class FingerprintCollectorDecider extends OicrDecider {
     private String outputPrefix = "./";
     private String outputDir = "seqware-results";
     private String manualOutput = "false";
+    private String groupBy = "";
     //GATK:
-    private String gatkPrefix;
+    private String gatkPrefix = "./";
     private double standCallConf;
     private double standEmitConf;
     private int dcov;
@@ -74,7 +75,7 @@ public class FingerprintCollectorDecider extends OicrDecider {
     public ReturnValue init() {
         Log.debug("INIT");
         this.setMetaType(Arrays.asList(BAM_METATYPE));
-        this.setGroupingStrategy(Header.FILE_SWA);
+        //this.setGroupingStrategy(Header.FILE_SWA);
         this.reseqType = new HashMap<String, Map>();
         //Handle .ini file - we accept only memory size allocated to different steps
         if (options.has("ini-file")) {
@@ -94,9 +95,19 @@ public class FingerprintCollectorDecider extends OicrDecider {
 
         }
 
-        //Group by sample if no other grouping selected
+        //Group by
         if (this.options.has("group-by")) {
-            Log.error("group-by parameter passed, but this decider does not allow overriding the default grouping (by Donor + Library Type)");
+            this.groupBy = options.valueOf("group-by").toString();
+            if (!this.groupBy.equals(Header.FILE_SWA.toString()) &&
+                !this.groupBy.equals(Header.SAMPLE_NAME.toString()) &&
+                !this.groupBy.equals(Header.SEQUENCER_RUN_NAME.toString())) {
+                Log.debug("Unsupported group-by parameter passed, will revert to default group-by FILE_SWA");
+                this.groupBy = "FILE_SWA";
+            } else {
+              if (!this.groupBy.equals(Header.FILE_SWA.toString())) {
+                  Log.debug("group-by [" + this.groupBy + "] passed, it will override the default (FILE_SWA)");
+              }
+            }
         }
 
         if (this.options.has("queue")) {
@@ -233,7 +244,8 @@ public class FingerprintCollectorDecider extends OicrDecider {
             }
                 
 
-            BeSmall currentSmall = new BeSmall(r);
+           // String groupByThis = this.groupBy.isEmpty() ? "" : this.handleGroupByAttribute(this.groupBy);
+            BeSmall currentSmall = new BeSmall(r, this.groupBy);
             fileSwaToSmall.put(r.getAttribute(Header.FILE_SWA.getTitle()), currentSmall);
 
             String fileDeets = currentSmall.getIusDetails();
@@ -273,7 +285,13 @@ public class FingerprintCollectorDecider extends OicrDecider {
 
         //group files according to the designated header (in the case of this workflow, by template type)
         for (ReturnValue r : newValues) {
-            String currVal = fileSwaToSmall.get(r.getAttribute(Header.FILE_SWA.getTitle())).groupByAttribute;
+            
+            String currVal;
+            if (groupBy.equals(Header.FILE_SWA.getTitle())) {
+              currVal = r.getAttribute(Header.FILE_SWA.getTitle());
+            } else {
+              currVal = fileSwaToSmall.get(r.getAttribute(Header.FILE_SWA.getTitle())).groupByAttribute;
+            }
             List<ReturnValue> vs = map.get(currVal);
             if (vs == null) {
                 vs = new ArrayList<ReturnValue>();
@@ -285,14 +303,10 @@ public class FingerprintCollectorDecider extends OicrDecider {
      return map;
     }
 
-    @Override
+    @Override //Not used here
     protected String handleGroupByAttribute(String attribute) {
         String a = super.handleGroupByAttribute(attribute);
-        BeSmall small = fileSwaToSmall.get(a);
-        if (small != null) {
-            return small.getGroupByAttribute();
-        }
-        return attribute;
+        return a;
     }
 
     @Override
@@ -336,9 +350,9 @@ public class FingerprintCollectorDecider extends OicrDecider {
         run.addProperty("output_dir", this.outputDir);
         run.addProperty("gatk_prefix",this.gatkPrefix);
         run.addProperty("manual_output", this.manualOutput);
-	
-            
-        if (null != checkedSNPs) {
+
+        
+        if (null != checkedSNPs && !checkedSNPs.isEmpty()) {
           run.addProperty("checked_snps", checkedSNPs);
           run.addProperty("check_points", checkPoints);
         }
@@ -429,10 +443,9 @@ public class FingerprintCollectorDecider extends OicrDecider {
         private Date date = null;
         private String iusDetails = null;
         private String groupByAttribute = null;
-        private String tissueType = null;
         private String path = null;
 
-        public BeSmall(ReturnValue rv) {
+        public BeSmall(ReturnValue rv, String groupBy) {
             try {
                 date = format.parse(rv.getAttribute(Header.PROCESSING_DATE.getTitle()));
             } catch (ParseException ex) {
@@ -440,10 +453,15 @@ public class FingerprintCollectorDecider extends OicrDecider {
             }
             FileAttributes fa = new FileAttributes(rv, rv.getFiles().get(0));
             iusDetails = fa.getLibrarySample() + fa.getSequencerRun() + fa.getLane() + fa.getBarcode();
-            tissueType = fa.getLimsValue(Lims.TISSUE_TYPE);
-            groupByAttribute = fa.getDonor() + ":" + fa.getLimsValue(Lims.LIBRARY_TEMPLATE_TYPE);
-            if (null != fa.getLimsValue(Lims.GROUP_ID)) {
-                groupByAttribute = groupByAttribute.concat(":" + fa.getLimsValue(Lims.GROUP_ID));
+            groupByAttribute = iusDetails;
+            // If groupBy
+
+            if (!groupBy.isEmpty()) {
+                if (groupBy.equals("SAMPLE_NAME")) {
+                    groupByAttribute = fa.getDonor() + ":" + fa.getLimsValue(Lims.LIBRARY_TEMPLATE_TYPE);
+                } else if (groupBy.equals("SAMPLE_SWA")) {
+                    groupByAttribute = rv.getAttribute(Header.SAMPLE_NAME.getTitle());
+                }
             }
 
             path = rv.getFiles().get(0).getFilePath() + "";
@@ -463,10 +481,6 @@ public class FingerprintCollectorDecider extends OicrDecider {
 
         public void setGroupByAttribute(String groupByAttribute) {
             this.groupByAttribute = groupByAttribute;
-        }
-
-        public String getTissueType() {
-            return tissueType;
         }
 
         public String getIusDetails() {
