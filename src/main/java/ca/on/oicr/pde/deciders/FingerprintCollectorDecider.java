@@ -31,6 +31,7 @@ public class FingerprintCollectorDecider extends OicrDecider {
     private String outputDir = "seqware-results";
     private String manualOutput = "false";
     private String groupBy = "";
+    private String customBamList = "";
     //GATK:
     private String gatkPrefix = "./";
     private double standCallConf;
@@ -88,7 +89,10 @@ public class FingerprintCollectorDecider extends OicrDecider {
 
                 this.standCallConf = Double.valueOf(iniFileMap.get("stand_call_conf"));
                 this.standEmitConf = Double.valueOf(iniFileMap.get("stand_emit_conf"));
-                this.dcov = Integer.valueOf(iniFileMap.get("dcov"));
+                this.dcov          = Integer.valueOf(iniFileMap.get("dcov"));
+                this.customBamList = iniFileMap.get("input_files");
+                if (!this.customBamList.isEmpty())
+                    Log.warn("Note that list of .bam files from this .ini will be APPENDED to the listt retrieved from metaDB");
             } else {
                 Log.error("The given INI file does not exist: " + file.getAbsolutePath());
                 System.exit(1);
@@ -354,7 +358,12 @@ public class FingerprintCollectorDecider extends OicrDecider {
 	    this.setTest(true);
 	}
         
-        run.addProperty("input_files", inputFiles);
+        
+        StringBuilder inputString = new StringBuilder(inputFiles);
+        if (!this.customBamList.isEmpty()) {   
+            inputString.append(",").append(this.customBamList);
+        }
+        run.addProperty("input_files", inputString.toString());
         run.addProperty("output_prefix",this.outputPrefix);
         run.addProperty("output_dir", this.outputDir);
         run.addProperty("gatk_prefix",this.gatkPrefix);

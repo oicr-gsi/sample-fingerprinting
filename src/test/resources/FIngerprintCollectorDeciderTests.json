@@ -20,6 +20,14 @@
                 "--root-sample-name": "PCSI_0022",
                 "--template-type": "WG"
             }
+        },
+        {
+            "id": "Grouping test 1",
+            "parameters": {
+                "--root-sample-name": "PCSI_00191",
+                "--group-by": "SAMPLE_NAME",
+                "--template-type": "EX"
+            }
         }
     ]
 }
