@@ -40,8 +40,8 @@ public class FingerprintCollectorDecider extends OicrDecider {
     private String queue = "";
     private final static String BAM_METATYPE = "application/bam";
 
-    private String templateTypeFilter = "";
-    private String reseqTypeFilter = "";
+    private String templateTypeFilter   = "";
+    private String resequenceTypeFilter = "";
     private String studyName;
     private Map<String, Map> reseqType;
     private final String SNPConfigFile = "/.mounts/labs/PDE/data/SampleFingerprinting/hotspots.config.xml";
@@ -52,6 +52,8 @@ public class FingerprintCollectorDecider extends OicrDecider {
         parser.acceptsAll(Arrays.asList("ini-file"), "Optional: the location of the INI file.").withRequiredArg();
         parser.accepts("template-type", "Optional. Set the template type to limit the workflow run "
                 + "so that it runs on data only of this template type").withRequiredArg();
+        parser.accepts("resequencing-type", "Optional. Set the resequencing type filter to limit the workflow run "
+                + "so that it runs on data only of this resequencing type").withRequiredArg();
         parser.accepts("output-path", "Optional: the path where the files should be copied to "
                 + "after analysis. Corresponds to output-prefix in INI file. Default: ./").withRequiredArg();
         parser.accepts("output-folder", "Optional: the name of the folder to put the output into relative to "
@@ -75,7 +77,6 @@ public class FingerprintCollectorDecider extends OicrDecider {
     public ReturnValue init() {
         Log.debug("INIT");
         this.setMetaType(Arrays.asList(BAM_METATYPE));
-        //this.setGroupingStrategy(Header.FILE_SWA);
         this.reseqType = new HashMap<String, Map>();
         //Handle .ini file - we accept only memory size allocated to different steps
         if (options.has("ini-file")) {
@@ -102,7 +103,7 @@ public class FingerprintCollectorDecider extends OicrDecider {
                 !this.groupBy.equals(Header.SAMPLE_NAME.toString()) &&
                 !this.groupBy.equals(Header.SEQUENCER_RUN_NAME.toString())) {
                 Log.debug("Unsupported group-by parameter passed, will revert to default group-by FILE_SWA");
-                this.groupBy = "FILE_SWA";
+                this.groupBy = Header.FILE_SWA.toString();
             } else {
               if (!this.groupBy.equals(Header.FILE_SWA.toString())) {
                   Log.debug("group-by [" + this.groupBy + "] passed, it will override the default (FILE_SWA)");
@@ -119,6 +120,11 @@ public class FingerprintCollectorDecider extends OicrDecider {
             Log.debug("Setting template type is not necessary, however if set the decider will run the workflow only on this type of data");
         }
 
+        if (this.options.has("resequencing-type")) {
+            this.resequenceTypeFilter = options.valueOf("resequencing-type").toString();
+            Log.debug("Setting resequencing type is not necessary, however if set the decider will run the workflow only on this type of data");
+        }
+        
         if (this.options.has("gatk-memory")) {
 
             this.gatkMemory = options.valueOf("gatk-memory").toString();
@@ -195,18 +201,21 @@ public class FingerprintCollectorDecider extends OicrDecider {
         String targetResequencingType = returnValue.getAttribute(Header.SAMPLE_TAG_PREFIX.getTitle() + "geo_targeted_resequencing");
         String targetTemplateType = returnValue.getAttribute(Header.SAMPLE_TAG_PREFIX.getTitle() + "geo_library_source_template_type");
         // If nulls, set to NA
-        if (null == targetResequencingType || targetResequencingType.isEmpty()) {
-            targetResequencingType = "NA";
-        }
         if (null == targetTemplateType || targetTemplateType.isEmpty()) {
             targetTemplateType = "NA";
         }
+        if (null == targetResequencingType || targetResequencingType.isEmpty()) {
+            targetResequencingType = "NA";
+        }
 
+        if (!fm.getMetaType().equals(BAM_METATYPE)) {
+                return false;
+        }
         // Check filters
-        if (!this.reseqTypeFilter.isEmpty() && !this.reseqTypeFilter.equals(targetResequencingType)) {
+        if (!this.templateTypeFilter.isEmpty() && !this.templateTypeFilter.equals(targetTemplateType)) {
             return false;
         }
-        if (!this.templateTypeFilter.isEmpty() && !this.templateTypeFilter.equals(targetTemplateType)) {
+        if (!this.resequenceTypeFilter.isEmpty() && !this.resequenceTypeFilter.equals(targetResequencingType)) {
             return false;
         }
 
@@ -323,7 +332,7 @@ public class FingerprintCollectorDecider extends OicrDecider {
         
         for (FileAttributes atts : run.getFiles()) {
           if (checkedSNPs.isEmpty()) {
-           String fileKey = fileSwaToSmall.get(atts.getOtherAttribute(Header.FILE_SWA.getTitle())).getGroupByAttribute();
+           String fileKey = fileSwaToSmall.get(atts.getOtherAttribute(Header.FILE_SWA.getTitle())).getReseqTemplateID();
            if (this.reseqType.containsKey(fileKey)) {
              checkedSNPs = this.reseqType.get(fileKey).get("file").toString();
              checkPoints = this.reseqType.get(fileKey).get("points").toString();
@@ -369,7 +378,9 @@ public class FingerprintCollectorDecider extends OicrDecider {
         if (!this.studyName.isEmpty()) {
           run.addProperty("study_name", this.studyName);
         }
-
+        if (!this.queue.isEmpty()) {
+          run.addProperty("queue", this.queue);
+        }
         
         return new ReturnValue();
     }
@@ -440,10 +451,11 @@ public class FingerprintCollectorDecider extends OicrDecider {
 
     private class BeSmall {
 
-        private Date date = null;
+        private Date   date = null;
         private String iusDetails = null;
         private String groupByAttribute = null;
         private String path = null;
+        private String reseqTemplateID = null;
 
         public BeSmall(ReturnValue rv, String groupBy) {
             try {
@@ -453,9 +465,9 @@ public class FingerprintCollectorDecider extends OicrDecider {
             }
             FileAttributes fa = new FileAttributes(rv, rv.getFiles().get(0));
             iusDetails = fa.getLibrarySample() + fa.getSequencerRun() + fa.getLane() + fa.getBarcode();
+            reseqTemplateID = fa.getDonor() + fa.getLimsValue(Lims.LIBRARY_TEMPLATE_TYPE);
             groupByAttribute = iusDetails;
             // If groupBy
-
             if (!groupBy.isEmpty()) {
                 if (groupBy.equals("SAMPLE_NAME")) {
                     groupByAttribute = fa.getDonor() + ":" + fa.getLimsValue(Lims.LIBRARY_TEMPLATE_TYPE);
@@ -465,6 +477,10 @@ public class FingerprintCollectorDecider extends OicrDecider {
             }
 
             path = rv.getFiles().get(0).getFilePath() + "";
+        }
+
+        public String getReseqTemplateID() {
+            return reseqTemplateID;
         }
 
         public Date getDate() {
