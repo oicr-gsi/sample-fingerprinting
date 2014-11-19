@@ -24,19 +24,20 @@ import net.sourceforge.seqware.pipeline.workflowV2.model.SqwFile;
  */
 public class SampleFingerprintingWorkflow extends OicrWorkflow {
 
-    private String[] bam_files;
-    private String[] genotypes;
-    private String[] vcf_files;
-    private String[] GATK_dirs;
+  //  private String[] bam_files;
+  //  private String[] genotypes;
+    private String[] vcfFiles;
+    private String[] finFiles;
+   // private String[] GATK_dirs;
     private String existingMatrix = "";
     private String studyName = "";
     private String watchersList = "";
     private String dataDir;
     //private String tempDir = "tempfiles/";
-    private String gatkPrefix = "./";
+ //   private String gatkPrefix = "./";
     //Additional one for GATK:
     //private String gatkTmp = "temp";
-    private String finDir = "finfiles/";
+    private final String finDir = "finfiles/";
    // private String gatkVersion;
     private String tabixVersion;
     private String vcftoolsVersion;
@@ -54,7 +55,10 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
     private final int jChunkSize = 50; // Maximum allowed number of vcf files when jaccard_indexing step doesn't fork into multiple sub-jobs
   //  private final int batchCount = 100; // Use for job batching, this many jobs 
     private boolean manualOutput;
-  //  private boolean provisionVcfs;
+    
+    private final static String VCF_EXT   = ".snps.raw.vcf.gz";
+    private final static String TABIX_EXT = ".snps.raw.vcf.gz.tbi";
+    private final static String FIN_EXT   = ".fin";
 
     @Override
     public Map<String, SqwFile> setupFiles() {
@@ -64,17 +68,7 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
                 Logger.getLogger(SampleFingerprintingWorkflow.class.getName()).log(Level.SEVERE, "input_files is not set, we need at least one bam file");
                 return (null);
             } else {
-                this.bam_files = getProperty("input_files").split(",");
-            }
-
-            if (getProperty("genotypes") == null) {
-                Logger.getLogger(SampleFingerprintingWorkflow.class.getName()).log(Level.SEVERE, "genotypes (vcf files) is not set, we need these to calculate similarity/generate genotypes");
-                return (null);
-            } else {
-                this.genotypes = getProperty("genotypes").split(",");
-                if (this.genotypes.length <= 1) {
-                    this.genotypes = null;
-                }
+                this.vcfFiles = getProperty("input_files").split(",");
             }
 
             if (getProperty("check_points") == null) {
@@ -128,35 +122,38 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
                 this.manualOutput = false;
                 Logger.getLogger(SampleFingerprintingWorkflow.class.getName()).log(Level.WARNING, "No manual output requested, will append a random dir to the output path");
             } else {
-                String manualCheck = getProperty("manual_output");
-                this.manualOutput = (manualCheck.isEmpty() || manualCheck.equalsIgnoreCase("false")) ? false : true;
+                String manualCheck = getOptionalProperty("manual_output", "false");
+                try {
+                    this.manualOutput = Boolean.valueOf(manualCheck);
+                } catch (NumberFormatException e) {
+                    this.manualOutput = false;
+                }
             }
 
-            this.vcf_files = new String[this.bam_files.length];
-
-            for (int i = 0; i < this.bam_files.length; i++) {
+            // Set up all inputs, assume that all vcf.gz, vcf.gz.tbi and .fin files sit in triplets in the same directories
+            for (int i = 0; i < this.vcfFiles.length; i++) {
                 //Using first file, try to guess the study name if it was not provided as an argument in .ini file
                 if (i == 0 && this.studyName.isEmpty()) {
-                    if (bam_files[i].matches("SWID_\\d+_\\D+_\\d+")) {
-                        String tempName = bam_files[i].substring(bam_files[i].lastIndexOf("SWID_"));
+                    if (vcfFiles[i].matches("SWID_\\d+_\\D+_\\d+")) {
+                        String tempName = vcfFiles[i].substring(vcfFiles[i].lastIndexOf("SWID_"));
                         this.studyName = tempName.substring(0, tempName.indexOf("_") - 1);
                     } else {
                         this.studyName = "UNDEF";
                     }
                 }
 
-                String basename = this.bam_files[i].substring(this.bam_files[i].lastIndexOf("/") + 1, this.bam_files[i].lastIndexOf(".bam"));
+                String basename = this.vcfFiles[i].substring(this.vcfFiles[i].lastIndexOf("/") + 1, this.vcfFiles[i].lastIndexOf(".vcf.gz"));
                 if (basename.contains(".")) {
                     basename = basename.substring(0, basename.indexOf("."));
                 }
                 String vcfName = basename + ".snps.raw.vcf";
-                this.vcf_files[i] = this.dataDir + vcfName;
+                this.vcfFiles[i] = this.dataDir + vcfName;
 
                 // If we don't have a vcf file we need to set it as an output (Obsolete)
                 // vcf files are in the same order as bam files, the decider needs to ensure this
 
             }
-            Log.stdout("Created array of " + this.vcf_files.length + " vcf files of length ");
+            Log.stdout("Created array of " + this.vcfFiles.length + " vcf files of length ");
         } catch (Exception e) {
             Logger.getLogger(SampleFingerprintingWorkflow.class.getName()).log(Level.SEVERE, null, e);
         }
@@ -172,6 +169,7 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
                 this.dataDir += "/";
             }
             this.addDirectory(this.dataDir);
+            this.addDirectory(this.finDir);
         } catch (Exception e) {
             Logger.getLogger(SampleFingerprintingWorkflow.class.getName()).log(Level.WARNING, null, e);
         }
@@ -183,15 +181,15 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
         try {
             //Need the decider to check the headers of the .bam files for the presence of RG and abscence of empty Fields (Field: )
             Workflow workflow = this.getWorkflow();
-            int newVcfs = 0;
+           // int newVcfs = 0;
             List<Job> prov_jobs = new ArrayList<Job>();
             List<Job> gatk_jobs = new ArrayList<Job>();
 
 
-            if (this.existingMatrix.isEmpty() && this.vcf_files.length > this.jChunkSize) {
+            if (this.existingMatrix.isEmpty() && this.vcfFiles.length > this.jChunkSize) {
 
                 StringBuilder chunkedResults = new StringBuilder();
-                int vcf_chunks = (int) Math.ceil((double) this.vcf_files.length / (double) this.jChunkSize);
+                int vcf_chunks = (int) Math.ceil((double) this.vcfFiles.length / (double) this.jChunkSize);
                 int resultID = 1;
 
                 // Combine chunks and run the jobs, registering results for later use
@@ -285,7 +283,7 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
                     + "--datadir=" + this.dataDir + " "
                     + "--studyname=" + this.studyName + " "
                     + "> " + this.dataDir + "index.html");
-         //   make_pics.addParent(job_copy);
+            //make_pics.addParent(job_copy);
             make_pics.addParent(job_jaccard);
             make_pics.setMaxMemory("4000");
             if (!this.queue.isEmpty()) {
