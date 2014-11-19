@@ -17,7 +17,9 @@ import net.sourceforge.seqware.pipeline.workflowV2.model.Workflow;
 import net.sourceforge.seqware.pipeline.workflowV2.model.SqwFile;
 
 /**
- *
+ * SampleFingerprinting v 2.0 - workflow split from original (1.1) version and
+ * working with Fingerprint Collector workflow
+ * 
  * @author pruzanov
  */
 public class SampleFingerprintingWorkflow extends OicrWorkflow {
@@ -30,29 +32,29 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
     private String studyName = "";
     private String watchersList = "";
     private String dataDir;
-    private String tempDir = "tempfiles/";
+    //private String tempDir = "tempfiles/";
     private String gatkPrefix = "./";
     //Additional one for GATK:
-    private String gatkTmp = "temp";
+    //private String gatkTmp = "temp";
     private String finDir = "finfiles/";
-    private String gatkVersion;
+   // private String gatkVersion;
     private String tabixVersion;
     private String vcftoolsVersion;
-    private String samtoolsVersion;
-    private String genomeFile;
-    private String checkedSNPs;
+   // private String samtoolsVersion;
+   // private String genomeFile;
+   // private String checkedSNPs;
     private String check_points;
     private String queue;
-    private String reportName = "sample_fingerprint";
-    private String gatk_java;
+    private final String reportName = "sample_fingerprint";
+   // private String gatk_java;
     //GATK parameters
-    private String stand_call_conf = "50.0";
-    private String stand_emit_conf = "10.0";
-    private String dcov = "200";
+  //  private String stand_call_conf = "50.0";
+  //  private String stand_emit_conf = "10.0";
+  //  private String dcov = "200";
     private final int jChunkSize = 50; // Maximum allowed number of vcf files when jaccard_indexing step doesn't fork into multiple sub-jobs
-    private final int batchCount = 100; // Use for job batching, this many jobs 
+  //  private final int batchCount = 100; // Use for job batching, this many jobs 
     private boolean manualOutput;
-    private boolean provisionVcfs;
+  //  private boolean provisionVcfs;
 
     @Override
     public Map<String, SqwFile> setupFiles() {
@@ -75,28 +77,6 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
                 }
             }
 
-            if (getProperty("gatk_java") == null) {
-                Logger.getLogger(SampleFingerprintingWorkflow.class.getName()).log(Level.SEVERE, "gatk_java is not set, we need it to run GATK since it requires 1.7 java and we cannot rely on the defaul");
-                return (null);
-            } else {
-                this.gatk_java = getProperty("gatk_java");
-            }
-            
-            if (getProperty("genome_file") == null) {
-                Logger.getLogger(SampleFingerprintingWorkflow.class.getName()).log(Level.SEVERE, "genome_file (reference assembly fasta) is not set, we need it to generate a genotype");
-                return (null);
-            } else {
-                this.genomeFile = getProperty("genome_file");
-            }
-
-
-            if (getProperty("checked_snps") == null) {
-                Logger.getLogger(SampleFingerprintingWorkflow.class.getName()).log(Level.SEVERE, "checked_snps (checkpoints) is not set, we need it to generate a genotype");
-                return (null);
-            } else {
-                this.checkedSNPs = getProperty("checked_snps");
-            }
-
             if (getProperty("check_points") == null) {
                 Logger.getLogger(SampleFingerprintingWorkflow.class.getName()).log(Level.SEVERE, "check_points (checkpoints) is not set, we need it to generate a report");
                 return (null);
@@ -115,18 +95,7 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
             } else {
                 this.watchersList = getProperty("watchers_list");
             }
-
-            this.stand_call_conf = getOptionalProperty("stand_call_conf", "50.0");
-            this.stand_emit_conf = getOptionalProperty("stand_emit_conf", "10.0");
-            this.dcov            = getOptionalProperty("dcov", "200");
             
-            if (getProperty("gatk_version") == null) {
-                Logger.getLogger(SampleFingerprintingWorkflow.class.getName()).log(Level.SEVERE, "gatk_version is not set, we need it to call GATK correctly");
-                return (null);
-            } else {
-                this.gatkVersion = getProperty("gatk_version");
-            }
-
             if (getProperty("tabix_version") == null) {
                 Logger.getLogger(SampleFingerprintingWorkflow.class.getName()).log(Level.SEVERE, "tabix_version is not set, we need it to call tabix correctly");
                 return (null);
@@ -141,13 +110,6 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
                 this.vcftoolsVersion = getProperty("vcftools_version");
             }
 
-            if (getProperty("samtools_version") == null) {
-                Logger.getLogger(SampleFingerprintingWorkflow.class.getName()).log(Level.SEVERE, "samtools_version is not set, we need it to call samtools correctly");
-                return (null);
-            } else {
-                this.samtoolsVersion = getProperty("samtools_version");
-            }
-
             if (getProperty("queue") == null) {
                 Logger.getLogger(SampleFingerprintingWorkflow.class.getName()).log(Level.WARNING, "Queue not set, most likely will run as default queue");
                 this.queue = "";
@@ -160,12 +122,6 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
                 this.studyName = "";
             } else {
                 this.studyName = getProperty("study_name");
-            }
-
-            if (getProperty("provision_vcfs") == null) {
-                Logger.getLogger(SampleFingerprintingWorkflow.class.getName()).log(Level.WARNING, "provision_vcfs flag is not set, will not provision vcf files");
-            } else {
-                this.provisionVcfs = getProperty("provision_vcfs").toString().isEmpty() ? false : true;
             }
 
             if (getProperty("manual_output") == null) {
@@ -215,24 +171,7 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
             if (!this.dataDir.endsWith("/")) {
                 this.dataDir += "/";
             }
-            //Setup gatk prefix
-            this.gatkPrefix = getOptionalProperty("gatk_prefix", "./");
-            if (!this.gatkPrefix.endsWith("/")) {
-                     this.gatkPrefix += "/";
-            }
-
             this.addDirectory(this.dataDir);
-            this.addDirectory(this.tempDir);
-            this.addDirectory(this.dataDir + this.finDir);
-            int num_of_files = getProperty("input_files").split(",").length;
-            //Make a pool of tmp directories for GATK:
-            this.GATK_dirs = new String[num_of_files];
-            int seed = this.makeRandom(8);
-            for (int b = 0; b < num_of_files; b++) {
-                this.GATK_dirs[b] = this.gatkPrefix + this.gatkTmp + seed++;
-                this.addDirectory(GATK_dirs[b]);
-            }
-
         } catch (Exception e) {
             Logger.getLogger(SampleFingerprintingWorkflow.class.getName()).log(Level.WARNING, null, e);
         }
@@ -248,181 +187,6 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
             List<Job> prov_jobs = new ArrayList<Job>();
             List<Job> gatk_jobs = new ArrayList<Job>();
 
-            // A small copy job
-            Job job_copy = workflow.createBashJob("copy_resources");
-            job_copy.setCommand("cp -R " + getWorkflowBaseDir()
-                              + "/data/* "
-                              + this.dataDir);
-
-            job_copy.setMaxMemory("2000");
-            if (!this.queue.isEmpty()) {
-                job_copy.setQueue(this.queue);
-            }
-
-            // TODO Entry point for Job batching modifications
-            int batchLength = this.bam_files.length / this.batchCount;
-            //int batchLength = 15; //DEBUG
-            String[] bam_path = new String[this.bam_files.length];
-
-            for (int i = 0; i < this.bam_files.length; i += batchLength) {
-                //BATCHING Job1 series
-                int stop = i + batchLength >= this.bam_files.length ? this.bam_files.length : i + batchLength;
-                prov_jobs.clear();
-                
-                for (int bj0 = i; bj0 < stop; bj0++) {  
-                    
-                  Job job_provide = workflow.createBashJob("provide_bams_" + bj0);
-                  job_provide.setCommand("echo Provisioning File in Batch " + i);
-                  StringBuilder provCommand = new StringBuilder();
-
-                  SqwFile bamFile = this.createInFile("application/bam", this.bam_files[bj0]);
-                  bam_path[bj0] = bamFile.getProvisionedPath();
-                  job_provide.addFile(bamFile);
-
-                  provCommand.append("echo Provisioning File ").append(bj0);
-
-                  job_provide.setCommand(provCommand.toString());
-                  job_provide.setMaxMemory("2000");
-                  if (!this.queue.isEmpty()) {
-                    job_provide.setQueue(this.queue);
-                  }
-                  prov_jobs.add(job_provide);
-                } //Batching ENDs
-                
-                Job job_index = workflow.createBashJob("index_bams_" + i);
-                StringBuilder idxCommand = new StringBuilder();
-                for (int bj1 = i; bj1 < stop; bj1++) {  
-
-                  if (bj1 > i)
-                      idxCommand.append(" && ");
-
-                  idxCommand.append(getWorkflowBaseDir())
-                            .append("/bin/samtools-")
-                            .append(this.samtoolsVersion)
-                            .append("/samtools index ")
-                            .append(bam_path[bj1]);
-               
-                } //Batching ENDs
-                job_index.setCommand(idxCommand.toString());
-                job_index.setMaxMemory("4000");
-                if (!this.queue.isEmpty()) {
-                    job_index.setQueue(this.queue);
-                }
-                for (Job pj : prov_jobs) {
-                    job_index.addParent(pj);
-                }
-                
-                Job job_gatk = workflow.createBashJob("call_snps_" + i);
-                StringBuilder gatkCommand = new StringBuilder();
-                //BATCHING Job2 series
-                for (int bj2 = i; bj2 < stop; bj2++) {
-                    if (bj2 > i) {
-                        gatkCommand.append(" && ");
-                    }
-                    gatkCommand.append(gatk_java)
-                            .append(" -Xmx2g -Djava.io.tmpdir=").append(this.GATK_dirs[bj2])
-                            .append(" -jar ").append(getWorkflowBaseDir()).append("/bin/GenomeAnalysisTK-").append(this.gatkVersion).append("/GenomeAnalysisTK.jar ")
-                            .append("-R ").append(this.genomeFile).append(" ")
-                            .append("-T UnifiedGenotyper -I ")
-                            .append(bam_path[bj2]).append(" ")
-                            .append("-o ").append(this.vcf_files[bj2]).append(" ")
-                            .append("-stand_call_conf ").append(this.stand_call_conf).append(" ")
-                            .append("-stand_emit_conf ").append(this.stand_emit_conf).append(" ")
-                            .append("-dcov ").append(this.dcov).append(" ")
-                            .append("-L ").append(this.checkedSNPs);
-                    newVcfs++; // Used only to track the number of newly generated vcf files 
-                    if (this.provisionVcfs) {
-                        SqwFile vcf_file = this.createOutputFile(this.vcf_files[bj2], "text/vcf-4", this.manualOutput);
-                        job_gatk.addFile(vcf_file);
-                    }
-                } //Batching ENDs
-                job_gatk.setCommand(gatkCommand.toString());
-                job_gatk.setMaxMemory(getProperty("gatk_memory"));
-                if (!this.queue.isEmpty()) {
-                    job_gatk.setQueue(this.queue);
-                }
-                job_gatk.addParent(job_index);
-                gatk_jobs.add(job_gatk);
-
-                Job job_gatk2 = workflow.createBashJob("calculate_depth_" + i);
-                StringBuilder gatk2Command = new StringBuilder();
-                //BATCHING Job3 series
-                for (int bj3 = i; bj3 < stop; bj3++) {
-
-                    if (bj3 > i) {
-                        gatk2Command.append(" && ");
-                    }
-                    gatk2Command.append(gatk_java).append(" -Xmx3g -Djava.io.tmpdir=").append(this.GATK_dirs[bj3])
-                            .append(" -jar ").append(getWorkflowBaseDir()).append("/bin/GenomeAnalysisTK-").append(this.gatkVersion).append("/GenomeAnalysisTK.jar ")
-                            .append("-R ").append(this.genomeFile).append(" ")
-                            .append("-T DepthOfCoverage ").append("-I ").append(bam_path[bj3]).append(" ")
-                            .append("-o ").append(this.tempDir).append(this.makeBasename(this.bam_files[bj3])).append(" ")
-                            .append("-L ").append(this.checkedSNPs);
-
-                }// BATCHING ENDs
-                job_gatk2.setCommand(gatk2Command.toString());
-                job_gatk2.setMaxMemory(getProperty("gatk_memory"));
-                if (!this.queue.isEmpty()) {
-                    job_gatk2.setQueue(this.queue);
-                }
-                job_gatk2.addParent(job_index);
-                //Additional step to create depth of coverage data - for individual fingerprint image generation
-                Job job_fin = workflow.createBashJob("make_fingerprint_file_" + i);
-                StringBuilder finCommand = new StringBuilder();
-                //BATCHING Job4 series
-                for (int bj4 = i; bj4 < stop; bj4++) {
-
-                    if (bj4 > i) {
-                        finCommand.append(" && ");
-                    }
-                    String basename = this.makeBasename(this.bam_files[bj4]);
-                    finCommand.append(getWorkflowBaseDir()).append("/dependencies/create_fin.pl")
-                              .append(" --refvcf=").append(this.checkedSNPs)
-                              .append(" --genotype=").append(this.vcf_files[bj4])
-                              .append(" --coverage=").append(this.tempDir).append(basename).append(".sample_interval_summary")
-                              .append(" --datadir=").append(this.tempDir)
-                              .append(" --outdir=").append(this.dataDir).append(this.finDir)
-                              .append(" --basename=").append(basename);
-                } //BATCHING ENDs
-                job_fin.setCommand(finCommand.toString());
-                job_fin.setMaxMemory("4000");
-                job_fin.addParent(job_gatk2);
-                gatk_jobs.add(job_fin);
-            } // END OF job Batching loop
-
-            // We don't need to continue if there are no new vcf files to generate
-            if (newVcfs == 0) {
-                Logger.getLogger(getClass().getName()).log(Level.INFO, "There are no new genotypes to generate, to avoid duplicate calculation the workflow will terminate");
-                throw new RuntimeException("There is not enough of new data, terminating...");
-            }
-
-            // At his point we need to stage, bgzip and tabix all vcf files we would need to create a jaccard matrix          
-            Job job_vcfprep = workflow.createBashJob("prepare_vcfs");
-            job_vcfprep.setCommand(getWorkflowBaseDir() + "/dependencies/prepare_vcfs.pl "
-                    + "--datadir=" + this.dataDir + " "
-                    + "--tabix=" + getWorkflowBaseDir() + "/bin/tabix-" + this.tabixVersion + "/tabix "
-                    + "--bgzip=" + getWorkflowBaseDir() + "/bin/tabix-" + this.tabixVersion + "/bgzip");
-            job_vcfprep.setMaxMemory("2000");
-            if (!this.queue.isEmpty()) {
-                job_vcfprep.setQueue(this.queue);
-            }
-
-            //SET PARENTS FOR VCFPREP JOB
-            for (Job parent : gatk_jobs) {
-                job_vcfprep.addParent(parent);
-            }
-
-            List<Job> upstream_jobs = new ArrayList<Job>();
-            upstream_jobs.add(job_vcfprep);
-
-
-            /* We use simple reasoning here - if existingMatrix is unavailable, we will need to run a loooong job
-               of calculting jaccard indexes if the list of vcf files is long. So, we will break the list into smaller chunks
-               the number of chunks should be determined by chunk_size,
-               if N/chunk_size = n of matrix 'tiles' then there should be (n^2 + n)/2 chunk jobs
-               Also, use the results as exisitngMatrix in the next step Likely to run only once
-               (when running this workflow on a study for the very first time)
-            */
 
             if (this.existingMatrix.isEmpty() && this.vcf_files.length > this.jChunkSize) {
 
@@ -447,7 +211,7 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
                             job_list_writer.setQueue(this.queue);
                         }
 
-                        job_list_writer.addParent(job_vcfprep);
+                       // job_list_writer.addParent(job_vcfprep);
 
                         Job job_jchunk = workflow.createBashJob("make_matrix_" + resultID);
                         String chunkName = "jaccard.chunk." + resultID + ".csv";
@@ -470,7 +234,7 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
                         }
 
                         job_jchunk.addParent(job_list_writer);
-                        upstream_jobs.add(job_jchunk);
+                        //upstream_jobs.add(job_jchunk);
                     }
                 }
                 // The result of the last job will be existingMatrix
@@ -490,7 +254,7 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
             if (!this.queue.isEmpty()) {
                 job_list_writer2.setQueue(this.queue);
             }
-            job_list_writer2.addParent(job_vcfprep);
+            //job_list_writer2.addParent(job_vcfprep);
 
             SqwFile matrix = this.createOutputFile(this.dataDir + this.studyName + "_jaccard.matrix.csv", "text/plain", this.manualOutput);
             Job job_jaccard = workflow.createBashJob("make_matrix");
@@ -511,9 +275,6 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
             }
             job_jaccard.addFile(matrix);
             job_jaccard.addParent(job_list_writer2);
-            for (Job parent : upstream_jobs) {
-                job_jaccard.addParent(parent);
-            }
 
             // Images generated here: matrix slicing/color assignment, flagging suspicious files, wrapper for R script
             Job make_pics = workflow.createBashJob("make_report");
@@ -524,7 +285,7 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
                     + "--datadir=" + this.dataDir + " "
                     + "--studyname=" + this.studyName + " "
                     + "> " + this.dataDir + "index.html");
-            make_pics.addParent(job_copy);
+         //   make_pics.addParent(job_copy);
             make_pics.addParent(job_jaccard);
             make_pics.setMaxMemory("4000");
             if (!this.queue.isEmpty()) {
