@@ -19,7 +19,6 @@
     <properties>
         <workflow-version>1.0</workflow-version>
         <main-class>ca.on.oicr.pde.deciders.FingerprintCollectorDecider</main-class>
-        <testSuite>src/test/resources/testing.xml</testSuite>
     </properties>
 
     <dependencies>
