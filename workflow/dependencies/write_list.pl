@@ -12,11 +12,11 @@ my($datadir,$segments);
 my $result = GetOptions ('datadir=s'     => \$datadir,    # working (output) directory with vcf files
                          'segments=s'    => \$segments);  # one or two segments (for composing a merged list) i.e. 0:49,100:149
 
-my $USAGE = "write_list --datadir=[dir with vcf files] --segments=[optional, segments of file list to make a merged list]\n";
+my $USAGE = "write_list --datadir=[dir with vcf.gz files] --segments=[optional, segments of file list to make a merged list]\n";
 die $USAGE if (!$datadir);
 
 opendir(DIR,"$datadir") or die "Couldn't read from directory [$datadir]";
-my @entries = grep{/.vcf$/} grep {!/.vcf.idx/} grep {!/\.gz/} sort readdir DIR; 
+my @entries = grep{/.vcf.gz$/} grep {!/.vcf.idx/} sort readdir DIR; 
 closedir(DIR);
 
 my @segments;
@@ -34,7 +34,7 @@ if ($segments) {
  @segments = ([0,$#entries]);
 }
 
-my @vcfs = map{$_ if(/\.vcf$/)} @entries;
+my @vcfs = map{$_ if(/\.vcf.gz$/)} @entries;
 print STDERR "Got ".scalar(@vcfs)." vcfs\n" if DEBUG;
 print STDERR Dumper(@segments) if DEBUG;
 
