@@ -40,7 +40,7 @@ public class FingerprintCollectorWorkflow extends OicrWorkflow {
     private final String tempDir = "tempfiles/";
     private final String gatkTmp = "temp";
     private final String finDir = "finfiles/";
-    private final int batchCount = 100; // Use for job batching, this many jobs
+    //private final int batchCount = 100; // Use for job batching, this many jobs
     private String gatkPrefix = "./";
 
     //Additional one for GATK:
