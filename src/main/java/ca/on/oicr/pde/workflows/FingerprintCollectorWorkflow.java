@@ -220,13 +220,8 @@ public class FingerprintCollectorWorkflow extends OicrWorkflow {
             List<Job> provisionJobs = new ArrayList<Job>();
             List<Job> gatkJobs = new ArrayList<Job>();
 
-            // Entry point for Job batching modifications
-            // (batching may not be needed in here)
-            //int batchLength = this.bamFiles.length / this.batchCount;
             String[] bamfilePaths = new String[this.bamFiles.length];
 
-            // Decider may be programmed to accept either single .bam 
-            // or set of sample-specific .bam files
             for (int i = 0; i < this.bamFiles.length; i++) {
 
                 SqwFile bamFile = this.createInFile("application/bam", this.bamFiles[i]);
