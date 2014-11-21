@@ -16,9 +16,9 @@ import net.sourceforge.seqware.pipeline.workflowV2.model.SqwFile;
 import net.sourceforge.seqware.pipeline.workflowV2.model.Workflow;
 
 /**
- * SampleFingerprinting v 2.0 - split from original (1.1) version and
- * working with Fingerprint Collector workflow
- * 
+ * SampleFingerprinting v 2.0 - split from original (1.1) version and working
+ * with Fingerprint Collector workflow
+ *
  * @author pruzanov@oicr.on.ca
  */
 public class SampleFingerprintingWorkflow extends OicrWorkflow {
@@ -37,15 +37,15 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
     private final String reportName = "sample_fingerprint";
     private final int jChunkSize = 50; // Maximum allowed number of vcf files when jaccard_indexing step doesn't fork into multiple sub-jobs   
     //Static strings
-    private final static String VCF_EXT   = ".snps.raw.vcf.gz";
+    private final static String VCF_EXT = ".snps.raw.vcf.gz";
     private final static String TABIX_EXT = ".snps.raw.vcf.gz.tbi";
-    private final static String FIN_EXT   = ".fin";
+    private final static String FIN_EXT = ".fin";
 
     @Override
     public Map<String, SqwFile> setupFiles() {
         // Set up reference, bam and vcf files here     
         try {
-           if (getProperty("input_files") == null) {
+            if (getProperty("input_files") == null) {
                 Logger.getLogger(SampleFingerprintingWorkflow.class.getName()).log(Level.SEVERE, "input_files is not set, we need at least one bam file");
                 return (null);
             } else {
@@ -70,7 +70,7 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
             } else {
                 this.watchersList = getProperty("watchers_list");
             }
-            
+
             if (getProperty("tabix_version") == null) {
                 Logger.getLogger(SampleFingerprintingWorkflow.class.getName()).log(Level.SEVERE, "tabix_version is not set, we need it to call tabix correctly");
                 return (null);
@@ -154,36 +154,49 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
             //Need the decider to check the headers of the .bam files for the presence of RG and abscence of empty Fields (Field: )
             Workflow workflow = this.getWorkflow();
             List<Job> upstreamJobs = new ArrayList<Job>();
+            
+            // A small copy job
+            Job job_copy = workflow.createBashJob("copy_resources");
+            job_copy.setCommand("cp -R " + getWorkflowBaseDir()
+                              + "/data/* "
+                              + this.dataDir);
 
+            job_copy.setMaxMemory("2000");
+            if (!this.queue.isEmpty()) {
+                job_copy.setQueue(this.queue);
+            }
+            upstreamJobs.add(job_copy);
+            
+            final String extList = VCF_EXT + "," + FIN_EXT + "," + TABIX_EXT;
+            StringBuilder basePathList = new StringBuilder(this.makeBasepath(this.vcfFiles[0], VCF_EXT));
+            for (int v = 1; v < this.vcfFiles.length; v++) {
+                basePathList.append(",").append(this.makeBasepath(this.vcfFiles[v], VCF_EXT));
+
+            }
+            
+            // Prepare the inputs (make symlinks in dataDir)
+            Job job_link_maker = workflow.createBashJob("link_inputs");
+            job_link_maker.setCommand(getWorkflowBaseDir() + "/dependencies/inputs_linker.pl"
+                    + " --list=" + basePathList.toString()
+                    + " --datadir=" + this.dataDir
+                    + " --findir="  + this.dataDir + this.finDir
+                    + " --extensions=" + extList);
+            job_link_maker.setMaxMemory("2000");
+            if (!this.queue.isEmpty()) {
+                job_link_maker.setQueue(this.queue);
+            }
+            upstreamJobs.add(job_link_maker);
 
             if (this.existingMatrix.isEmpty() && this.vcfFiles.length > this.jChunkSize) {
 
                 StringBuilder chunkedResults = new StringBuilder();
                 int vcf_chunks = (int) Math.ceil((double) this.vcfFiles.length / (double) this.jChunkSize);
                 int resultID = 1;
-                String extList = VCF_EXT + "," + FIN_EXT + "," + TABIX_EXT;
-                StringBuilder basePathList = new StringBuilder(this.vcfFiles[0]);
-                for (int v = 1; v < this.vcfFiles.length; v++) {
-                    basePathList.append(",").append(this.makeBasepath(this.vcfFiles[v], VCF_EXT));
-                   
-                }
-                
-                // Prepare the inputs (make symlinks in dataDir)
-                Job job_link_maker = workflow.createBashJob("link_inputs");
-                job_link_maker.setCommand(getWorkflowBaseDir() + "/dependencies/inputs_linker.pl"
-                        + " --list =" + basePathList.toString()
-                        + " --datadir=" + this.dataDir
-                        + " --extensions=" + extList);
-                job_link_maker.setMaxMemory("2000");
-                if (!this.queue.isEmpty()) {
-                            job_link_maker.setQueue(this.queue);
-                }
-                
-                
+
                 // Combine chunks and run the jobs, registering results for later use
                 for (int c = 0; c < vcf_chunks; c++) {
                     for (int cc = c; cc < vcf_chunks; cc++) {
-                        
+
                         Job job_list_writer = workflow.createBashJob("make_list" + resultID);
                         String chunkList = "jaccard.chunk." + resultID + ".list";
                         job_list_writer.setCommand(getWorkflowBaseDir() + "/dependencies/write_list.pl"
@@ -223,11 +236,10 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
                         upstreamJobs.add(job_jchunk);
                     }
                 }
-                
+
                 // The result of the last job will be existingMatrix
                 this.existingMatrix = chunkedResults.toString();
             }
-
 
             // Next job is jaccard_coeff.matrix script, need to create|update giant matrix of jaccard indexes
             // using vcftools, colors should not be assigned at his step. Will be final jaccard index job          
@@ -241,9 +253,9 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
             if (!this.queue.isEmpty()) {
                 job_list_writer2.setQueue(this.queue);
             }
-            
+
             for (Job upstreamJob : upstreamJobs) {
-               job_list_writer2.addParent(upstreamJob);
+                job_list_writer2.addParent(upstreamJob);
             }
 
             //Similarity-calculating job, operates on chunks
@@ -286,7 +298,7 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
             // Zip finfiles and similarity matrix for customization in the webtool
             Job zip_fins = workflow.createBashJob("zip_finfiles");
             zip_fins.setCommand("zip -r " + this.dataDir + "customize.me.zip "
-                    + this.dataDir + this.finDir
+                    + this.dataDir + this.finDir + " "
                     + matrix.getSourcePath());
             zip_fins.addParent(make_pics);
             zip_fins.setMaxMemory("2000");
