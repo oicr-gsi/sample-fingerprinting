@@ -34,6 +34,7 @@ public class SampleFingerprintingDecider extends OicrDecider {
     private String studyName;
     private String watchersList = "";
     private String customVcfList;
+    private String queue = "";
 
     //these params should come from settings xml file
     private String genomeFile;
@@ -48,7 +49,7 @@ public class SampleFingerprintingDecider extends OicrDecider {
     private Map<String, BeSmall> fileSwaToSmall;
 
     //Static strings
-    private final static String VCF_EXT = ".snps.raw.vcf.gz";
+    //private final static String VCF_EXT = ".snps.raw.vcf.gz";
     private final static String TBI_EXT = ".snps.raw.vcf.gz.tbi";
     private final static String FIN_EXT = ".fin";
     private static final String VCF_GZIP_METATYPE = "application/vcf-4-gzip";
@@ -62,6 +63,7 @@ public class SampleFingerprintingDecider extends OicrDecider {
         parser.accepts("template-type", "Optional: name of the study that we need to analyze.").withRequiredArg();
         parser.accepts("resequencing-type", "Optional: resequencing type for templates other than WG").withRequiredArg();
         parser.accepts("existing-matrix", "Optional: existing matrix from previous workflow run(s)").withRequiredArg();
+        parser.accepts("queue", "Optional: Set the queue (for example, to production)").withRequiredArg();
         //parser.accepts("provision-vcfs", "Optional: set to non-null re-using vcf files from the runs this decider will launch").withRequiredArg();
         parser.accepts("output-path", "Optional: the path where the files should be copied to "
                 + "after analysis. Corresponds to output-prefix in INI file. Default: ./").withRequiredArg();
@@ -177,6 +179,12 @@ public class SampleFingerprintingDecider extends OicrDecider {
             Log.debug("template-type parameter ids not set, will include all available types from the study");
         }
 
+        if (this.options.has("queue")) {
+            this.queue = options.valueOf("queue").toString();
+        } else {
+            Log.debug("queue parameter is not set, will not set this parameter");
+        }
+        
         // Setting resequencing type works like setting up a filter, the decider should fiure out reseq. type automatically
         if (this.options.has("resequencing_type")) {
             this.reseqTypeFilter = this.options.valueOf("resequencing-type").toString();
@@ -375,6 +383,10 @@ public class SampleFingerprintingDecider extends OicrDecider {
         run.addProperty("output_prefix", this.output_prefix);
         run.addProperty("output_dir", this.output_dir);
 
+        if (!this.queue.isEmpty()) {
+          run.addProperty("queue", this.queue);
+        }
+        
         if (null != checkedSNPs) {
             run.addProperty("checked_snps", checkedSNPs);
             run.addProperty("check_points", checkPoints);
