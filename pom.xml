@@ -25,11 +25,13 @@
             <artifactId>samtools</artifactId>
             <version>0.1.19</version>
             <type>zip</type>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>samtools</groupId>
             <artifactId>tabix</artifactId>
             <version>0.2.6</version>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.broadinstitute</groupId>
@@ -37,6 +39,7 @@
             <version>2.7-2</version>
             <classifier>g6bda569</classifier>
             <type>zip</type>
+            <scope>provided</scope>
         </dependency>
     </dependencies>
 
