@@ -24,12 +24,14 @@
             <groupId>samtools</groupId>
             <artifactId>tabix</artifactId>
             <version>0.2.6</version>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.sourceforge</groupId>
             <artifactId>vcftools</artifactId>
             <version>0.1.10</version>
             <type>zip</type>
+            <scope>provided</scope>
         </dependency>
     </dependencies>
 
