@@ -34,7 +34,7 @@ public class SampleFingerprintingDecider extends OicrDecider {
     private String studyName;
     private String watchersList = "";
     private String customVcfList;
-    private String queue = "";
+    private String queue = " ";
 
     //these params should come from settings xml file
     private String genomeFile;
@@ -385,6 +385,8 @@ public class SampleFingerprintingDecider extends OicrDecider {
 
         if (!this.queue.isEmpty()) {
           run.addProperty("queue", this.queue);
+        } else {
+          run.addProperty("queue", " ");
         }
         
         if (null != checkedSNPs) {
