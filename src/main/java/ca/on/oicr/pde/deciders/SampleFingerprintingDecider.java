@@ -59,19 +59,20 @@ public class SampleFingerprintingDecider extends OicrDecider {
     public SampleFingerprintingDecider() {
         super();
         fileSwaToSmall = new HashMap<String, BeSmall>();
-        parser.acceptsAll(Arrays.asList("ini-file"), "Optional: the location of the INI file.").withRequiredArg();
-        parser.accepts("template-type", "Optional: name of the study that we need to analyze.").withRequiredArg();
-        parser.accepts("resequencing-type", "Optional: resequencing type for templates other than WG").withRequiredArg();
-        parser.accepts("existing-matrix", "Optional: existing matrix from previous workflow run(s)").withRequiredArg();
-        parser.accepts("queue", "Optional: Set the queue (for example, to production)").withRequiredArg();
-        //parser.accepts("provision-vcfs", "Optional: set to non-null re-using vcf files from the runs this decider will launch").withRequiredArg();
-        parser.accepts("output-path", "Optional: the path where the files should be copied to "
-                + "after analysis. Corresponds to output-prefix in INI file. Default: ./").withRequiredArg();
-        parser.accepts("output-folder", "Optional: the name of the folder to put the output into relative to "
-                + "the output-path. Corresponds to output-dir in INI file. Default: seqware-results").withRequiredArg();
-        parser.accepts("config-file", "Optional. Path to a config file in .xml format "
-                + "Default: /.mounts/labs/PDE/data/SampleFingerprinting/hotspots.config.xml").withRequiredArg();
-        parser.accepts("watchers-list", "Optional: Comma-separated list of oicr emails for people interested in monitoring this workflow").withRequiredArg();
+        defineArgument("ini-file", "Optional: the location of the INI file.", false);
+        defineArgument("template-type", "Optional: name of the study that we need to analyze.", false);
+        defineArgument("resequencing-type", "Optional: resequencing type for templates other than WG", false);
+        defineArgument("existing-matrix", "Optional: existing matrix from previous workflow run(s)", false);
+        defineArgument("queue", "Optional: Set the queue (for example, to production)", false);
+        defineArgument("output-path", "Optional: the path where the files should be copied to "
+                     + "after analysis. Corresponds to output-prefix in INI file. Default: ./", false);
+        defineArgument("output-folder", "Optional: the name of the folder to put the output into relative to "
+                     + "the output-path. Corresponds to output-dir in INI file. Default: seqware-results", false);
+        defineArgument("config-file", "Optional. Path to a config file in .xml format "
+                     + "Default: /.mounts/labs/PDE/data/SampleFingerprinting/hotspots.config.xml", false);
+        defineArgument("watchers-list", "Optional: Comma-separated list of oicr emails for people interested in monitoring this workflow", false);
+        // Also should work with after-date and before-date parameters
+
     }
 
     @Override
