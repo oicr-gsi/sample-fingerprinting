@@ -183,6 +183,7 @@ foreach my $id (@ordered_list) {
  if (!$parent_clusters{$samples{$id}->{sample}} || $sperslice{$count}->{$samples{$id}->{sample}} > $parent_clusters{$samples{$id}->{sample}}->{max}) {
          $parent_clusters{$samples{$id}->{sample}} = {max=>$sperslice{$count}->{$samples{$id}->{sample}},cluster=>$count};
  }
+ #TODO may need to label all files which split b/w clusters
 }
 
 # ============================================================================================
@@ -521,7 +522,7 @@ sub printout_slice {
 
  # Updating flagging for files and samples
  foreach my $sample (keys %seen_sample) {
-  next if (scalar(@{$seen_sample{$sample}}) <= 1);
+  next if (scalar(@{$seen_sample{$sample}}) <= 1); # FIXME this line causing non-highlighting in some legit cases??
 
   foreach my $clustr(@{$seen_sample{$sample}}) {
    if (scalar(@{$clustr}) < $maxfiles{$sample}) {
