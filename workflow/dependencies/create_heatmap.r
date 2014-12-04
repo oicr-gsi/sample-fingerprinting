@@ -41,4 +41,4 @@ plotfile<-function(f,title,maxSNPs,flagged=FALSE) {
 #cat(pngname,image_width,image_height,sep=" ")
 png(filename=pngname,width=image_width,height=image_height,units="px",pointsize=15,bg="white")
 plotfile(f,title,maxSNPs,flagged)
-dev.off()
+blah<-dev.off()

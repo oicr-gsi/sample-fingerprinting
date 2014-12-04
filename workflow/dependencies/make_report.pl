@@ -58,7 +58,7 @@ my $result = GetOptions ('datadir=s'    => \$datadir, # working (output) directo
                          'matrix=s'     => \$matrix,  # file with calculated indexes
                          'refsnps=i'    => \$refsnps, # number of SNPs in reference checkpoint list
                          'studyname=s'  => \$studyname);
-
+if (!$matrix || !$refsnps || !$studyname ) { die $USAGE; }
 # First step -load the data, filter files with not enogh SNPs 
 $datadir.="/" if $datadir !~m!/$!;
 $tempdir ||=$datadir;
@@ -185,6 +185,7 @@ foreach my $id (@ordered_list) {
  }
  #TODO may need to label all files which split b/w clusters
 }
+print STDERR "Found ".scalar(keys %preclusters)." preclusters\n" if DEBUG;
 
 # ============================================================================================
 # Re-assign lanes to parent clusters, if needed. Flag those lanes which can not be re-assigned
@@ -268,7 +269,6 @@ foreach my $sl (sort {$a<=>$b} keys %sliced) {
  if (scalar(keys %{$sperslice{$sl}}) == 0){next;} # Skip non-existing clices
  my $t = join(",",(keys %{$sperslice{$sl}})); # Title
  print STDERR "MY TITLE: $t\n" if DEBUG;
- 
  &printout_slice($sliced{$sl},$sl,\@slicelines,join("_",($studyname,$sl)),$datadir,$t);
  &printout_snps($sliced{$sl},$sl,join("_",($studyname,$sl)),$datadir);
 }
@@ -474,10 +474,11 @@ sub printout_slice {
  print STDERR "Will Rscript $Bin/create_heatmap.r $outfile $pngtitle $refsnps $png $pngsize $flagged\n" if DEBUG;
  my $clustered_ids = `Rscript $Bin/create_heatmap.r $outfile $pngtitle $refsnps $png $pngsize $flagged`;
  my @clustered_ids = grep {/\S+/} split(" ",$clustered_ids); # grep {/$studyname/}
- 
+ print STDERR "Clustered IDs:\n" if DEBUG;
+ print STDERR Dumper(@clustered_ids) if DEBUG;
  my @fingers = ();
  my %seen_sample = (); # Re-use this hash for calculating
- my %maxfiles = ();   # maximum number of files in a sample (donor) on this heatmap. 'Max' cluster doesn't get marked
+ my %maxfiles = ();    # maximum number of files in a sample (donor) on this heatmap. 'Max' cluster doesn't get marked
  my $current_sample;
  my $lbuffer = [];     # lane buffer - for holding files in a cluster
 
@@ -489,7 +490,7 @@ sub printout_slice {
   $current_sample ||= $samples{$clustered_ids[$cl]}->{sample};
   $seen_sample{$current_sample} ||= [];
   $maxfiles{$current_sample} ||= 0;
-
+  
   if ($current_sample && $samples{$clustered_ids[$cl]}->{sample} && $current_sample ne $samples{$clustered_ids[$cl]}->{sample}) {
     push(@{$seen_sample{$current_sample}},$lbuffer);
     if ($maxfiles{$current_sample} < scalar(@{$lbuffer})){$maxfiles{$current_sample} = scalar(@{$lbuffer});}
@@ -514,18 +515,20 @@ sub printout_slice {
    } 
   }
  }
- 
+
  if (scalar(@{$lbuffer}) > 0) {
   push(@{$seen_sample{$current_sample}},$lbuffer);
   if ($maxfiles{$current_sample} < scalar(@{$lbuffer})){$maxfiles{$current_sample} = scalar(@{$lbuffer});}
  }
 
- # Updating flagging for files and samples
+ # Updating flagging for files and samples 
+ print STDERR Dumper(%seen_sample) if DEBUG;
  foreach my $sample (keys %seen_sample) {
-  next if (scalar(@{$seen_sample{$sample}}) <= 1); # FIXME this line causing non-highlighting in some legit cases??
-
+  next if (scalar(@{$seen_sample{$sample}}) <= 1); 
+  my $havemax = 0;
+  map{if (scalar(@{$_}) == $maxfiles{$sample}){$havemax++}} (@{$seen_sample{$sample}});
   foreach my $clustr(@{$seen_sample{$sample}}) {
-   if (scalar(@{$clustr}) < $maxfiles{$sample}) {
+   if (scalar(@{$clustr}) < $maxfiles{$sample} || (scalar(@{$clustr}) == $maxfiles{$sample} && $havemax > 1)) {
      map{$flagged{files}->{$samples{$_}->{name}}++} (@{$clustr});
      $flagged{samples}->{$sample}++;
      $flagged = "TRUE";
