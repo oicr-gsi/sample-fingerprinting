@@ -261,10 +261,10 @@ sub calculate_snps {
  if ($file!~/$datadir/) {
   $file = $datadir.$file;
  }
- print STDERR "Calculating SNPs for $file\n" if DEBUG;
  if ($file !~/.snps.raw.vcf.gz$/) {
    $file.=".snps.raw.vcf.gz";
  }
+ print STDERR "Calculating SNPs for $file\n" if DEBUG;
 
  my $result = `zcat $file | grep -v ^# | wc -l`;
  chomp($result);

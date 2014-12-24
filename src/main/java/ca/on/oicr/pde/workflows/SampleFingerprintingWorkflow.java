@@ -289,7 +289,7 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
                 job_jaccard.getCommand().addArgument("--existing_matrix=" + this.existingMatrix);
             }
 
-            job_jaccard.setMaxMemory("3000");
+            job_jaccard.setMaxMemory("4000");
             if (!this.queue.isEmpty()) {
                 job_jaccard.setQueue(this.queue);
             }
@@ -307,7 +307,7 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
                     + "> " + this.dataDir + "index.html");
 
             make_pics.addParent(job_jaccard);
-            make_pics.setMaxMemory("4000");
+            make_pics.setMaxMemory("6000");
             if (!this.queue.isEmpty()) {
                 make_pics.setQueue(this.queue);
             }
