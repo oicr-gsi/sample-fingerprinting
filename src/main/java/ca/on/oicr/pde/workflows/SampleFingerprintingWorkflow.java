@@ -35,8 +35,11 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
     private boolean manualOutput;
     private final String finDir = "finfiles/";
     private final String reportName = "sample_fingerprint";
-    private final int jChunkSize = 50;  // Maximum allowed number of vcf files when jaccard_indexing step doesn't fork into multiple sub-jobs   
+    private int jChunkSize; // Optimal (for speed) allowed number of vcf files when jaccard_indexing step doesn't fork into multiple sub-jobs   
+    private final int MIN_CHUNK_SIZE = 50;
+    private final int MAX_CHUNKS = 40; // n in (n^2 + n)/2 which defines N of chunks (it should not be more than 900
     private final int MAX_FILES = 500; // Maximum number of files to pass to the script for sym.linking
+    private final int MAX_INPUTS = 3500; // Recommended max size of the data set
     //Static strings
     private final static String VCF_EXT = ".snps.raw.vcf.gz";
     private final static String TABIX_EXT = ".snps.raw.vcf.gz.tbi";
@@ -51,6 +54,13 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
                 return (null);
             } else {
                 this.vcfFiles = getProperty("input_files").split(",");
+                if (this.vcfFiles.length > MAX_INPUTS)
+                    Log.stderr("Number of inputs files exceeds recommended threshold (" + MAX_INPUTS + ") which may be impractical for this workflow");
+                this.jChunkSize = MIN_CHUNK_SIZE;
+                int chunks = this.vcfFiles.length / this.jChunkSize;
+                if (chunks > MAX_CHUNKS) {
+                    this.jChunkSize = this.vcfFiles.length/MAX_CHUNKS;
+                }
             }
 
             if (getProperty("check_points") == null) {
@@ -194,6 +204,8 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
 
                 StringBuilder chunkedResults = new StringBuilder();
                 int vcf_chunks = (int) Math.ceil((double) this.vcfFiles.length / (double) this.jChunkSize);
+                //TODO add optimzer for number of chunks
+                
                 int resultID = 1;
 
                 // Combine chunks and run the jobs, registering results for later use
