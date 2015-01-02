@@ -33,6 +33,7 @@ use Data::Dumper;
 
 use constant THRESHOLD=>30; # That many SNPs every genotype should have
 use constant DEBUG=>0;
+use constant NOGARBAGE=>1; # Filter (or not) entries that have only 1 or/and 0
 use constant SAMPLESPERSLICE=>8;
 use constant JACCARDOFFSET=>0.1; # Allow lanes to be reassigned to their parent cluster if they similarity to the lanes from other donors is not that great
 
@@ -83,8 +84,17 @@ if ($matrix && -e $matrix) {
   my @temp = split("\t");
   my $trimmed_name = $temp[0];
   $trimmed_name=~s/(SWID_\d+)_(.*)/$2\_$1/;
+  my $notgarbage = 1;
+  if (NOGARBAGE) {
+    my %checkhash = ();
+    map {$checkhash{$temp[$_]}++ if ($temp[$_] ne "1" && $temp[$_] ne "0.000")} (1..$snp_index-1);
+    if (scalar(keys %checkhash) == 0) {
+     print STDERR "Detected Garbage Row\n" if DEBUG;
+     $notgarbage = 0;
+    } 
+  }
 
-  if ($temp[$snp_index] && $temp[$snp_index] >= THRESHOLD && ($temp[0]=~/(\d+)_($studyname.\d+)_/ || $temp[0]=~/SWID_(\d+)_([A-Z]+.\d+)_/)) {
+  if ($temp[$snp_index] && $temp[$snp_index] >= THRESHOLD && $notgarbage && ($temp[0]=~/(\d+)_($studyname.\d+)_/ || $temp[0]=~/SWID_(\d+)_([A-Z]+.\d+)_/)) {
     $ids{$temp[0]} = join("_",($2,$1));
     $samples{$ids{$temp[0]}} = {sample=>$2,file=>$temp[0],name=>$trimmed_name}; # register a file as pertaining to a certain sample (studyname_sampleid)
     $sample_counter{$2}++; 
