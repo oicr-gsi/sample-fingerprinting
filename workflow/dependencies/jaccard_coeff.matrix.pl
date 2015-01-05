@@ -158,7 +158,7 @@ foreach my $id(@{$sublists[0]}) { #keys %ids) {
  print STDERR "Working on ".$count++." of ".scalar(@{$sublists[1]})." samples\n";
  SM:
  foreach my $s(@{$sublists[1]}) { 
-   if ($seen{$s}) {next;} # If we saw it, don't calculate snps
+   if ($seen{$s} && $oldmatrix) {next;} # If we saw it, don't calculate snps
    $snps{$s} ||= &calculate_snps($ids{$s});
    if ($s eq $id) {
     $matrix{$id}->{$s} = 1;
