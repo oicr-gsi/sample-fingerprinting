@@ -10,7 +10,7 @@ use Data::Dumper;
 use strict;
 
 
-use constant DEBUG =>1;
+use constant DEBUG =>0;
 # Below is the dafault for vcf_compare, should not be used when workflow runs
 my $vcf_compare = "vcftools/bin/vcf-compare";
 my(%ids,@sublists,%files,%matrix,%seen,$list,$studyname,$vcf_path,$oldmatrix,$datadir,$path_to_tabix);
@@ -158,6 +158,7 @@ foreach my $id(@{$sublists[0]}) { #keys %ids) {
  print STDERR "Working on ".$count++." of ".scalar(@{$sublists[1]})." samples\n";
  SM:
  foreach my $s(@{$sublists[1]}) { 
+   if ($seen{$s}) {next;} # If we saw it, don't calculate snps
    $snps{$s} ||= &calculate_snps($ids{$s});
    if ($s eq $id) {
     $matrix{$id}->{$s} = 1;
@@ -168,6 +169,7 @@ foreach my $id(@{$sublists[0]}) { #keys %ids) {
   my $file2 = $datadir.$ids{$s};
 
   if ($seen{$id}->{$s}) {next;} 
+  print STDERR "Interaction of $id and $s unseen, calculating...\n" if DEBUG;
   $seen{$id}->{$s}++;
   $seen{$s}->{$id}++;
   
