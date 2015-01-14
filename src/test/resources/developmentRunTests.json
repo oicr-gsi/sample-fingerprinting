@@ -1,6 +1,6 @@
 {
     "defaultDescription": "SampleFingerprinting decider test",
-    "defaultMetricsDirectory": "/.mounts/labs/PDE/data/RegressionTests/SampleFingerprinting/decider/development",
+    "defaultMetricsResources": "/expected_output/development/",
     "defaultParameters": {
         "--output-path": "./"
     },
@@ -13,21 +13,21 @@
             "studies": ["AshPC"],
             "parameters": {
                 "--before-date": "2013-11-19"
-             }
+            }
         },
         {
             "id": "ABIRC study test",
             "studies": ["ABvsInvitrogenReagentComp"],
             "parameters": {
                 "--before-date": "2013-11-19"
-             }
+            }
         },
         {
             "id": "SequencerRun test",
             "sequencerRuns": ["121011_SN802_0091_AD1DDBACXX"],
             "parameters": {
                 "--before-date": "2013-11-19"
-             }
+            }
         }
     ]
 }
