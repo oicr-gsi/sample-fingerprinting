@@ -1,11 +1,12 @@
 {
     "defaultDescription": "FingerprintCollectorDecider test",
-    "defaultMetricsDirectory": "/.mounts/labs/PDE/data/RegressionTests/FingerprintCollector/decider/output_expectation",
+    "defaultMetricsResources": "/expected_output/development/",
     "defaultParameters": {
+        "--before-date": "2014-06-13"
     },
     "defaultIniExclusions": ["parent-accessions", "workflow_run_accession", "workflow-run-accession",
-          "unique_string", "parent_accessions", "parent_accession", "input_file",   
-          "input_files","workflow_bundle_dir","output_prefix"],
+        "unique_string", "parent_accessions", "parent_accession", "input_file",
+        "input_files", "workflow_bundle_dir", "output_prefix"],
     "tests": [
         {
             "id": "General sample test 1",
