@@ -38,7 +38,7 @@ public class FingerprintCollectorDecider extends OicrDecider {
     private double standEmitConf;
     private int dcov;
 
-    private String queue = "";
+    private String queue = " ";
     private final static String BAM_METATYPE = "application/bam";
 
     private String templateTypeFilter   = "";
@@ -389,6 +389,8 @@ public class FingerprintCollectorDecider extends OicrDecider {
         }
         if (!this.queue.isEmpty()) {
           run.addProperty("queue", this.queue);
+        } else {
+          run.addProperty("queue", " ");
         }
         
         return new ReturnValue();
