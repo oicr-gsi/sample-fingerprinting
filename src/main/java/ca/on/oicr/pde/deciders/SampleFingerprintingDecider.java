@@ -31,17 +31,16 @@ public class SampleFingerprintingDecider extends OicrDecider {
     private final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.S");
     private String output_prefix = "./";
     private String output_dir = "seqware-results";
-    private String studyName;
+    private String studyName = "";
     private String watchersList = "";
-    private String customVcfList;
+    private String customVcfList = "";
     private String queue = " ";
 
     //these params should come from settings xml file
     private String genomeFile;
 
     //Previous workflow runs and input files
-    private String existingMatrix;
-    private String inputFiles;
+    private String existingMatrix = "";
     private String templateTypeFilter = "";
     private String reseqTypeFilter = "";
     private Map<String, Map> reseqType;
@@ -49,7 +48,7 @@ public class SampleFingerprintingDecider extends OicrDecider {
     private Map<String, BeSmall> fileSwaToSmall;
 
     //Static strings
-    //private final static String VCF_EXT = ".snps.raw.vcf.gz";
+    private final static String VCF_EXT = ".snps.raw.vcf.gz";
     private final static String TBI_EXT = ".snps.raw.vcf.gz.tbi";
     private final static String FIN_EXT = ".fin";
     private static final String VCF_GZIP_METATYPE = "application/vcf-4-gzip";
@@ -71,6 +70,7 @@ public class SampleFingerprintingDecider extends OicrDecider {
         defineArgument("config-file", "Optional. Path to a config file in .xml format "
                      + "Default: /.mounts/labs/PDE/data/SampleFingerprinting/hotspots.config.xml", false);
         defineArgument("watchers-list", "Optional: Comma-separated list of oicr emails for people interested in monitoring this workflow", false);
+        defineArgument("verbose", "Optional: Set the verbosity to true", false);
         // Also should work with after-date and before-date parameters
 
     }
@@ -81,7 +81,7 @@ public class SampleFingerprintingDecider extends OicrDecider {
         Log.debug("INIT");
         String[] metaTypes = {TBI_METATYPE, VCF_GZIP_METATYPE, FIN_METATYPE};
         this.setMetaType(Arrays.asList(metaTypes));
-        //Handle .ini file - we accept only memory size allocated to different steps
+        // Handle .ini file - we accept only memory size allocated to different steps
         if (options.has("ini-file")) {
             File file = new File(options.valueOf("ini-file").toString());
             if (file.exists()) {
@@ -99,15 +99,15 @@ public class SampleFingerprintingDecider extends OicrDecider {
         }
 
         this.reseqType = new HashMap<String, Map>();
-        //Group by template type if no other grouping selected
+        // Group by template type if no other grouping selected
         if (!this.options.has("group-by")) {
             if (this.options.has("study-name")) {
                 this.setGroupingStrategy(Header.STUDY_SWA);
             }
             if (this.options.has("root-sample-name")) {
-                //TODO: net.sourceforge.seqware.common.hibernate.FindAllTheFiles.Header needs to be updated to support ROOT_SAMPLE_SWA
-                //uncomment when fixed... this.setGroupingStrategy(Header.ROOT_SAMPLE_SWA);
-                //error out until the above TODO is implemented
+                // TODO: net.sourceforge.seqware.common.hibernate.FindAllTheFiles.Header needs to be updated to support ROOT_SAMPLE_SWA
+                // uncomment when fixed... this.setGroupingStrategy(Header.ROOT_SAMPLE_SWA);
+                // error out until the above TODO is implemented
                 throw new RuntimeException("ROOT_SAMPLE_SWA needs to be implemented in FindAllTheFiles.Header");
             }
             if (this.options.has("sequencer-run-name")) {
@@ -133,6 +133,10 @@ public class SampleFingerprintingDecider extends OicrDecider {
                 this.output_dir = "seqware-results";
             }
         }
+        
+        if (this.options.has("verbose")) {
+            Log.setVerbose(true);
+	} 
 
         if (this.options.has("existing-matrix")) {
             this.existingMatrix = options.valueOf("existing-matrix").toString();
@@ -148,9 +152,7 @@ public class SampleFingerprintingDecider extends OicrDecider {
                 Log.warn("We have " + commaSepWatchers + " for watchers");
                 String[] watchers = commaSepWatchers.split(",");
                 for (String email : watchers) {
-                    if (email.contains("@oicr.on.ca")) {
                         this.watchersList += this.watchersList.isEmpty() ? email : "," + email;
-                    }
                 }
             }
             if (this.watchersList.isEmpty() || !this.watchersList.contains("@")) {
@@ -197,7 +199,7 @@ public class SampleFingerprintingDecider extends OicrDecider {
             this.SNPConfigFile = this.options.valueOf("rsconfig-file").toString();
         }
 
-        //allows anything defined on the command line to override the defaults here.
+        // allows anything defined on the command line to override the defaults here.
         ReturnValue val = super.init();
         return val;
     }
@@ -278,7 +280,7 @@ public class SampleFingerprintingDecider extends OicrDecider {
                 continue;
             }
 
-            String filePath = r.getFiles().get(0).getFilePath();
+            String filePath = this.makeBasePath(r.getFiles().get(0).getFilePath(), VCF_EXT);
             //Make sure we have proper sets of data files
             if (!tbiChecker.contains(filePath) || !finChecker.contains(filePath)) {
                 continue;
@@ -337,10 +339,10 @@ public class SampleFingerprintingDecider extends OicrDecider {
     @Override
     public ReturnValue customizeRun(WorkflowRun run) {
         Log.debug("INI FILE:" + run.getIniFile().toString());
-        this.inputFiles = "";
         String checkedSNPs = "";
         String checkPoints = "";
-
+        List<String> vcfList = new ArrayList<String>();
+        
         for (FileAttributes atts : run.getFiles()) {
             if (checkedSNPs.isEmpty()) {
                 String fileKey = fileSwaToSmall.get(atts.getOtherAttribute(Header.FILE_SWA.getTitle())).getGroupByAttribute();
@@ -349,12 +351,15 @@ public class SampleFingerprintingDecider extends OicrDecider {
                     checkPoints = this.reseqType.get(fileKey).get("points").toString();
                 }
             }
+         if (atts.getMetatype().equalsIgnoreCase(VCF_GZIP_METATYPE)) {
+             vcfList.add(atts.getPath());
+         }
         }
 
         StringBuilder inputString = new StringBuilder();
         // Check for name unique-ness, skip duplicates
         Set<String> uniqChecker = new HashSet<String>();
-        String[] inputs = inputFiles.split(",");
+        String[] inputs = vcfList.toArray(new String[0]);
         for (String inputVcf : inputs) {
             if (uniqChecker.contains(inputVcf)) {
                 Log.stderr("Found duplicate file in the list of extra inputs, will skip [" + inputVcf + "]");
@@ -401,13 +406,13 @@ public class SampleFingerprintingDecider extends OicrDecider {
 
         run.addProperty("study_name", this.studyName);
 
-        if (null != this.existingMatrix && !this.existingMatrix.isEmpty()) {
+        if (!this.existingMatrix.isEmpty()) {
             run.addProperty("existing_matrix", this.existingMatrix);
         } else {
             run.addProperty("existing_matrix", " ");
         }
 
-        if (null != this.watchersList && !this.watchersList.isEmpty()) {
+        if (!this.watchersList.isEmpty()) {
             run.addProperty("watchers_list", this.watchersList);
         }
 
@@ -422,7 +427,7 @@ public class SampleFingerprintingDecider extends OicrDecider {
             DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
             Document doc = dBuilder.parse(fXmlFile);
 
-	//optional, but recommended
+	    //optional, but recommended
             //read this - http://stackoverflow.com/questions/13786607/normalization-in-dom-parsing-with-java-how-does-it-work
             doc.getDocumentElement().normalize();
             NodeList nList = doc.getElementsByTagName("template_type");
