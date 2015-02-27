@@ -17,6 +17,7 @@
     <name>${display-name}</name>
 
     <properties>
+        <workflow-name>FingerprintCollector</workflow-name>
     </properties>
 
     <dependencies>
