@@ -40,6 +40,7 @@ public class FingerprintCollectorDecider extends OicrDecider {
 
     private String queue = " ";
     private final static String BAM_METATYPE = "application/bam";
+    private final static int HUMAN_ORG_ID = 31;
 
     private String templateTypeFilter   = "";
     private String resequenceTypeFilter = "";
@@ -220,6 +221,12 @@ public class FingerprintCollectorDecider extends OicrDecider {
             return false;
         }
         if (!this.resequenceTypeFilter.isEmpty() && !this.resequenceTypeFilter.equals(targetResequencingType)) {
+            return false;
+        }
+        //Check organism
+        String organismId  = returnValue.getAttribute("Sample Organism ID");
+        if (null != organismId && !organismId.equals(Integer.toString(HUMAN_ORG_ID))) {
+            Log.error("Organism other than H.sapience is not supported");
             return false;
         }
 
