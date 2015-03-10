@@ -43,6 +43,8 @@ public class SampleFingerprintingDecider extends OicrDecider {
     private String existingMatrix = "";
     private String templateTypeFilter = "";
     private String reseqTypeFilter = "";
+    private String manual_output = "false";
+    private boolean separate_platforms = true;
     private Map<String, Map> reseqType;
     private String SNPConfigFile = "/.mounts/labs/PDE/data/SampleFingerprinting/hotspots.config.xml";
     private Map<String, BeSmall> fileSwaToSmall;
@@ -70,8 +72,9 @@ public class SampleFingerprintingDecider extends OicrDecider {
         defineArgument("config-file", "Optional. Path to a config file in .xml format "
                      + "Default: /.mounts/labs/PDE/data/SampleFingerprinting/hotspots.config.xml", false);
         defineArgument("watchers-list", "Optional: Comma-separated list of oicr emails for people interested in monitoring this workflow", false);
+        defineArgument("manual-output", "Optional: Set the manual output. Default: false", false);
+        defineArgument("separate-platforms", "Optional: Separate sequencing platforms, i.e. MiSeq and HiSeq. Default: true", false);
         defineArgument("verbose", "Optional: Set the verbosity to true", false);
-        // Also should work with after-date and before-date parameters
 
     }
 
@@ -137,6 +140,20 @@ public class SampleFingerprintingDecider extends OicrDecider {
         if (this.options.has("verbose")) {
             Log.setVerbose(true);
 	} 
+        
+        if (this.options.has("manual-output")) {
+            this.manual_output = options.valueOf("manual_output").toString();
+            Log.debug("Setting manual output, default is false and needs to be set only in special cases");
+	}
+        
+        if (this.options.has("separate-platforms")) {
+            String newSepValue = options.valueOf("separate-platforms").toString();
+            if (newSepValue.equalsIgnoreCase("false")) {
+               this.separate_platforms = false; 
+            } else {
+                Log.debug("Invalid setting for separate-platforms, using default [true]");
+            }
+	}
 
         if (this.options.has("existing-matrix")) {
             this.existingMatrix = options.valueOf("existing-matrix").toString();
@@ -388,14 +405,15 @@ public class SampleFingerprintingDecider extends OicrDecider {
         run.addProperty("input_files", inputString.toString());
         run.addProperty("output_prefix", this.output_prefix);
         run.addProperty("output_dir", this.output_dir);
-
+        run.addProperty("manual_output",  this.manual_output);
+        
         if (!this.queue.isEmpty()) {
           run.addProperty("queue", this.queue);
         } else {
           run.addProperty("queue", " ");
         }
         
-        if (null != checkedSNPs) {
+        if (null != checkedSNPs && !checkedSNPs.isEmpty()) {
             run.addProperty("checked_snps", checkedSNPs);
             run.addProperty("check_points", checkPoints);
         }
@@ -489,7 +507,7 @@ public class SampleFingerprintingDecider extends OicrDecider {
         private String iusDetails = null;
         private String groupByAttribute = null;
         private String path = null;
-
+        
         public BeSmall(ReturnValue rv) {
             try {
                 date = DATE_FORMAT.parse(rv.getAttribute(Header.PROCESSING_DATE.getTitle()));
@@ -498,16 +516,23 @@ public class SampleFingerprintingDecider extends OicrDecider {
                 ex.printStackTrace();
             }
             FileAttributes fa = new FileAttributes(rv, rv.getFiles().get(0));
+            
             // Having metatype as part of details is needed since we deal with multiple mime types her
             iusDetails = fa.getLibrarySample() + fa.getSequencerRun() + fa.getLane() + fa.getBarcode() + fa.getMetatype();
             // We are going to group by template type only (if we did not receive template type as a parameter)
-            groupByAttribute = fa.getLimsValue(Lims.LIBRARY_TEMPLATE_TYPE);
+            StringBuilder groupBy = new StringBuilder(fa.getLimsValue(Lims.LIBRARY_TEMPLATE_TYPE));
             String tgtReseq = fa.getLimsValue(Lims.TARGETED_RESEQUENCING);
+            String platformID = rv.getAttribute("Sequencer Run Platform ID");
             if (null != tgtReseq) {
-                groupByAttribute = groupByAttribute.concat(tgtReseq);
+                groupBy.append(":").append(tgtReseq);
             } else {
-                groupByAttribute = groupByAttribute.concat("NA");
+                groupBy.append(":").append("NA");
             }
+            //Depending on user's options, platformID may be used for grouping
+            if (separate_platforms)
+                groupBy.append(":").append(platformID);
+            this.setGroupByAttribute(groupBy.toString());
+            
             path = rv.getFiles().get(0).getFilePath();
         }
 
@@ -515,7 +540,7 @@ public class SampleFingerprintingDecider extends OicrDecider {
             return date;
         }
 
-        public void setDate(Date date) {
+        public final void setDate(Date date) {
             this.date = date;
         }
 
@@ -523,7 +548,7 @@ public class SampleFingerprintingDecider extends OicrDecider {
             return groupByAttribute;
         }
 
-        public void setGroupByAttribute(String groupByAttribute) {
+        public final void setGroupByAttribute(String groupByAttribute) {
             this.groupByAttribute = groupByAttribute;
         }
 
@@ -531,7 +556,7 @@ public class SampleFingerprintingDecider extends OicrDecider {
             return iusDetails;
         }
 
-        public void setIusDetails(String iusDetails) {
+        public final void setIusDetails(String iusDetails) {
             this.iusDetails = iusDetails;
         }
 
@@ -539,7 +564,7 @@ public class SampleFingerprintingDecider extends OicrDecider {
             return path;
         }
 
-        public void setPath(String path) {
+        public final void setPath(String path) {
             this.path = path;
         }
     }
