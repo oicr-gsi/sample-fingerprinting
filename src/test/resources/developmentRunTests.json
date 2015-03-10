@@ -2,7 +2,8 @@
     "defaultDescription": "SampleFingerprinting decider test",
     "defaultMetricsResources": "/expected_output/development/",
     "defaultParameters": {
-        "--output-path": "./"
+        "--output-path": "./",
+        "--parent-wf-accessions": "1452534"
     },
     "defaultIniExclusions": ["parent-accessions", "workflow_run_accession", "workflow-run-accession",
         "unique_string", "parent_accessions", "parent_accession", "input_file", "input_files", "workflow_bundle_dir",
@@ -10,24 +11,15 @@
     "tests": [
         {
             "id": "AshPC study test",
-            "studies": ["AshPC"],
-            "parameters": {
-                "--before-date": "2013-11-19"
-            }
+            "studies": ["AshPC"]
         },
         {
             "id": "ABIRC study test",
-            "studies": ["ABvsInvitrogenReagentComp"],
-            "parameters": {
-                "--before-date": "2013-11-19"
-            }
+            "studies": ["ABvsInvitrogenReagentComp"]
         },
         {
             "id": "SequencerRun test",
-            "sequencerRuns": ["121011_SN802_0091_AD1DDBACXX"],
-            "parameters": {
-                "--before-date": "2013-11-19"
-            }
+            "sequencerRuns": ["121011_SN802_0091_AD1DDBACXX"]
         }
     ]
 }
