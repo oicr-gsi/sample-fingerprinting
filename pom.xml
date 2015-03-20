@@ -11,7 +11,7 @@
 
     <groupId>ca.on.oicr.pde.workflows</groupId>
     <artifactId>FingerprintCollector</artifactId>
-    <version>1.1</version>
+    <version>1.2</version>
     <packaging>jar</packaging>
 
     <name>${display-name}</name>
@@ -21,10 +21,10 @@
     </properties>
 
     <dependencies>
-        <dependency>
-            <groupId>samtools</groupId>
-            <artifactId>samtools</artifactId>
-            <version>0.1.19</version>
+         <dependency>
+            <groupId>picard</groupId>
+            <artifactId>picard-tools</artifactId>
+            <version>1.72</version>
             <type>zip</type>
             <scope>provided</scope>
         </dependency>
