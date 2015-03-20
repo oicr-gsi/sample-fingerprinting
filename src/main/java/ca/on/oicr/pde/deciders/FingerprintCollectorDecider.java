@@ -337,7 +337,8 @@ public class FingerprintCollectorDecider extends OicrDecider {
             this.setTest(false);
         }
         
-        String inputFiles = "";
+        StringBuilder inputFiles  = new StringBuilder();
+        StringBuilder rgDetails  = new StringBuilder();
         String checkedSNPs = "";
         String checkPoints = "";
         
@@ -353,24 +354,26 @@ public class FingerprintCollectorDecider extends OicrDecider {
           }
           
           if (atts.getMetatype().equals(BAM_METATYPE)) {
-            if (!inputFiles.isEmpty()) {
-                inputFiles += ",";
+            if (inputFiles.length() != 0) {
+                inputFiles.append(",");
+                rgDetails.append(",");
             }
-              inputFiles += atts.getPath();
+              inputFiles.append(atts.getPath());
+              rgDetails.append(fileSwaToSmall.get(atts.getOtherAttribute(Header.FILE_SWA.getTitle())).getRGdata());
           }
         }
                 
         //setting testmode for excluded stuff (I am not sure if it is necessery though, but just to be safe):
-	if (inputFiles.isEmpty()) {
+	if (inputFiles.length() == 0) {
 	    this.setTest(true);
 	}
         
         
-        StringBuilder inputString = new StringBuilder(inputFiles);
         if (!this.customBamList.isEmpty()) {   
-            inputString.append(",").append(this.customBamList);
+            inputFiles.append(",").append(this.customBamList);
         }
-        run.addProperty("input_files", inputString.toString());
+        run.addProperty("input_files", inputFiles.toString());
+        run.addProperty("rg_details", rgDetails.toString());
         run.addProperty("output_prefix",this.outputPrefix);
         run.addProperty("output_dir", this.outputDir);
         run.addProperty("gatk_prefix",this.gatkPrefix);
@@ -474,6 +477,12 @@ public class FingerprintCollectorDecider extends OicrDecider {
         private String groupByAttribute = null;
         private String path = null;
         private String reseqTemplateID = null;
+        
+        private String rgId = null;
+        private String rgPl = null;
+        private String rgPu = null;
+        private String rgLb = null;
+        private String rgSm = null;
 
         public BeSmall(ReturnValue rv, String groupBy) {
             try {
@@ -482,6 +491,13 @@ public class FingerprintCollectorDecider extends OicrDecider {
                 Log.error("Bad date!", ex);
             }
             FileAttributes fa = new FileAttributes(rv, rv.getFiles().get(0));
+            this.rgId = rv.getAttribute(Header.FILE_SWA.getTitle());
+            this.rgPl = rv.getAttribute(Header.SAMPLE_TAG_PREFIX.getTitle() + "geo_template_type");
+            this.rgPl = this.rgPl.substring(0, this.rgPl.lastIndexOf(" "));
+            this.rgPu = fa.getSequencerRun() + "_" + fa.getLane() + "_" + fa.getBarcode();
+            this.rgLb = fa.getLibrarySample();
+            this.rgSm = fa.getDonor();
+            
             iusDetails = fa.getLibrarySample() + fa.getSequencerRun() + fa.getLane() + fa.getBarcode();
             reseqTemplateID = fa.getDonor() + fa.getLimsValue(Lims.LIBRARY_TEMPLATE_TYPE);
             groupByAttribute = iusDetails;
@@ -531,6 +547,18 @@ public class FingerprintCollectorDecider extends OicrDecider {
 
         public void setPath(String path) {
             this.path = path;
+        }
+        
+        public String getRGdata() {
+            StringBuilder sb = new StringBuilder();
+            String[] rgs = {this.rgId, this.rgPl, this.rgPu, this.rgLb, this.rgSm};
+            for (int i = 0; i < rgs.length; i++) {
+                if (i > 0 )
+                    sb.append(":");
+                sb.append(rgs[i]);
+            }
+            
+            return sb.toString();
         }
     }
 }
