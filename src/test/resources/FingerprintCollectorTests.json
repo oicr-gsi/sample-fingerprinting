@@ -10,7 +10,7 @@
         {
             "id": "workflow",
             "parameters": {
-                "input_files": "/oicr/data/archive/seqware/seqware_analysis_2/sqwprod/results/seqware-0.10.0_GenomicAlignmentNovoalign-0.10.1/79076690/SWID_10102_CPCG_0001_Pr_P_PE_300_WG_110915_SN203_0124_BC00C4ACXX_NoIndex_L002_R1_001.fastq.gz.annotated.bam"
+                "input_files": "/.mounts/labs/PDE/private/pruzanov/data/CNVevaluation/PCSI_0098WG/SWID_278681_PCSI_0098_Pa_P_PE_700_WG_120905_h803_0093_AC12P2ACXX_NoIndex_L002_R1_001.chr22.bam"
             }
         }
     ]

@@ -239,13 +239,7 @@ public class FingerprintCollectorWorkflow extends OicrWorkflow {
                 bamfilePaths[i] = bamFile.getProvisionedPath();
                 bamfilePathsRG[i] = this.dataDir + this.makeBasename(bamfilePaths[i]) + ".bam";
                 Job jobIndex = workflow.createBashJob("index_bams_" + i);
-               /* StringBuilder idxCommand = new StringBuilder();
 
-                idxCommand.append(getWorkflowBaseDir())
-                        .append("/bin/samtools-")
-                        .append(this.samtoolsVersion)
-                        .append("/samtools index ")
-                        .append(bamfilePaths[i]);*/
                 String[] rgItems = this.rgDetails[i].split(":");
                 if (rgItems.length != 5) {
                     throw new RuntimeException("RG data entry corrupted for " + this.makeBasename(bamfilePaths[i])+ ".bam, terminating...");
@@ -263,7 +257,7 @@ public class FingerprintCollectorWorkflow extends OicrWorkflow {
                 + " CREATE_INDEX=TRUE"
                 + " SORT_ORDER=coordinate");
 
-                jobIndex.setMaxMemory("6000");
+                jobIndex.setMaxMemory("10000");
                 
                 if (!this.queue.isEmpty()) {
                     jobIndex.setQueue(this.queue);
