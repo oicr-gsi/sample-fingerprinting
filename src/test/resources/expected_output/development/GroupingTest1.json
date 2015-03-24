@@ -12,6 +12,7 @@
   "totalInputFiles" : 2,
   "workflowRuns" : [ {
     "workflowIni" : {
+      "bundled_jre" : "jre1.7.0_51",
       "check_points" : "400",
       "checked_snps" : "/.mounts/labs/PDE/data/SampleFingerprinting/snps/dbsnp137.hg19.402.overlap.vcf.gz",
       "data_dir" : "data",
@@ -24,9 +25,11 @@
       "manual_output" : "false",
       "metadata" : "metadata",
       "output_dir" : "seqware-results",
+      "picard_memory" : "7000",
+      "picard_version" : "1.72",
       "provision_vcfs" : "true",
       "queue" : "",
-      "samtools_version" : "0.1.19",
+      "rg_details" : "531707:Illumina:130321_SN203_0175_AC1MWPACXX_2_TAGCTT:PCSI_0191_St_R_PE_391_EX:PCSI_0191,531686:Illumina:130321_SN203_0175_AC1MWPACXX_1_GGCTAC:PCSI_0191_Pa_P_PE_410_EX:PCSI_0191",
       "stand_call_conf" : "50.0",
       "stand_emit_conf" : "10.0",
       "study_name" : "PCSI",

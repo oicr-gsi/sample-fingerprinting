@@ -18,7 +18,7 @@
         {
             "id": "General sample test 2",
             "parameters": {
-                "--root-sample-name": "PCSI_0022",
+                "--root-sample-name": "PCSI_0098",
                 "--template-type": "WG"
             }
         },
