@@ -17,13 +17,12 @@ import net.sourceforge.seqware.pipeline.workflowV2.model.SqwFile;
 import net.sourceforge.seqware.pipeline.workflowV2.model.Workflow;
 
 /*
-  A workaround tested with Bowtie2Alignemr workflow that allows provisioning multiple files into a single dir:
-  //DEBUG
-  file.setOutputPath("provisionfiles/CUSTOMDIR/" + this.input_fastq1[fileIndex].substring(
-  this.input_fastq1[fileIndex].lastIndexOf("/") + 1, this.input_fastq1[fileIndex].length()));
-  file.getOutputPath() //GET the path in workflow
+ A workaround tested with Bowtie2Alignemr workflow that allows provisioning multiple files into a single dir:
+ //DEBUG
+ file.setOutputPath("provisionfiles/CUSTOMDIR/" + this.input_fastq1[fileIndex].substring(
+ this.input_fastq1[fileIndex].lastIndexOf("/") + 1, this.input_fastq1[fileIndex].length()));
+ file.getOutputPath() //GET the path in workflow
  */
-
 /**
  * @Description For pairing with SampleFingerprinting 2.0 A lighter (split)
  * version of SampleFingerprinting 1.1
@@ -69,6 +68,7 @@ public class FingerprintCollectorWorkflow extends OicrWorkflow {
     private List<String> baseNames;
     private String bundledJRE;
     private String[] rgDetails;
+    private boolean doBamFix = false;
 
     @Override
     public Map<String, SqwFile> setupFiles() {
@@ -107,12 +107,13 @@ public class FingerprintCollectorWorkflow extends OicrWorkflow {
             this.dcov = getOptionalProperty("dcov", DCOV_DEFAULT);
             this.bundledJRE = getProperty("bundled_jre");
             this.rgDetails = getProperty("rg_details").split(",");
-            
+            this.doBamFix = Boolean.valueOf(getOptionalProperty("preprocess_bam", "false"));
+
             if (this.bamFiles.length != this.rgDetails.length) {
                 Logger.getLogger(FingerprintCollectorWorkflow.class.getName()).log(Level.SEVERE, "Don't have the same number of Misc data items for bam files");
                 return (null);
             }
-            
+
             if (getProperty("gatk_version") == null) {
                 Logger.getLogger(FingerprintCollectorWorkflow.class.getName()).log(Level.SEVERE, "gatk_version is not set, we need it to call GATK correctly");
                 return (null);
@@ -230,39 +231,76 @@ public class FingerprintCollectorWorkflow extends OicrWorkflow {
             List<Job> provisionJobs = new ArrayList<Job>();
             List<Job> gatkJobs = new ArrayList<Job>();
 
-            String[] bamfilePaths   = new String[this.bamFiles.length];
+            String[] orderedBamfilePaths = new String[this.bamFiles.length];
             String[] bamfilePathsRG = new String[this.bamFiles.length];
+            String[] gatkInputs = new String[this.bamFiles.length];
 
             for (int i = 0; i < this.bamFiles.length; i++) {
 
                 SqwFile bamFile = this.createInFile("application/bam", this.bamFiles[i]);
-                bamfilePaths[i] = bamFile.getProvisionedPath();
-                bamfilePathsRG[i] = this.dataDir + this.makeBasename(bamfilePaths[i]) + ".bam";
-                Job jobIndex = workflow.createBashJob("index_bams_" + i);
+                bamFile.setIsInput(true);
+                List<Job> fixerJobs = new ArrayList<Job>();
 
-                String[] rgItems = this.rgDetails[i].split(":");
-                if (rgItems.length != 5) {
-                    throw new RuntimeException("RG data entry corrupted for " + this.makeBasename(bamfilePaths[i])+ ".bam, terminating...");
-                }
-                jobIndex.setCommand(getWorkflowBaseDir() + "/bin/" + this.bundledJRE + "/bin/java"
-                + " -Xmx" + this.getProperty("picard_memory") + "M"
-                + " -jar " + getWorkflowBaseDir() + "/bin/picard-tools-" + this.picardVersion + "/AddOrReplaceReadGroups.jar"
-                + " INPUT=" + bamfilePaths[i]
-                + " OUTPUT=" + bamfilePathsRG[i]
-                + " RGID=" + rgItems[0]
-                + " RGLB=" + rgItems[1]
-                + " RGPL=" + rgItems[2]
-                + " RGSM=" + rgItems[3]
-                + " RGPU=" + rgItems[4] 
-                + " CREATE_INDEX=TRUE"
-                + " SORT_ORDER=coordinate");
+                if (this.doBamFix) {
+                    Log.stdout("Bam pre-processing requested, will re-order and add Read Groups");
+                    orderedBamfilePaths[i] = this.dataDir + this.makeBasename(bamFile.getProvisionedPath()) + ".ordered.bam";
+                    bamfilePathsRG[i] = this.dataDir + this.makeBasename(bamFile.getProvisionedPath()) + ".rg.bam";
+                    gatkInputs[i] = bamfilePathsRG[i];
 
-                jobIndex.setMaxMemory("10000");
-                
-                if (!this.queue.isEmpty()) {
-                    jobIndex.setQueue(this.queue);
+                    Job jobReorder = workflow.createBashJob("reorder_bams_" + i);
+                    jobReorder.addFile(bamFile);
+                    jobReorder.setCommand(getWorkflowBaseDir() + "/bin/" + this.bundledJRE + "/bin/java"
+                            + " -Xmx4000M"
+                            + " -jar " + getWorkflowBaseDir() + "/bin/picard-tools-" + this.picardVersion + "/ReorderSam.jar"
+                            + " INPUT=" + bamFile.getProvisionedPath()
+                            + " OUTPUT=" + orderedBamfilePaths[i]
+                            + " REFERENCE=" + this.genomeFile);
+
+                    jobReorder.setMaxMemory("7000");
+
+                    if (!this.queue.isEmpty()) {
+                        jobReorder.setQueue(this.queue);
+                    }
+
+                    Job jobIndex = workflow.createBashJob("index_bams_" + i);
+
+                    String[] rgItems = this.rgDetails[i].split(":");
+                    if (rgItems.length != 5) {
+                        throw new RuntimeException("RG data entry corrupted for " + this.makeBasename(orderedBamfilePaths[i]) + ".bam, terminating...");
+                    }
+                    jobIndex.setCommand(getWorkflowBaseDir() + "/bin/" + this.bundledJRE + "/bin/java"
+                            + " -Xmx" + this.getProperty("picard_memory") + "M"
+                            + " -jar " + getWorkflowBaseDir() + "/bin/picard-tools-" + this.picardVersion + "/AddOrReplaceReadGroups.jar"
+                            + " INPUT=" + orderedBamfilePaths[i]
+                            + " OUTPUT=" + bamfilePathsRG[i]
+                            + " RGID=" + rgItems[0]
+                            + " RGLB=" + rgItems[1]
+                            + " RGPL=" + rgItems[2]
+                            + " RGSM=" + rgItems[3]
+                            + " RGPU=" + rgItems[4]
+                            + " CREATE_INDEX=TRUE"
+                            + " SORT_ORDER=coordinate");
+
+                    jobIndex.setMaxMemory("10000");
+                    jobIndex.addParent(jobReorder);
+                    if (!this.queue.isEmpty()) {
+                        jobIndex.setQueue(this.queue);
+                    }
+                    fixerJobs.add(jobIndex);
+                    
+                } else {
+                    Log.stdout("Assuming that bam files are ordered and have Read Groups (required by GATK)");
+                    gatkInputs[i] = bamFile.getProvisionedPath();
+                    Job bamIndexJob = workflow.createBashJob("bam_index_" + i);
+                    bamIndexJob.addFile(bamFile);
+                    bamIndexJob.setCommand(getWorkflowBaseDir() + "/bin/" + this.bundledJRE + "/bin/java"
+                            + " -Xmx4000M"
+                            + " -jar " + getWorkflowBaseDir() + "/bin/picard-tools-" + this.picardVersion + "/BuildBamIndex.jar"
+                            + " INPUT=" + bamFile.getProvisionedPath());
+
+                    bamIndexJob.setMaxMemory("6000");
+                    fixerJobs.add(bamIndexJob);
                 }
-                jobIndex.addFile(bamFile);
 
                 Job jobGATK = workflow.createBashJob("call_snps_" + i);
                 StringBuilder gatkCommand = new StringBuilder();
@@ -272,14 +310,14 @@ public class FingerprintCollectorWorkflow extends OicrWorkflow {
                         .append(" -jar ").append(getWorkflowBaseDir()).append("/bin/GenomeAnalysisTK-").append(this.gatkVersion).append("/GenomeAnalysisTK.jar ")
                         .append("-R ").append(this.genomeFile).append(" ")
                         .append("-T UnifiedGenotyper -I ")
-                        .append(bamfilePathsRG[i]).append(" ")
+                        .append(gatkInputs[i]).append(" ")
                         .append("-o ").append(this.vcfFiles[i]).append(" ")
                         .append("-stand_call_conf ").append(this.standCallConf).append(" ")
                         .append("-stand_emit_conf ").append(this.standEmitConf).append(" ")
                         .append("-dcov ").append(this.dcov).append(" ")
                         .append("-L ").append(this.checkedSNPs);
                 newVcfs++; // Used to track the number of newly generated vcf files and
-                           // provisioning .vcf.gz and .vcf.tbi files
+                // provisioning .vcf.gz and .vcf.tbi files
 
                 jobGATK.setCommand(gatkCommand.toString());
                 jobGATK.setMaxMemory(getProperty("gatk_memory"));
@@ -288,7 +326,9 @@ public class FingerprintCollectorWorkflow extends OicrWorkflow {
                     jobGATK.setQueue(this.queue);
                 }
 
-                jobGATK.addParent(jobIndex);
+                for (Job fixerJob : fixerJobs) {
+                    jobGATK.addParent(fixerJob);
+                }
                 gatkJobs.add(jobGATK);
 
                 Job jobGATK2 = workflow.createBashJob("calculate_depth_" + i);
@@ -298,7 +338,7 @@ public class FingerprintCollectorWorkflow extends OicrWorkflow {
                         .append(" -jar ").append(getWorkflowBaseDir()).append("/bin/GenomeAnalysisTK-").append(this.gatkVersion).append("/GenomeAnalysisTK.jar ")
                         .append("-R ").append(this.genomeFile).append(" ")
                         .append("-T DepthOfCoverage ")
-                        .append("-I ").append(bamfilePathsRG[i]).append(" ")
+                        .append("-I ").append(gatkInputs[i]).append(" ")
                         .append("-o ").append(this.tempDir).append(this.makeBasename(this.bamFiles[i])).append(" ")
                         .append("-L ").append(this.checkedSNPs);
 
@@ -309,7 +349,9 @@ public class FingerprintCollectorWorkflow extends OicrWorkflow {
                     jobGATK2.setQueue(this.queue);
                 }
 
-                jobGATK2.addParent(jobIndex);
+                for (Job fixerJob : fixerJobs) {
+                    jobGATK2.addParent(fixerJob);
+                }
                 //Additional step to create depth of coverage data - for individual fingerprint image generation
                 Job jobFin = workflow.createBashJob("make_fingerprint_file_" + i);
                 StringBuilder finCommand = new StringBuilder();
@@ -353,7 +395,7 @@ public class FingerprintCollectorWorkflow extends OicrWorkflow {
             if (!this.queue.isEmpty()) {
                 jobVcfPrep.setQueue(this.queue);
             }
-            
+
             //SET PARENTS FOR VCFPREP JOB
             for (Job parent : gatkJobs) {
                 jobVcfPrep.addParent(parent);
@@ -361,7 +403,7 @@ public class FingerprintCollectorWorkflow extends OicrWorkflow {
 
             for (String base : baseNames) {
                 jobVcfPrep.addFile(this.createOutputFile(this.dataDir + base + SNPFILE_SUFFIX + ".gz.tbi", "application/tbi", this.manualOutput));
-                jobVcfPrep.addFile(this.createOutputFile(this.dataDir + base + SNPFILE_SUFFIX + ".gz",  "application/vcf-4-gzip", this.manualOutput));
+                jobVcfPrep.addFile(this.createOutputFile(this.dataDir + base + SNPFILE_SUFFIX + ".gz", "application/vcf-4-gzip", this.manualOutput));
             }
 
             /*
