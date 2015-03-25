@@ -45,6 +45,7 @@ public class FingerprintCollectorDecider extends OicrDecider {
     private String templateTypeFilter   = "";
     private String resequenceTypeFilter = "";
     private String studyName;
+    private boolean preprocessBam = false;
     private Map<String, Map> reseqType;
     private final String SNPConfigFile = "/.mounts/labs/PDE/data/SampleFingerprinting/hotspots.config.xml";
 
@@ -52,6 +53,8 @@ public class FingerprintCollectorDecider extends OicrDecider {
         super();
         fileSwaToSmall = new HashMap<String, BeSmall>();
         parser.acceptsAll(Arrays.asList("ini-file"), "Optional: the location of the INI file.").withRequiredArg();
+        parser.accepts("preprocess-bam", "Optional. Set the flag that tells the workflow to run bam re-ordering "
+                + "and adding RG (read groups) which may be absent in some cases").withRequiredArg();
         parser.accepts("template-type", "Optional. Set the template type to limit the workflow run "
                 + "so that it runs on data only of this template type").withRequiredArg();
         parser.accepts("resequencing-type", "Optional. Set the resequencing type filter to limit the workflow run "
@@ -194,6 +197,10 @@ public class FingerprintCollectorDecider extends OicrDecider {
             this.studyName = options.valueOf("study-name").toString();
 	} else {
             Log.warn("study-name parameter is not set, will try to determine it automatically");
+        }
+        
+        if (this.options.has("preprocess-bam")) {
+            this.preprocessBam = Boolean.valueOf(options.valueOf("preprocess-bam").toString());
         }
 
         //allows anything defined on the command line to override the defaults here.
@@ -378,6 +385,7 @@ public class FingerprintCollectorDecider extends OicrDecider {
         run.addProperty("output_dir", this.outputDir);
         run.addProperty("gatk_prefix",this.gatkPrefix);
         run.addProperty("manual_output", this.manualOutput);
+        run.addProperty("preprocess_bam", Boolean.toString(this.preprocessBam));
 
         
         if (null != checkedSNPs && !checkedSNPs.isEmpty()) {
