@@ -312,6 +312,7 @@ public class FingerprintCollectorWorkflow extends OicrWorkflow {
                         .append("-T UnifiedGenotyper -I ")
                         .append(gatkInputs[i]).append(" ")
                         .append("-o ").append(this.vcfFiles[i]).append(" ")
+                        .append("-filterRNC ")
                         .append("-stand_call_conf ").append(this.standCallConf).append(" ")
                         .append("-stand_emit_conf ").append(this.standEmitConf).append(" ")
                         .append("-dcov ").append(this.dcov).append(" ")
@@ -340,6 +341,7 @@ public class FingerprintCollectorWorkflow extends OicrWorkflow {
                         .append("-T DepthOfCoverage ")
                         .append("-I ").append(gatkInputs[i]).append(" ")
                         .append("-o ").append(this.tempDir).append(this.makeBasename(this.bamFiles[i])).append(" ")
+                        .append("-filterRNC ")
                         .append("-L ").append(this.checkedSNPs);
 
                 jobGATK2.setCommand(gatk2Command.toString());
