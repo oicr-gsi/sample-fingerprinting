@@ -7,6 +7,12 @@
       <check_points>400</check_points>
      </resequencing_type>
    </template_type>
+   <template_type id="WT">
+     <resequencing_type id="NA">
+      <checked_snps>/.mounts/labs/PDE/data/SampleFingerprinting/snps/dbsnp137.hg19.402.overlap.vcf.gz</checked_snps>
+      <check_points>400</check_points>
+     </resequencing_type>
+   </template_type>
    <template_type id="EX">
      <resequencing_type id="NA">
       <checked_snps>/.mounts/labs/PDE/data/SampleFingerprinting/snps/dbsnp137.hg19.402.overlap.vcf.gz</checked_snps>

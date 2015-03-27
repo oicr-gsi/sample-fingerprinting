@@ -83,7 +83,9 @@ if ($matrix && -e $matrix) {
   chomp;
   my @temp = split("\t");
   my $trimmed_name = $temp[0];
-  $trimmed_name=~s/(SWID_\d+)_(.*)/$2\_$1/;
+  if ($trimmed_name =~/^SWID/) {
+     $trimmed_name=~s/(SWID_\d+)_(.*)/$2\_$1/;
+  }
   my $notgarbage = 1;
   if (NOGARBAGE) {
     my %checkhash = ();
@@ -94,10 +96,11 @@ if ($matrix && -e $matrix) {
     } 
   }
 
-  if ($temp[$snp_index] && $temp[$snp_index] >= THRESHOLD && $notgarbage && ($temp[0]=~/(\d+)_($studyname.\d+)_/ || $temp[0]=~/SWID_(\d+)_([A-Z]+.\d+)_/)) {
-    $ids{$temp[0]} = join("_",($2,$1));
-    $samples{$ids{$temp[0]}} = {sample=>$2,file=>$temp[0],name=>$trimmed_name}; # register a file as pertaining to a certain sample (studyname_sampleid)
-    $sample_counter{$2}++; 
+  if ($temp[$snp_index] && $temp[$snp_index] >= THRESHOLD && $notgarbage && $trimmed_name=~/([A-Z]{3,4}_\d+)_/ ) { #|| $temp[0]=~/SWID_(\d+)_([A-Z]+.\d+)_/)) {
+    print STDERR "Registering $temp[0]\n" if DEBUG; 
+    $ids{$temp[0]} = $trimmed_name;
+    $samples{$ids{$temp[0]}} = {sample=>$1,file=>$temp[0],name=>$trimmed_name}; # register a file as pertaining to a certain sample (studyname_sampleid)
+    $sample_counter{$1}++; 
 
     push(@lines,join("\t",@temp));
   } else {
@@ -193,7 +196,6 @@ foreach my $id (@ordered_list) {
  if (!$parent_clusters{$samples{$id}->{sample}} || $sperslice{$count}->{$samples{$id}->{sample}} > $parent_clusters{$samples{$id}->{sample}}->{max}) {
          $parent_clusters{$samples{$id}->{sample}} = {max=>$sperslice{$count}->{$samples{$id}->{sample}},cluster=>$count};
  }
- #TODO may need to label all files which split b/w clusters
 }
 print STDERR "Found ".scalar(keys %preclusters)." preclusters\n" if DEBUG;
 
@@ -528,7 +530,7 @@ sub printout_slice {
 
  if (scalar(@{$lbuffer}) > 0) {
   push(@{$seen_sample{$current_sample}},$lbuffer);
-  if ($maxfiles{$current_sample} < scalar(@{$lbuffer})){$maxfiles{$current_sample} = scalar(@{$lbuffer});}
+  if (!$maxfiles{$current_sample} || $maxfiles{$current_sample} < scalar(@{$lbuffer})){$maxfiles{$current_sample} = scalar(@{$lbuffer});}
  }
 
  # Updating flagging for files and samples 

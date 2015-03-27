@@ -179,6 +179,11 @@ foreach my $id(@{$sublists[0]}) { #keys %ids) {
   print STDERR "Will check files $file1 and $file2\n" if DEBUG;
   if (! -e $file1 || ! -e $file2){print STDERR "File(s) $file1 or $file2 not FOUND!\n";next;}
   print STDERR "Will run $vcf_compare $file1 $file2 ...\n" if DEBUG;
+
+  # Touch .tbi files to make sure that index is newer than vcf
+  `touch $file1.tbi`;
+  `touch $file2.tbi`
+
   my @compares = `$vcf_compare $file1 $file2 | grep \"^VN\"`;
   my @numbers = (0,0,0);
 
