@@ -182,7 +182,7 @@ foreach my $id(@{$sublists[0]}) { #keys %ids) {
 
   # Touch .tbi files to make sure that index is newer than vcf
   `touch $file1.tbi`;
-  `touch $file2.tbi`
+  `touch $file2.tbi`;
 
   my @compares = `$vcf_compare $file1 $file2 | grep \"^VN\"`;
   my @numbers = (0,0,0);
