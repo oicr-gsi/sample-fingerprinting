@@ -3,7 +3,8 @@
     "defaultMetricsResources": "/expected_output/development/",
     "defaultParameters": {
         "--output-path": "./",
-        "--parent-wf-accessions": "1452534"
+        "--parent-wf-accessions": "1753099",
+        "--before-date": "2015-05-12"
     },
     "defaultIniExclusions": ["parent-accessions", "workflow_run_accession", "workflow-run-accession",
         "unique_string", "parent_accessions", "parent_accession", "input_file", "input_files", "workflow_bundle_dir",

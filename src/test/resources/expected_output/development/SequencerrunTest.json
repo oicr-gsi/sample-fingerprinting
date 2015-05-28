@@ -1,15 +1,15 @@
 {
-  "workflowRunCount" : 2,
-  "studies" : [ "ABvsInvitrogenReagentComp", "PCSI" ],
-  "sequencerRuns" : [ "111027_SN203_0127_BC08J8ACXX", "111118_h803_0071_AC08E3ACXX", "111130_h801_0064_AC043YACXX", "120125_h1080_0092_AD0DDKACXX", "120127_h804_0078_AC0GRMACXX", "120511_SN1080_0107_AD0VMLACXX", "121011_SN802_0091_AD1DDBACXX", "121031_h239_0164_AC1F4JACXX" ],
-  "lanes" : [ "111027_SN203_0127_BC08J8ACXX_lane_4", "111027_SN203_0127_BC08J8ACXX_lane_7", "111118_h803_0071_AC08E3ACXX_lane_1", "111118_h803_0071_AC08E3ACXX_lane_2", "111130_h801_0064_AC043YACXX_lane_8", "120125_h1080_0092_AD0DDKACXX_lane_7", "120127_h804_0078_AC0GRMACXX_lane_7", "120127_h804_0078_AC0GRMACXX_lane_8", "120511_SN1080_0107_AD0VMLACXX_lane_8", "121011_SN802_0091_AD1DDBACXX_lane_2", "121011_SN802_0091_AD1DDBACXX_lane_3", "121011_SN802_0091_AD1DDBACXX_lane_4", "121011_SN802_0091_AD1DDBACXX_lane_5", "121011_SN802_0091_AD1DDBACXX_lane_6", "121011_SN802_0091_AD1DDBACXX_lane_7", "121011_SN802_0091_AD1DDBACXX_lane_8", "121031_h239_0164_AC1F4JACXX_lane_1" ],
-  "samples" : [ "PCSI_0019_St_R_PE_700_WG", "PCSI_0047_Ly_R_PE_700_WG", "PCSI_0090_Ly_R_PE_414_EX", "PCSI_0090_Pa_P_PE_410_EX", "PCSI_0090_Pa_X_PE_433_EX", "PCSI_0112_Ly_R_PE_389_EX", "PCSI_0112_Ly_R_PE_446_EX", "PCSI_0112_Pa_P_PE_394_EX", "PCSI_0112_Pa_P_PE_430_EX", "PCSI_0125_Pa_P_PE_406_EX", "PCSI_0125_Pa_P_PE_409_EX", "PCSI_0125_St_R_PE_451_EX", "PCSI_0131_Pa_P_PE_389_EX", "PCSI_0167_Pa_P_PE_397_EX" ],
+  "workflowRunCount" : 1,
+  "studies" : [ "PCSI" ],
+  "sequencerRuns" : [ "121011_SN802_0091_AD1DDBACXX" ],
+  "lanes" : [ "121011_SN802_0091_AD1DDBACXX_lane_2", "121011_SN802_0091_AD1DDBACXX_lane_3", "121011_SN802_0091_AD1DDBACXX_lane_4", "121011_SN802_0091_AD1DDBACXX_lane_5", "121011_SN802_0091_AD1DDBACXX_lane_6" ],
+  "samples" : [ "PCSI_0090_Ly_R_PE_414_EX", "PCSI_0112_Ly_R_PE_389_EX", "PCSI_0125_Pa_P_PE_409_EX", "PCSI_0131_Pa_P_PE_389_EX", "PCSI_0167_Pa_P_PE_397_EX" ],
   "workflows" : [ "FingerprintCollector" ],
-  "processingAlgorithms" : [ "" ],
+  "processingAlgorithms" : [ "ProvisionFiles" ],
   "fileMetaTypes" : [ "application/vcf-4-gzip" ],
   "maxInputFiles" : 5,
-  "minInputFiles" : 2,
-  "totalInputFiles" : 7,
+  "minInputFiles" : 5,
+  "totalInputFiles" : 5,
   "workflowRuns" : [ {
     "workflowIni" : {
       "check_points" : "400",
@@ -28,40 +28,39 @@
       "watchers_list" : "pruzanov@oicr.on.ca"
     },
     "files" : [ {
-      "studyTitle" : [ "ABvsInvitrogenReagentComp", "PCSI" ],
+      "studyTitle" : [ "PCSI" ],
       "studyAttributes" : {
-        "study.geo_lab_group_id" : [ [ "33" ], [ "53" ] ]
+        "study.geo_lab_group_id" : [ [ "33" ] ]
       },
-      "experimentName" : [ "Geo_ABvsInvitrogenReagentComp_ILLUMINA_EX_{F*101}{..}{R*101}", "Geo_PCSI_ILLUMINA_EX_{F*101}{..}{R*101}" ],
+      "experimentName" : [ "Geo_PCSI_ILLUMINA_EX_{F*101}{..}{R*101}" ],
       "experimentAttributes" : { },
-      "sampleName" : [ "PCSI_0112_Ly_R_PE_389_EX", "PCSI_0112_Ly_R_PE_446_EX", "PCSI_0112_Pa_P_PE_394_EX", "PCSI_0112_Pa_P_PE_430_EX" ],
+      "sampleName" : [ "PCSI_0090_Ly_R_PE_414_EX" ],
       "sampleAttributes" : {
         "sample.geo_library_source_template_type" : [ [ "EX" ] ],
-        "sample.geo_prep_kit" : [ [ "GA_multiplex" ] ],
-        "sample.geo_reaction_id" : [ [ "5389" ], [ "5398" ], [ "7851" ], [ "8126" ] ],
-        "sample.geo_run_id_and_position_and_slot" : [ [ "1184_3_1" ], [ "1206_1_1" ], [ "852_4_1" ], [ "852_7_1" ] ],
+        "sample.geo_reaction_id" : [ [ "7848" ] ],
+        "sample.geo_run_id_and_position_and_slot" : [ [ "1184_2_1" ] ],
         "sample.geo_targeted_resequencing" : [ [ "Agilent SureSelect ICGC/Sanger Exon" ] ],
-        "sample.geo_template_id" : [ [ "14102" ], [ "14422" ], [ "23820" ], [ "24292" ] ],
+        "sample.geo_template_id" : [ [ "23816" ] ],
         "sample.geo_template_type" : [ [ "Illumina PE Library Seq" ] ],
-        "sample.geo_tissue_origin" : [ [ "Ly" ], [ "Pa" ] ],
-        "sample.geo_tissue_type" : [ [ "P" ], [ "R" ] ]
+        "sample.geo_tissue_origin" : [ [ "Ly" ] ],
+        "sample.geo_tissue_type" : [ [ "R" ] ]
       },
-      "sequencerRunName" : [ "111027_SN203_0127_BC08J8ACXX", "121011_SN802_0091_AD1DDBACXX", "121031_h239_0164_AC1F4JACXX" ],
+      "sequencerRunName" : [ "121011_SN802_0091_AD1DDBACXX" ],
       "sequencerRunAttributes" : {
-        "sequencerrun.geo_instrument_run_id" : [ [ "1184" ], [ "1206" ], [ "852" ] ]
+        "sequencerrun.geo_instrument_run_id" : [ [ "1184" ] ]
       },
-      "laneName" : [ "111027_SN203_0127_BC08J8ACXX_lane_4", "111027_SN203_0127_BC08J8ACXX_lane_7", "121011_SN802_0091_AD1DDBACXX_lane_3", "121031_h239_0164_AC1F4JACXX_lane_1" ],
+      "laneName" : [ "121011_SN802_0091_AD1DDBACXX_lane_2" ],
       "laneAttributes" : {
-        "lane.geo_lane" : [ [ "1" ], [ "3" ], [ "4" ], [ "7" ] ]
+        "lane.geo_lane" : [ [ "2" ] ]
       },
-      "iusTag" : [ "ACAGTG", "CGATGT", "GGCTAC", "TTAGGC" ],
+      "iusTag" : [ "ACTTGA" ],
       "iusAttributes" : { },
       "workflowName" : [ "FingerprintCollector" ],
-      "processingAlgorithm" : [ "" ],
+      "processingAlgorithm" : [ "ProvisionFiles" ],
       "processingAttributes" : { },
       "fileMetaType" : [ "application/vcf-4-gzip" ],
       "fileAttributes" : { },
-      "fileId" : 104381461
+      "fileId" : -284910845
     }, {
       "studyTitle" : [ "PCSI" ],
       "studyAttributes" : {
@@ -69,33 +68,33 @@
       },
       "experimentName" : [ "Geo_PCSI_ILLUMINA_EX_{F*101}{..}{R*101}" ],
       "experimentAttributes" : { },
-      "sampleName" : [ "PCSI_0090_Ly_R_PE_414_EX", "PCSI_0090_Pa_P_PE_410_EX", "PCSI_0090_Pa_X_PE_433_EX" ],
+      "sampleName" : [ "PCSI_0112_Ly_R_PE_389_EX" ],
       "sampleAttributes" : {
         "sample.geo_library_source_template_type" : [ [ "EX" ] ],
-        "sample.geo_reaction_id" : [ [ "5879", "5880" ], [ "5895" ], [ "7848" ] ],
-        "sample.geo_run_id_and_position_and_slot" : [ [ "1184_2_1" ], [ "906_7_1" ], [ "913_7_1", "913_8_1" ] ],
+        "sample.geo_reaction_id" : [ [ "7851" ] ],
+        "sample.geo_run_id_and_position_and_slot" : [ [ "1184_3_1" ] ],
         "sample.geo_targeted_resequencing" : [ [ "Agilent SureSelect ICGC/Sanger Exon" ] ],
-        "sample.geo_template_id" : [ [ "16549" ], [ "16551" ], [ "23816" ] ],
+        "sample.geo_template_id" : [ [ "23820" ] ],
         "sample.geo_template_type" : [ [ "Illumina PE Library Seq" ] ],
-        "sample.geo_tissue_origin" : [ [ "Ly" ], [ "Pa" ] ],
-        "sample.geo_tissue_type" : [ [ "P" ], [ "R" ], [ "X" ] ]
+        "sample.geo_tissue_origin" : [ [ "Ly" ] ],
+        "sample.geo_tissue_type" : [ [ "R" ] ]
       },
-      "sequencerRunName" : [ "120125_h1080_0092_AD0DDKACXX", "120127_h804_0078_AC0GRMACXX", "121011_SN802_0091_AD1DDBACXX" ],
+      "sequencerRunName" : [ "121011_SN802_0091_AD1DDBACXX" ],
       "sequencerRunAttributes" : {
-        "sequencerrun.geo_instrument_run_id" : [ [ "1184" ], [ "906" ], [ "913" ] ]
+        "sequencerrun.geo_instrument_run_id" : [ [ "1184" ] ]
       },
-      "laneName" : [ "120125_h1080_0092_AD0DDKACXX_lane_7", "120127_h804_0078_AC0GRMACXX_lane_7", "120127_h804_0078_AC0GRMACXX_lane_8", "121011_SN802_0091_AD1DDBACXX_lane_2" ],
+      "laneName" : [ "121011_SN802_0091_AD1DDBACXX_lane_3" ],
       "laneAttributes" : {
-        "lane.geo_lane" : [ [ "2" ], [ "7" ], [ "8" ] ]
+        "lane.geo_lane" : [ [ "3" ] ]
       },
-      "iusTag" : [ "ACAGTG", "ACTTGA", "CAGATC" ],
+      "iusTag" : [ "GGCTAC" ],
       "iusAttributes" : { },
       "workflowName" : [ "FingerprintCollector" ],
-      "processingAlgorithm" : [ "" ],
+      "processingAlgorithm" : [ "ProvisionFiles" ],
       "processingAttributes" : { },
       "fileMetaType" : [ "application/vcf-4-gzip" ],
       "fileAttributes" : { },
-      "fileId" : 104381461
+      "fileId" : 829096270
     }, {
       "studyTitle" : [ "PCSI" ],
       "studyAttributes" : {
@@ -103,33 +102,33 @@
       },
       "experimentName" : [ "Geo_PCSI_ILLUMINA_EX_{F*101}{..}{R*101}" ],
       "experimentAttributes" : { },
-      "sampleName" : [ "PCSI_0125_Pa_P_PE_406_EX", "PCSI_0125_Pa_P_PE_409_EX", "PCSI_0125_St_R_PE_451_EX" ],
+      "sampleName" : [ "PCSI_0125_Pa_P_PE_409_EX" ],
       "sampleAttributes" : {
         "sample.geo_library_source_template_type" : [ [ "EX" ] ],
-        "sample.geo_reaction_id" : [ [ "5500", "5501", "5554" ], [ "6700" ], [ "7852" ] ],
-        "sample.geo_run_id_and_position_and_slot" : [ [ "1004_8_1" ], [ "1184_4_1" ], [ "859_1_1", "859_2_1", "865_8_1" ] ],
+        "sample.geo_reaction_id" : [ [ "7852" ] ],
+        "sample.geo_run_id_and_position_and_slot" : [ [ "1184_4_1" ] ],
         "sample.geo_targeted_resequencing" : [ [ "Agilent SureSelect ICGC/Sanger Exon" ] ],
-        "sample.geo_template_id" : [ [ "14967" ], [ "19283" ], [ "23822" ] ],
+        "sample.geo_template_id" : [ [ "23822" ] ],
         "sample.geo_template_type" : [ [ "Illumina PE Library Seq" ] ],
-        "sample.geo_tissue_origin" : [ [ "Pa" ], [ "St" ] ],
-        "sample.geo_tissue_type" : [ [ "P" ], [ "R" ] ]
+        "sample.geo_tissue_origin" : [ [ "Pa" ] ],
+        "sample.geo_tissue_type" : [ [ "P" ] ]
       },
-      "sequencerRunName" : [ "111118_h803_0071_AC08E3ACXX", "111130_h801_0064_AC043YACXX", "120511_SN1080_0107_AD0VMLACXX", "121011_SN802_0091_AD1DDBACXX" ],
+      "sequencerRunName" : [ "121011_SN802_0091_AD1DDBACXX" ],
       "sequencerRunAttributes" : {
-        "sequencerrun.geo_instrument_run_id" : [ [ "1004" ], [ "1184" ], [ "859" ], [ "865" ] ]
+        "sequencerrun.geo_instrument_run_id" : [ [ "1184" ] ]
       },
-      "laneName" : [ "111118_h803_0071_AC08E3ACXX_lane_1", "111118_h803_0071_AC08E3ACXX_lane_2", "111130_h801_0064_AC043YACXX_lane_8", "120511_SN1080_0107_AD0VMLACXX_lane_8", "121011_SN802_0091_AD1DDBACXX_lane_4" ],
+      "laneName" : [ "121011_SN802_0091_AD1DDBACXX_lane_4" ],
       "laneAttributes" : {
-        "lane.geo_lane" : [ [ "1" ], [ "2" ], [ "4" ], [ "8" ] ]
+        "lane.geo_lane" : [ [ "4" ] ]
       },
-      "iusTag" : [ "CTTGTA", "TAGCTT" ],
+      "iusTag" : [ "CTTGTA" ],
       "iusAttributes" : { },
       "workflowName" : [ "FingerprintCollector" ],
-      "processingAlgorithm" : [ "" ],
+      "processingAlgorithm" : [ "ProvisionFiles" ],
       "processingAttributes" : { },
       "fileMetaType" : [ "application/vcf-4-gzip" ],
       "fileAttributes" : { },
-      "fileId" : 104381461
+      "fileId" : -310729950
     }, {
       "studyTitle" : [ "PCSI" ],
       "studyAttributes" : {
@@ -159,11 +158,11 @@
       "iusTag" : [ "TAGCTT" ],
       "iusAttributes" : { },
       "workflowName" : [ "FingerprintCollector" ],
-      "processingAlgorithm" : [ "" ],
+      "processingAlgorithm" : [ "ProvisionFiles" ],
       "processingAttributes" : { },
       "fileMetaType" : [ "application/vcf-4-gzip" ],
       "fileAttributes" : { },
-      "fileId" : 104381461
+      "fileId" : 132340735
     }, {
       "studyTitle" : [ "PCSI" ],
       "studyAttributes" : {
@@ -193,95 +192,11 @@
       "iusTag" : [ "ATCACG" ],
       "iusAttributes" : { },
       "workflowName" : [ "FingerprintCollector" ],
-      "processingAlgorithm" : [ "" ],
+      "processingAlgorithm" : [ "ProvisionFiles" ],
       "processingAttributes" : { },
       "fileMetaType" : [ "application/vcf-4-gzip" ],
       "fileAttributes" : { },
-      "fileId" : 104381461
-    } ]
-  }, {
-    "workflowIni" : {
-      "check_points" : "400",
-      "checked_snps" : "/.mounts/labs/PDE/data/SampleFingerprinting/snps/dbsnp137.hg19.402.overlap.vcf.gz",
-      "data_dir" : "data",
-      "existing_matrix" : "",
-      "genome_file" : "/.mounts/labs/PDE/data/SampleFingerprinting/fasta/hg19.fa",
-      "manual_output" : "false",
-      "metadata" : "metadata",
-      "output_dir" : "seqware-results",
-      "queue" : "",
-      "samtools_version" : "0.1.19",
-      "study_name" : "PCSI",
-      "tabix_version" : "0.2.6",
-      "vcftools_version" : "0.1.10",
-      "watchers_list" : "pruzanov@oicr.on.ca"
-    },
-    "files" : [ {
-      "studyTitle" : [ "PCSI" ],
-      "studyAttributes" : {
-        "study.geo_lab_group_id" : [ [ "33" ] ]
-      },
-      "experimentName" : [ "Geo_PCSI_ILLUMINA_WG_{F*101}{..}{R*101}" ],
-      "experimentAttributes" : { },
-      "sampleName" : [ "PCSI_0019_St_R_PE_700_WG" ],
-      "sampleAttributes" : {
-        "sample.geo_library_source_template_type" : [ [ "WG" ] ],
-        "sample.geo_reaction_id" : [ [ "7961", "8155", "8156" ] ],
-        "sample.geo_run_id_and_position_and_slot" : [ [ "1184_8_1", "1209_3_1", "1209_4_1" ] ],
-        "sample.geo_template_id" : [ [ "19961" ] ],
-        "sample.geo_template_type" : [ [ "Illumina PE Library Seq" ] ],
-        "sample.geo_tissue_origin" : [ [ "St" ] ],
-        "sample.geo_tissue_type" : [ [ "R" ] ]
-      },
-      "sequencerRunName" : [ "121011_SN802_0091_AD1DDBACXX" ],
-      "sequencerRunAttributes" : {
-        "sequencerrun.geo_instrument_run_id" : [ [ "1184" ] ]
-      },
-      "laneName" : [ "121011_SN802_0091_AD1DDBACXX_lane_8" ],
-      "laneAttributes" : {
-        "lane.geo_lane" : [ [ "8" ] ]
-      },
-      "iusTag" : [ "NoIndex" ],
-      "iusAttributes" : { },
-      "workflowName" : [ "FingerprintCollector" ],
-      "processingAlgorithm" : [ "" ],
-      "processingAttributes" : { },
-      "fileMetaType" : [ "application/vcf-4-gzip" ],
-      "fileAttributes" : { },
-      "fileId" : 104381461
-    }, {
-      "studyTitle" : [ "PCSI" ],
-      "studyAttributes" : {
-        "study.geo_lab_group_id" : [ [ "33" ] ]
-      },
-      "experimentName" : [ "Geo_PCSI_ILLUMINA_WG_{F*101}{..}{R*101}" ],
-      "experimentAttributes" : { },
-      "sampleName" : [ "PCSI_0047_Ly_R_PE_700_WG" ],
-      "sampleAttributes" : {
-        "sample.geo_library_source_template_type" : [ [ "WG" ] ],
-        "sample.geo_reaction_id" : [ [ "7960", "8157", "8158" ] ],
-        "sample.geo_run_id_and_position_and_slot" : [ [ "1184_7_1", "1209_5_1", "1209_6_1" ] ],
-        "sample.geo_template_id" : [ [ "19979" ] ],
-        "sample.geo_template_type" : [ [ "Illumina PE Library Seq" ] ],
-        "sample.geo_tissue_origin" : [ [ "Ly" ] ],
-        "sample.geo_tissue_type" : [ [ "R" ] ]
-      },
-      "sequencerRunName" : [ "121011_SN802_0091_AD1DDBACXX" ],
-      "sequencerRunAttributes" : {
-        "sequencerrun.geo_instrument_run_id" : [ [ "1184" ] ]
-      },
-      "laneName" : [ "121011_SN802_0091_AD1DDBACXX_lane_7" ],
-      "laneAttributes" : {
-        "lane.geo_lane" : [ [ "7" ] ]
-      },
-      "iusTag" : [ "NoIndex" ],
-      "iusAttributes" : { },
-      "workflowName" : [ "FingerprintCollector" ],
-      "processingAlgorithm" : [ "" ],
-      "processingAttributes" : { },
-      "fileMetaType" : [ "application/vcf-4-gzip" ],
-      "fileAttributes" : { },
-      "fileId" : 104381461
+      "fileId" : -666180481
     } ]
   } ]
 }
