@@ -45,7 +45,7 @@ public class FingerprintCollectorWorkflow extends OicrWorkflow {
     //Additional one for GATK:
     private String gatkVersion;
     private String tabixVersion;
-    //private String samtoolsVersion;
+    private String samtoolsVersion;
     private String genomeFile;
     private String checkedSNPs;
     private String queue;
@@ -133,6 +133,13 @@ public class FingerprintCollectorWorkflow extends OicrWorkflow {
                 return (null);
             } else {
                 this.picardVersion = getProperty("picard_version");
+            }
+            
+            if (getProperty("samtools_version") == null) {
+                Logger.getLogger(FingerprintCollectorWorkflow.class.getName()).log(Level.SEVERE, "samtools_version is not set, we need it to call samtools correctly");
+                return (null);
+            } else {
+                this.samtoolsVersion = getProperty("samtools_version");
             }
 
             if (getProperty("queue") == null) {
@@ -228,7 +235,6 @@ public class FingerprintCollectorWorkflow extends OicrWorkflow {
             Workflow workflow = this.getWorkflow();
             int newVcfs = 0;
 
-            List<Job> provisionJobs = new ArrayList<Job>();
             List<Job> gatkJobs = new ArrayList<Job>();
 
             String[] orderedBamfilePaths = new String[this.bamFiles.length];
@@ -291,14 +297,18 @@ public class FingerprintCollectorWorkflow extends OicrWorkflow {
                 } else {
                     Log.stdout("Assuming that bam files are ordered and have Read Groups (required by GATK)");
                     gatkInputs[i] = bamFile.getProvisionedPath();
-                    Job bamIndexJob = workflow.createBashJob("bam_index_" + i);
+                    Job bamIndexJob = workflow.createBashJob("index_bams_" + i);
                     bamIndexJob.addFile(bamFile);
-                    bamIndexJob.setCommand(getWorkflowBaseDir() + "/bin/" + this.bundledJRE + "/bin/java"
+                    
+                    /*bamIndexJob.setCommand(getWorkflowBaseDir() + "/bin/" + this.bundledJRE + "/bin/java"
                             + " -Xmx4000M"
                             + " -jar " + getWorkflowBaseDir() + "/bin/picard-tools-" + this.picardVersion + "/BuildBamIndex.jar"
                             + " INPUT=" + bamFile.getProvisionedPath());
-
-                    bamIndexJob.setMaxMemory("6000");
+                    */
+                    bamIndexJob.setCommand(getWorkflowBaseDir() + "/bin/samtools-" + this.samtoolsVersion
+                                         + "/samtools index "
+                                         + bamFile.getProvisionedPath());
+                    bamIndexJob.setMaxMemory("4000");
                     fixerJobs.add(bamIndexJob);
                 }
 
