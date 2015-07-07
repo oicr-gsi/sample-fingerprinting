@@ -46,7 +46,7 @@ public class SampleFingerprintingDecider extends OicrDecider {
     private String manual_output = "false";
     private boolean separate_platforms = true;
     private Map<String, Map> reseqType;
-    private String SNPConfigFile = "/.mounts/labs/PDE/data/SampleFingerprinting/hotspots.config.xml";
+    private String SNPConfigFile;
     private Map<String, BeSmall> fileSwaToSmall;
 
     //Static strings
@@ -54,8 +54,9 @@ public class SampleFingerprintingDecider extends OicrDecider {
     private final static String TBI_EXT = ".snps.raw.vcf.gz.tbi";
     private final static String FIN_EXT = ".fin";
     private static final String VCF_GZIP_METATYPE = "application/vcf-4-gzip";
-    private static final String TBI_METATYPE = "application/tbi";
-    private static final String FIN_METATYPE = "text/plain";
+    private static final String TBI_METATYPE      = "application/tbi";
+    private static final String FIN_METATYPE      = "text/plain";
+    private static final String DEFAULT_SNPCONFIG_FILE = "/.mounts/labs/PDE/data/SampleFingerprinting/hotspots.config.xml";
 
     public SampleFingerprintingDecider() {
         super();
@@ -71,7 +72,7 @@ public class SampleFingerprintingDecider extends OicrDecider {
                      + "the output-path. Corresponds to output-dir in INI file. Default: seqware-results", false);
         defineArgument("config-file", "Optional. Path to a config file in .xml format "
                      + "Default: /.mounts/labs/PDE/data/SampleFingerprinting/hotspots.config.xml", false);
-        defineArgument("watchers-list", "Optional: Comma-separated list of oicr emails for people interested in monitoring this workflow", false);
+        defineArgument("watchers-list", "Optional: Comma-separated list of emails for people interested in monitoring this workflow", false);
         defineArgument("manual-output", "Optional: Set the manual output. Default: false", false);
         defineArgument("separate-platforms", "Optional: Separate sequencing platforms, i.e. MiSeq and HiSeq. Default: true", false);
         defineArgument("verbose", "Optional: Set the verbosity to true", false);
@@ -186,6 +187,9 @@ public class SampleFingerprintingDecider extends OicrDecider {
         if (this.options.has("config-file")) {
             this.SNPConfigFile = options.valueOf("config-file").toString();
             Log.warn("Got custom config file, will use settings from user's input");
+        } else {
+            this.SNPConfigFile = DEFAULT_SNPCONFIG_FILE;
+            Log.warn("Using default config file " + DEFAULT_SNPCONFIG_FILE);
         }
 
         if (this.options.has("genome-file")) {
@@ -210,10 +214,6 @@ public class SampleFingerprintingDecider extends OicrDecider {
             this.reseqTypeFilter = this.options.valueOf("resequencing-type").toString();
         } else {
             Log.debug("resequencing_type parameter ids not set, will include all available types from the study");
-        }
-
-        if (this.options.has("rsconfig-file")) {
-            this.SNPConfigFile = this.options.valueOf("rsconfig-file").toString();
         }
 
         // allows anything defined on the command line to override the defaults here.
@@ -438,7 +438,7 @@ public class SampleFingerprintingDecider extends OicrDecider {
     }
 
     private boolean configFromParsedXML(String fileName, String templateType, String resequencingType) {
-        // SHOULD BE OK, though fields that need to be defined also need to be customized
+
         try {
             File fXmlFile = new File(fileName);
             DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
@@ -572,10 +572,6 @@ public class SampleFingerprintingDecider extends OicrDecider {
     // Service Functions
     private String makeBasePath(String name, String ext) {
         return name.substring(0, name.lastIndexOf(ext));
-    }
-
-    private String makeBaseName(String name, String ext) {
-        return name.substring(name.lastIndexOf("/") + 1, name.lastIndexOf(ext));
     }
 
 }

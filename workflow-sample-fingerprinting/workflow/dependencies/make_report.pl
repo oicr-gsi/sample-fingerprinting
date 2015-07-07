@@ -45,15 +45,20 @@ my($snp_index,%samples,%sample_counter,%ids,%filtered,@lines,%reports,%flagged);
 
 my $pngsize = 750;
 
-# reports (for each slice) should contain these data:
-# img => image of the heatmap
-# fp  => image of the fingerprints
-# title => title that should list all samples in the cluster
-# matrix => path to file with similarity matrix (jaccard indexes) for a heatmap
-# genotype => path to file with genotype info for a heatmap
+=head2 reports hash structure
+
+ reports (for each slice) should contain these data:
+
+ img      => image of the heatmap
+ fp       => image of the fingerprints
+ title    => title that should list all samples in the cluster
+ matrix   => path to file with similarity matrix (jaccard indexes) for a heatmap
+ genotype => path to file with genotype info for a heatmap
+
+=cut
 
 my @colors = qw/red orange yellow green lightblue blue purple darkgreen black pink/; 
-my $USAGE="make_report.pl --datadir=[req] --studyname=[req] --matrix=[req] --refsnps=[req] --tempdir=[opt]";
+my $USAGE  = "make_report.pl --datadir=[req] --studyname=[req] --matrix=[req] --refsnps=[req] --tempdir=[opt]";
 my $result = GetOptions ('datadir=s'    => \$datadir, # working (output) directory
                          'tempdir=s'    => \$tempdir,  # directory with temporary GATK files
                          'matrix=s'     => \$matrix,  # file with calculated indexes
@@ -163,15 +168,14 @@ my @ordered_list = split(" ",$ordered);
 print STDERR "Got ".scalar(@ordered_list)." files ordered by clustering\n" if DEBUG;
 
 my %indexed_lines = ();
-my %seen_sample = ();
-my %sperslice = (); # samples per slice, calculate and compare with sample_counter (if no match, there's b/w slices sample split
-my %sliced  = ();
+my %seen_sample   = ();
+my %sperslice     = (); # samples per slice, calculate and compare with sample_counter (if no match, there's b/w slices sample split
+my %sliced        = ();
 my %parent_clusters = (); # keys are samples, values are number of files in the parent cluster
 my $count   = 0; # slice counter
 
 map{if(/(\S+)\t/ && $ids{$1}){$indexed_lines{$ids{$1}} = $_}} @lines;
 print STDERR "Got ".scalar(keys %indexed_lines)." indexed lines\n" if DEBUG;
-
 my %preclusters = ();
  
 # ======================================================================================
@@ -213,7 +217,7 @@ foreach my $cl (sort {$a<=>$b} keys %preclusters) {
          my @plines = @clines;
          map{push(@plines,$indexed_lines{$_}) if $samples{$_}->{sample} eq $samples{$file_id}->{sample}} (keys %{$preclusters{$parent_clusters{$samples{$file_id}->{sample}}->{cluster}}});
          
-         # FIXME this needs to be handled differently (perhaps not here, but on the level of R script that build the heatmap)
+         # this may need to be handled differently (perhaps not here, but on the level of R script that build the heatmap)
          if (&aver_ji(\@plines,$samples{$file_id}->{sample},1) >= &aver_ji(\@clines,$samples{$file_id}->{sample},0) - JACCARDOFFSET) {
              # Reassign to parent cluster:
              print STDERR $file_id." gets reassigned to its parent cluster\n" if DEBUG;
@@ -229,10 +233,11 @@ foreach my $cl (sort {$a<=>$b} keys %preclusters) {
   }
 }
 
-# ==============================================
+# ============================================================
 # Compose slices: Using list from previous step,  
 # assemble slices having fewer or 8 samples (final clustering)
-# ==============================================
+# ============================================================
+
 %sperslice = ();
 my $slice_id = 0;
 PRE:
@@ -299,18 +304,20 @@ sub printout_html {
                   -author=>'pruzanov@oicr.on.ca',
                   -meta=>{'keywords'=>'sample swap detection genotype fingerprinting',
                                       'copyright'=>'&copy; 2013 OICR'},
-                  -script=>[{-type => 'text/javascript',
-                            -code  => 'function showFingerprints(snapshot){window.open(snapshot,"_blank","width='.($pngsize + 1).',height=600,toolbar=0,menubar=0,status=1,scrollbars=yes,resizable=1")}'}],
+                  -script=>[{-type  => 'text/javascript',
+                             -code  => 'function showFingerprints(snapshot){window.open(snapshot,"_blank","width='.($pngsize + 1).',height=600,toolbar=0,menubar=0,status=1,scrollbars=yes,resizable=1")}'}],
                   -BGCOLOR=>'white');
+
  print button(-onClick=>"showFingerprints('help.html')",
               -name=>"help_button",
               -value=>"Help");
+
  print "\n&nbsp;&nbsp;\n";
  my $matrix_link = $matrix;
  $matrix_link=~s!.*/!!;
  print button(-onClick=>"window.location.href=\'$matrix_link\'",
-              -name=>"download_button",
-              -value=>"Download Data");
+              -name   =>"download_button",
+              -value  =>"Download Data");
  print h2("Sample Fingerprinting for ".$studyname." study");
  print br;
  #1. Suspicious samples
@@ -329,9 +336,9 @@ sub printout_html {
   my @filtered = map{Tr({-align=>'LEFT',-valign=>'BOTTOM'},td($_))} (values %filtered);
 
   print h3("Files skipped due to low coverage/small number of SNPs or single file in a sample:");
-   print br;
-   print table({-border=>0},
-                @filtered);
+  print br;
+  print table({-border=>0},
+               @filtered);
  }
 
 
@@ -342,11 +349,11 @@ sub printout_html {
  # 3. image of the heatmap and 4. button with a link to popup with fingerprints
  my @hmaps = map {&heatmap_rep($_)} (sort {$a<=>$b} keys %reports);
  my @tab_rows = map {3*$_+2 <= $#hmaps ? Tr({-align=>'LEFT',-valign=>'TOP'},@hmaps[3*$_..3*$_+2])
-                                      : Tr({-align=>'LEFT',-valign=>'TOP'},@hmaps[3*$_..$#hmaps]);} (0..$n_rows-1);
+                                       : Tr({-align=>'LEFT',-valign=>'TOP'},@hmaps[3*$_..$#hmaps]);} (0..$n_rows-1);
 
  print h3("Heatmaps based on similarity matricies:");
  print table({-border=>0},
-            @tab_rows);
+              @tab_rows);
 
  print end_html;
 }
@@ -383,7 +390,6 @@ sub printout_snps {
    my @temp = split("\t");
    $snpinfo{$temp[0]}->{$temp[1]} ||= $temp[2];
    $snpcalls{$temp[2]}->{$samples{$id}->{file}} = $temp[3];
-   
   }
   $fh_fin->close;
  }
@@ -660,11 +666,11 @@ sub create_popup {
  my $popname = "fingerprints_popup_$cluster_id"."_$$".".html";
  my $pop = new IO::File(">$dir/$popname") or die "Cannot write to [>$dir/$popname]";
 
- print $pop start_html(-title=>"Individual Fingerprints Report $cluster_id",
-                       -author=>'pruzanov@oicr.on.ca',
-                       -meta=>{'keywords'=>'sample swap detection genotype fingerprinting',
-                                           'copyright'=>'&copy; 2013 OICR'},
-                       -BGCOLOR=>'white');
+ print $pop start_html(-title   => "Individual Fingerprints Report $cluster_id",
+                       -author  => 'pruzanov@oicr.on.ca',
+                       -meta    => {'keywords'=>'sample swap detection genotype fingerprinting',
+                                                'copyright'=>'&copy; 2013 OICR'},
+                       -BGCOLOR => 'white');
 
  my @t_rows = ();
  foreach my $finger (@{$reports{$cluster_id}->{fp}}) {
@@ -681,9 +687,9 @@ sub create_popup {
   } 
  }
 
- print $pop table({-border=>0,
-                   -cellpadding=>0,
-                   -cellspacing=>0},
+ print $pop table({-border      =>0,
+                   -cellpadding =>0,
+                   -cellspacing =>0},
                    @t_rows);
 
  print $pop end_html;

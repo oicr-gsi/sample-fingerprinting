@@ -18,20 +18,22 @@
 
     <properties>
         <workflow-name>SampleFingerprinting</workflow-name>
+        <tabix-version>0.2.6</tabix-version>
+        <vcftools-version>0.1.10</vcftools-version>
     </properties>
 
     <dependencies>
         <dependency>
             <groupId>samtools</groupId>
             <artifactId>tabix</artifactId>
-            <version>0.2.6</version>
+            <version>${tabix-version}</version>
             <type>zip</type>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.sourceforge</groupId>
             <artifactId>vcftools</artifactId>
-            <version>0.1.10</version>
+            <version>${vcftools-version}</version>
             <type>zip</type>
             <scope>provided</scope>
         </dependency>

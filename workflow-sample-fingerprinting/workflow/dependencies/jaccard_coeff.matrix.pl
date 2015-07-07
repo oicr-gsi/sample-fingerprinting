@@ -20,7 +20,7 @@ my $result = GetOptions ('list=s'            => \$list, # list with filenames (e
                          'existing_matrix=s' => \$oldmatrix, # file with previously calculater indexes
                          'datadir=s'         => \$datadir, # directory with vcf files
                          'tabix=s'           => \$path_to_tabix, # path to tabix dir
-                         'vcf_compare=s'     => \$vcf_path, # path to vcftools vcf-compare script
+                         'vcf-compare=s'     => \$vcf_path, # path to vcftools vcf-compare script
                          'studyname=s'       => \$studyname);
 
 if (!$list || !$studyname) {die $USAGE;}
@@ -56,8 +56,10 @@ if (defined $oldmatrix && $oldmatrix=~/\S+/) {
 if (@old_matrices && @old_matrices > 0) {
 print STDERR "Found ".scalar(@old_matrices)." old matrices [$oldmatrix]\n" if DEBUG;
 my $interact = 0;
+
 foreach my $old (@old_matrices) {
  my %id_added = ();
+
  if ($old && -e $old) {
   print STDERR "We have data in ".$old." , will append our results to the existing matrix\n" if DEBUG;
   open(OLD,"<$old") or die "Couldn't read from the file with previously calculated indexes";
@@ -67,6 +69,7 @@ foreach my $old (@old_matrices) {
   chomp($idstring);
   my @tempids = ();
   @tempids = grep {/\S+/} split("\t",$idstring);
+
   if ($tempids[$#tempids] =~ /SNP/) {
    $sindex = $#tempids;
    pop @tempids;
@@ -128,8 +131,10 @@ if ($list=~/\,/) {
  my $subidx = 0;
  $sublists[0] = [];
  $sublists[1] = [];
+ 
  while(<LIST>) {
   chomp;
+ 
   # Split the list if there's an empty line
   if (/^$/) {
    $subidx = 1;
@@ -150,6 +155,7 @@ if ($list=~/\,/) {
 print STDERR scalar(keys %ids)." genotypes collected\n" if DEBUG;
 
 my $count = 1;
+
 foreach my $id(@{$sublists[0]}) { #keys %ids) {
  # Take care of SNP number calculation
   
@@ -187,7 +193,7 @@ foreach my $id(@{$sublists[0]}) { #keys %ids) {
   my @compares = `$vcf_compare $file1 $file2 | grep \"^VN\"`;
   my @numbers = (0,0,0);
 
-  for (my $i=0; $i<@compares; $i++) {
+  for (my $i = 0; $i < @compares; $i++) {
     if ($compares[$i] =~ /$ids{$id}/ && $compares[$i] =~ /$ids{$s}/) {
      $numbers[2] = $1 if ($compares[$i]=~/\t(\d+)\t/);
     } elsif ($compares[$i] =~ /$sample/) {
@@ -242,18 +248,14 @@ sub id_file {
  my $id;
 
  if ($file=~/(\d+)_($studyname.\d+)_/ || $file=~/(\d+)_([A-Z]+.\d+)_/) {
-  #print STDERR "Studyname $studyname detected by cond.1\n" if DEBUG;
   $id = $2.$1;
   $ids{$id} = $file;
   $files{$file} = $id;
  } elsif ($file=~/^($studyname\_[0-1]\d+).(\S+)/ || $file=~/([A-Z]+.\d+)\.(\S+)/) {
-  #print STDERR "Studyname $studyname detected by cond.2\n" if DEBUG;
   $id = join("_",($1,$2));
   $ids{$id} = $file;
   $files{$file} = $id;
  } else {
-  #print STDERR "Studyname $studyname NOT detected\n" if DEBUG;
-  #return;
   $ids{$file} = $file;
   $files{$file} = $file;
  }

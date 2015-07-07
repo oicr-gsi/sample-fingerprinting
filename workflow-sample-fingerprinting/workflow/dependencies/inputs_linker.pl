@@ -12,10 +12,10 @@ use Getopt::Long;
 use constant DEBUG=>0;
 my($list,$datadir,$findir,$extensions);
 my(@extensions,@basepaths);
-my $result = GetOptions ('list=s'            => \$list, #Comma-separated list with basenames (full path sans extension), extension should be passed in 'extensions' 
-                         'datadir=s'         => \$datadir, # directory for symbolic links to inputs
-                         'findir=s'          => \$findir,  # directory for symbolic links to finfiles (found by exttension)
-                         'extensions=s'      => \$extensions); #Comma-separated extensions of all files that need to be linked as well
+my $result = GetOptions ('list=s'            => \$list,        # Comma-separated list with basenames (full path sans extension), extension should be passed in 'extensions' 
+                         'datadir=s'         => \$datadir,     # directory for symbolic links to inputs
+                         'findir=s'          => \$findir,      # directory for symbolic links to finfiles (found by exttension)
+                         'extensions=s'      => \$extensions); # Comma-separated extensions of all files that need to be linked as well
 
 # split extensions
 @extensions = split(",",$extensions);
@@ -34,4 +34,3 @@ for (my $f = 0; $f < @basepaths; $f++) {
       }
     }
 }
-

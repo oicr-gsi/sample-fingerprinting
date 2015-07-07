@@ -74,5 +74,5 @@ sub vet_emails {
  if (!$emails || @{$emails} == 0) {
   return undef;
  }
- return map {$_ if (/\w+\@oicr\.on\.ca/)} @emails;
+ return map {$_ if (/\w+\@.+/)} @emails;
 }
