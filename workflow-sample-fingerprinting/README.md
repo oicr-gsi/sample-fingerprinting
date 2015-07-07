@@ -30,7 +30,9 @@ These parameters can be overridden either in the INI file on on the command line
 
 Required:
 
-    study_name                string      A required parameter passed by the decider or on the command line if workflow is launched manually
+    study_name                string      A required parameter passed by the decider
+                                          or on the command line if workflow is launched
+                                          manually
 
 Input/output:
 
@@ -66,8 +68,6 @@ Optional:
 ###Output files
 **sample_fingerprint.[StudyName].report.zip**
 Contains index.html with Sample Swap report, similarity matrix files, heatmaps of clustered samples in png format
-
-**Undetermined_indices.zip** :  if in a particular lane there is no 'NoIndex', a fastq.gz file will also be produced containing any reads that were not allocated to one of the fastq files
 
 ###Support
 For support, please file an issue on the [Github project](https://github.com/oicr-gsi) or send an email to gsi@oicr.on.ca .
