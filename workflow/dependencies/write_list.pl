@@ -12,7 +12,7 @@ my($datadir,$segments);
 my $result = GetOptions ('datadir=s'     => \$datadir,    # working (output) directory with vcf files
                          'segments=s'    => \$segments);  # one or two segments (for composing a merged list) i.e. 0:49,100:149
 
-my $USAGE = "write_list --datadir=[dir with vcf.gz files] --segments=[optional, segments of file list to make a merged list]\n";
+my $USAGE = "write_list --datadir [dir with vcf.gz files] --segments [optional, segments of file list to make a merged list]\n";
 die $USAGE if (!$datadir);
 
 opendir(DIR,"$datadir") or die "Couldn't read from directory [$datadir]";

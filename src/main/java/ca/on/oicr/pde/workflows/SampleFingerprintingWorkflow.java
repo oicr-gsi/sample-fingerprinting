@@ -33,17 +33,18 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
     private String checkPoints;
     private String queue;
     private boolean manualOutput;
-    private final String finDir = "finfiles/";
-    private final String reportName = "sample_fingerprint";
-    private int jChunkSize; // Optimal (for speed) allowed number of vcf files when jaccard_indexing step doesn't fork into multiple sub-jobs   
+    private int jChunkSize; // Optimal (for speed) allowed number of vcf files when jaccard_indexing step doesn't fork into multiple sub-jobs
+    //Static integers
     private final int MIN_CHUNK_SIZE = 50;
-    private final int MAX_CHUNKS = 40; // n in (n^2 + n)/2 which defines N of chunks (it should not be more than 900
-    private final int MAX_FILES = 500; // Maximum number of files to pass to the script for sym.linking
-    private final int MAX_INPUTS = 3500; // Recommended max size of the data set
+    private final int MAX_CHUNKS     = 40;   // n in (n^2 + n)/2 which defines N of chunks (it should not be more than 900
+    private final int MAX_FILES      = 500;  // Maximum number of files to pass to the script for sym.linking
+    private final int MAX_INPUTS     = 3500; // Recommended max size of the data set
     //Static strings
-    private final static String VCF_EXT = ".snps.raw.vcf.gz";
+    private final String finDir           = "finfiles/";
+    private final String reportName       = "sample_fingerprint";
+    private final static String VCF_EXT   = ".snps.raw.vcf.gz";
     private final static String TABIX_EXT = ".snps.raw.vcf.gz.tbi";
-    private final static String FIN_EXT = ".fin";
+    private final static String FIN_EXT   = ".fin";
 
     @Override
     public Map<String, SqwFile> setupFiles() {
@@ -189,10 +190,10 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
                 // Prepare the inputs (make symlinks in dataDir)
                 Job job_link_maker = workflow.createBashJob("link_inputs");
                 job_link_maker.setCommand(getWorkflowBaseDir() + "/dependencies/inputs_linker.pl"
-                        + " --list=" + basePathList.toString()
-                        + " --datadir=" + this.dataDir
-                        + " --findir=" + this.dataDir + this.finDir
-                        + " --extensions=" + extList);
+                        + " --list "    + basePathList.toString()
+                        + " --datadir " + this.dataDir
+                        + " --findir "  + this.dataDir + this.finDir
+                        + " --extensions " + extList);
                 job_link_maker.setMaxMemory("2000");
                 if (!this.queue.isEmpty()) {
                     job_link_maker.setQueue(this.queue);
@@ -204,8 +205,6 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
 
                 StringBuilder chunkedResults = new StringBuilder();
                 int vcf_chunks = (int) Math.ceil((double) this.vcfFiles.length / (double) this.jChunkSize);
-                //TODO add optimzer for number of chunks
-                
                 int resultID = 1;
 
                 // Combine chunks and run the jobs, registering results for later use
@@ -215,8 +214,8 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
                         Job job_list_writer = workflow.createBashJob("make_list" + resultID);
                         String chunkList = "jaccard.chunk." + resultID + ".list";
                         job_list_writer.setCommand(getWorkflowBaseDir() + "/dependencies/write_list.pl"
-                                + " --datadir=" + this.dataDir
-                                + " --segments=\"" + c * this.jChunkSize + ":" + ((c + 1) * this.jChunkSize - 1) + ","
+                                + " --datadir "    + this.dataDir
+                                + " --segments \"" + c * this.jChunkSize + ":" + ((c + 1) * this.jChunkSize - 1) + ","
                                 + cc * this.jChunkSize + ":" + ((cc + 1) * this.jChunkSize - 1) + "\""
                                 + " > " + this.dataDir + chunkList);
 
@@ -237,11 +236,11 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
                         resultID++;
 
                         job_jchunk.setCommand(getWorkflowBaseDir() + "/dependencies/jaccard_coeff.matrix.pl"
-                                + " --list=" + this.dataDir + chunkList
-                                + " --vcf_compare=" + getWorkflowBaseDir() + "/bin/vcftools_" + this.vcftoolsVersion + "/bin/vcf-compare"
-                                + " --datadir=" + this.dataDir
-                                + " --tabix=" + getWorkflowBaseDir() + "/bin/tabix-" + this.tabixVersion
-                                + " --studyname=" + this.studyName
+                                + " --list "        + this.dataDir + chunkList
+                                + " --vcf-compare " + getWorkflowBaseDir() + "/bin/vcftools_" + this.vcftoolsVersion + "/bin/vcf-compare"
+                                + " --datadir "     + this.dataDir
+                                + " --tabix "       + getWorkflowBaseDir() + "/bin/tabix-" + this.tabixVersion
+                                + " --studyname "   + this.studyName
                                 + " > " + this.dataDir + chunkName);
 
                         job_jchunk.setMaxMemory("2000");
@@ -263,8 +262,8 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
             Job job_list_writer2 = workflow.createBashJob("make_Final_list");
             String chunkList = "jaccard.chunks.list";
             job_list_writer2.setCommand(getWorkflowBaseDir() + "/dependencies/write_list.pl"
-                    + " --datadir=" + this.dataDir
-                    + " > " + this.dataDir + chunkList);
+                    + " --datadir " + this.dataDir
+                    + " > "         + this.dataDir + chunkList);
 
             job_list_writer2.setMaxMemory("2000");
             if (!this.queue.isEmpty()) {
@@ -279,14 +278,14 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
             SqwFile matrix = this.createOutputFile(this.dataDir + this.studyName + "_jaccard.matrix.csv", "text/plain", this.manualOutput);
             Job job_jaccard = workflow.createBashJob("make_matrix");
             job_jaccard.setCommand(getWorkflowBaseDir() + "/dependencies/jaccard_coeff.matrix.pl"
-                    + " --list=" + this.dataDir + chunkList
-                    + " --vcf_compare=" + getWorkflowBaseDir() + "/bin/vcftools_" + this.vcftoolsVersion + "/bin/vcf-compare"
-                    + " --datadir=" + this.dataDir
-                    + " --tabix=" + getWorkflowBaseDir() + "/bin/tabix-" + this.tabixVersion
-                    + " --studyname=" + this.studyName
+                    + " --list "        + this.dataDir + chunkList
+                    + " --vcf-compare " + getWorkflowBaseDir() + "/bin/vcftools_" + this.vcftoolsVersion + "/bin/vcf-compare"
+                    + " --datadir "     + this.dataDir
+                    + " --tabix "       + getWorkflowBaseDir() + "/bin/tabix-" + this.tabixVersion
+                    + " --studyname "   + this.studyName
                     + " > " + matrix.getSourcePath());
             if (!this.existingMatrix.isEmpty()) {
-                job_jaccard.getCommand().addArgument("--existing_matrix=" + this.existingMatrix);
+                job_jaccard.getCommand().addArgument("--existing_matrix " + this.existingMatrix);
             }
 
             job_jaccard.setMaxMemory("4000");
@@ -298,13 +297,13 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
 
             // Images generated here: matrix slicing/color assignment, flagging suspicious files, wrapper for R script
             Job make_pics = workflow.createBashJob("make_report");
-            make_pics.setCommand("perl " + getWorkflowBaseDir() + "/dependencies/make_report.pl "
-                    + "--matrix=" + matrix.getSourcePath() + " "
-                    + "--refsnps=" + this.checkPoints + " "
-                    + "--tempdir=" + this.dataDir + this.finDir + " "
-                    + "--datadir=" + this.dataDir + " "
-                    + "--studyname=" + this.studyName + " "
-                    + "> " + this.dataDir + "index.html");
+            make_pics.setCommand("perl " + getWorkflowBaseDir() + "/dependencies/make_report.pl"
+                    + " --matrix "    + matrix.getSourcePath()
+                    + " --refsnps "   + this.checkPoints
+                    + " --tempdir "   + this.dataDir + this.finDir
+                    + " --datadir "   + this.dataDir
+                    + " --studyname=" + this.studyName
+                    + " > " + this.dataDir + "index.html");
 
             make_pics.addParent(job_jaccard);
             make_pics.setMaxMemory("6000");
@@ -347,11 +346,11 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
             // Next job is report-emailing script (check html for flagged samples, send email(s) to interested people)
             if (!this.watchersList.isEmpty()) {
                 Job job_alert = workflow.createBashJob("send_alert");
-                job_alert.setCommand("perl " + getWorkflowBaseDir() + "/dependencies/plotReporter.pl "
-                        + "--watchers=" + this.watchersList + " "
-                        + "--report=" + this.dataDir + "index.html "
-                        + "--studyname=" + this.studyName + " "
-                        + "--bundle=" + report_file.getOutputPath());
+                job_alert.setCommand("perl " + getWorkflowBaseDir() + "/dependencies/plotReporter.pl"
+                        + " --watchers "  + this.watchersList
+                        + " --report "    + this.dataDir + "index.html"
+                        + " --studyname " + this.studyName
+                        + " --bundle "    + report_file.getOutputPath());
                 job_alert.setMaxMemory("2000");
                 job_alert.addParent(zip_report);
                 if (!this.queue.isEmpty()) {

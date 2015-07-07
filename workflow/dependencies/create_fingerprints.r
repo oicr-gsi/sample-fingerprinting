@@ -28,8 +28,7 @@ for(n in names[[1]]) {
  maxchar<-ifelse(nchar(n)>maxchar,nchar(n),maxchar)
 }
 
-# Set the width of image an right margin
-#off<-ifelse(maxchar*6.5>snps+10,maxchar*6.5,0)
+# Set the width of image's right margin
 off = 0
 
 # Function for drawing colorstrips
@@ -44,7 +43,6 @@ colorstrip<-function(cls,ccol,base,height,margin=0) {
 image_height = 20*length(names[[1]])
 
 # Assign colnames for color array
-
 colnames(refcols)<-c("A","C","G","T","M")
 BLANC="#D7D7D7"
 
@@ -74,7 +72,6 @@ for(i in 1:length(names[[1]])){
  
  plot(1, type="n", axes=F, xlab="", ylab="",xlim=c(0,ifelse(off==0,snps+10,off)),ylim=c(0,10),yaxs = 'i',xaxs = 'i')
  colorstrip(C,cclrs[[1]][i],0,10,0)
- #text(5,1,name,pos=4,cex=1,font=2)
  
 }
 dev.off()

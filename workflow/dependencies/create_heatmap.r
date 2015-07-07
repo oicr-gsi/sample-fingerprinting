@@ -7,8 +7,6 @@ title   = cmd_args[2]             # title of the heatmap (list of samples)
 maxSNPs = as.numeric(cmd_args[3]) # how many control 'hotspots' (ref SNPs)
 pngname = cmd_args[4]             # Name of the pngfile for writing into
 
-#cat("Arguments:",cmd_args[1],cmd_args[2],cmd_args[3],cmd_args[4],cmd_args[5],cmd_args[6],sep="\n")
-
 image_width  = as.numeric(cmd_args[5])
 image_height = image_width
 
@@ -37,8 +35,6 @@ plotfile<-function(f,title,maxSNPs,flagged=FALSE) {
 
 }
 
-
-#cat(pngname,image_width,image_height,sep=" ")
 png(filename=pngname,width=image_width,height=image_height,units="px",pointsize=15,bg="white")
 plotfile(f,title,maxSNPs,flagged)
 blah<-dev.off()
