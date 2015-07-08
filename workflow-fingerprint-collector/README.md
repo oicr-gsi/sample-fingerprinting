@@ -60,16 +60,20 @@ Optional:
                                           that contains coordinates and ids of dbSNPs
                                           used to genotype .bam files
     check_points              int         Number of snps in 'checked_snps' file
-    genome_file
-    gatk_prefix
-    preprocess_bam
+    genome_file               string      Reference fasta assembly (i.e. hg19.fa) Note that 
+                                          there should be .fai and .dict files (generated with
+                                          samtools and picard, respectively) in the same directory
+    gatk_prefix               string      GATK prefix should point to a 'well-performing' file system
+                                          for writing temporary files into it. May prevent possible
+                                          failures of a workflow run
+    preprocess_bam            boolean     Flag that shows if re-ordering/adding read groups are 
+                                          needed for .bam files, should rarely be true
     queue                     string      Name of the (SGE) queue to schedule to [production]
 
 
 
 ###Output files
-**sample_fingerprint.[StudyName].report.zip**
-Contains index.html with Sample Swap report, similarity matrix files, heatmaps of clustered samples in png format
+"fingerprint" .vcf.gz, .tbi, .fin files used by the downstream (Sample Fingerprinting) workflow
 
 ###Support
 For support, please file an issue on the [Github project](https://github.com/oicr-gsi) or send an email to gsi@oicr.on.ca .
