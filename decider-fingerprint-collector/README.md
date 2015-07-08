@@ -4,10 +4,10 @@ Version 1.1.3
 
 ###Overview
 
-Fingerprint Collector Decider accepts alignments ( .bam files ) from Novoalign (or BWA) aligners. 
-The purpose is to provide a "lighter" version of analysis that would be capable to process data 
-more efficiently than 1.0 version. It sets up Fingerprint Collector workflow to generate .vcf.gz, .tbi and .fin 
-files for downstream processing (Sample Fingerprinting 2.0 workflow).
+Fingerprint Collector Decider pre-configures workflow runs that would accepts alignments ( .bam files )
+from Novoalign (or BWA) aligners. The purpose is to provide a "lighter" version of analysis that would be
+capable to process large-scale data more efficiently than 1.0 version. Fingerprint Collector workflow run would
+produce .vcf.gz, .tbi and .fin files for downstream processing (Sample Fingerprinting 2.0 workflow).
 
 
 ###Compile
