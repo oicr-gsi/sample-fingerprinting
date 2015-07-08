@@ -48,6 +48,7 @@ Optional:
 
     preprocess-bam            true|false  Flag that indicates if re-ordering/adding Read Groups
                                           are needed, should rarely be true
+                                          [false]
     gatk-prefix               string      prefix for customizing temporary files' location for GATK
     gatk-memory               integer     RAM in Mb allocated to GATK jobs      
     queue                     string      Name of the (SGE) queue to schedule to [production]
