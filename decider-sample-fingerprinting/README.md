@@ -47,13 +47,15 @@ Optional:
     config-file               string      specify alternative file with hotspot settings 
                                           (should not be needed)
     separate-platforms        true|false  Optional: Separate sequencer run platforms, determines if i.e.
-                                          HiSeq and MiSeq data will be processed by separate runs [true]
+                                          HiSeq and MiSeq data will be processed by separate runs 
+                                          [true]
     after-date                string      Optional: Format YYYY-MM-DD. Implemented by OICRDecider, Only run
                                           on files modified after a certain date, not inclusive
     before-date               string      Optional: Format YYYY-MM-DD. Implemented by OICRDecider, Only run
                                           on files modified before a certain date, not inclusive
     watchers-list             string      List of people notified by email about detected sample swaps
-    queue                     string      Name of the (SGE) queue to schedule to [production]
+    queue                     string      Name of the (SGE) queue to schedule to 
+                                          [empty]
 
 
 ###Support
