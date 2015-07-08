@@ -66,7 +66,7 @@ Optional:
     gatk_prefix               string      GATK prefix should point to a 'well-performing' file system
                                           for writing temporary files into it. May prevent possible
                                           failures of a workflow run
-    preprocess_bam            boolean     Flag that shows if re-ordering/adding read groups are 
+    preprocess_bam            true|false  Flag that shows if re-ordering/adding read groups are 
                                           needed for .bam files, should rarely be true
     queue                     string      Name of the (SGE) queue to schedule to [production]
 
