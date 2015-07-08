@@ -46,7 +46,7 @@ Optional:
     existing-matrix           string      Recycling results from previous SampleFingerprinting workflow runs
     config-file               string      specify alternative file with hotspot settings (should not be needed)
     separate-platforms        true|false  Optional: Separate sequencer run platforms, determines if i.e. HiSeq and MiSeq
-                                          will be processed by separate runs
+                                          will be processed by separate runs [true]
     after-date                string      Optional: Format YYYY-MM-DD. Implemented by OICRDecider, Only run on files 
                                           modified after a certain date, not inclusive
     before-date               string      Optional: Format YYYY-MM-DD. Implemented by OICRDecider, Only run on files
