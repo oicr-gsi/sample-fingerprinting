@@ -63,11 +63,34 @@ Optional:
                                           SampleFingerprinting workflow runs)
     queue                     string      Name of the (SGE) queue to schedule to [production]
 
+####Building similarity matrix
 
+This step uses a wrapper perl script (jaccard_coeff.matrix.pl) which calls vcftools executable vcf-compare. Vcf files are analyzed for overlap and then we calculate Jaccard index that gets recorded into the matrix and uses as a measurement of similarity between two genotypes.
+
+####Producing the HTML report
+
+make_report.pl is doing the bulk of the job by clustering data (using R scripts) and identifying potential swaps.This script produces several output files, most notably - heatmaps for lanes grouped together based on their similarity. The heatmaps organized in a html report (index.html), which also provides links for downloading similarity matrices and genotype tables for each of the heatmaps. The report may be further customized using our webtool (needs to be deployed on a webserver).
+
+![sample-fingerprinting report](docs/HTML_report.png)
+
+The HTML Report contains the following:
+
+    List of potential swapped samples
+    Heat maps for each set of very similar samples
+    Link to download the Project (Study) Similarity Matrix CSV file
+    Genotype barcodes of all files in a heatmap
+    Similarity matrix describing the proximity of all files in a heatmap
+    Link to Genotype CSV (for each heatmap)
+    
+####Sending Alerts
+
+There is a small script plotReporter.pl that sends alerts notifying about potential sample swaps detected by this workflow. A comma-delimited list of emails should be assigned to parameter watchers_list. The scripts rely on make_report.pl script that inserts special flags into .html report. plotReporter.pl detects these tags and sends out emails with generic text and location of the result bundle.
 
 ###Output files
+
 **sample_fingerprint.[StudyName].report.zip**
 Contains index.html with Sample Swap report, similarity matrix files, heatmaps of clustered samples in png format
 
 ###Support
+
 For support, please file an issue on the [Github project](https://github.com/oicr-gsi) or send an email to gsi@oicr.on.ca .
