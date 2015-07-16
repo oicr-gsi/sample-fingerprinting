@@ -70,6 +70,33 @@ Optional:
                                           needed for .bam files, should rarely be true
     queue                     string      Name of the (SGE) queue to schedule to [production]
 
+####Indexing with samtools
+
+Indexing with samtools is required by GATK which picks up after indexes (.bai) get generated. The command (samtools index ###.bam) is executed so that index files end up together with their .bam in provisionfiles/### directory.
+Building vcf files with GATK, calculating depth of coverage
+
+We use GATK UnifiedGenotyper to call snps on our bam files with following parameters:
+    
+    java -jar GenomeAnalysisTK.jar 
+    -R ###.fa
+    -T UnifiedGenotyper 
+    -I ###.bam
+    -o ###.vcf
+    -stand_call_conf 50.0
+    -stand_emit_conf 10.0
+    -dcov 50
+    -L dbsnp137.hg19.402.overlap.vcf
+
+dbsnp137.hg19.402.overlap.vcf is a file produced using dbSNP data by selecting SNPs with MAF (minor allele frequency) >=0.50.
+
+GATK is also used to produce coverage data for SNP loci with the help of another module, DepthOfCoverage.
+    
+    java -jar GenomeAnalysisTK.jar 
+    -R ###.fa
+    -T DepthOfCoverage "
+    -I ###.bam
+    -o outputdir/basename 
+    -L dbsnp137.hg19.402.overlap.vcf
 
 
 ###Output files
