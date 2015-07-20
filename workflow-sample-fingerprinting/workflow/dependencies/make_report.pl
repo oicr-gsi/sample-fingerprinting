@@ -123,6 +123,7 @@ if ($matrix && -e $matrix) {
  $fh->open(">$mfile") or die "Couldn't write filtered data into a file [$mfile]";
  
  my @filterhead;
+ 
  HEAD:
  foreach my $hf (@heads) {
   if ($filtered{$hf}) {next;}
@@ -136,16 +137,32 @@ if ($matrix && -e $matrix) {
  # Get read of filtered files (lines in the matrix)
  LINE:
  foreach my $line (@lines) {
-  my @tlines=split("\t",$line);
-  if ($line=~/^(\S+)\t/) {
+  my @tlines = split("\t",$line);
+  if ($line =~/^(\S+)\t/) {
     if ($filtered{$tlines[0]}){next LINE;}
-    
-    print $fh $ids{$tlines[0]};
+    # TODO a nice point to insert new swap - marking code
+
+    print $fh $ids{$tlines[0]};     # Trimmed  name is printed into matrix_filtered.csv
+    my @swapchecks = ();            # Contains coefficients for $heads[$line_idx]
+    my @file_ids   = ();            # Contains trimmed names of files corresponding
+                                    # to data in @swapchecks 
     IDX:
     foreach my $line_idx (1..$#tlines) {
       if ($filtered{$heads[$line_idx]}) {next IDX;}
-      $tlines[$line_idx] =~/NA/ ? print $fh "\t0" : print $fh "\t$tlines[$line_idx]";
+       if ($tlines[$line_idx] =~/NA/) {
+           print $fh "\t0";
+           push(@swapchecks, 0);
+       } else {
+           print $fh "\t$tlines[$line_idx]";
+           push (@swapchecks, $tlines[$line_idx]);
+       }
+       push(@file_ids, $ids{$heads[$line_idx]});
     }
+
+    my $isSwapped = &flagSwapped($tlines[0], \@filterhead, \@swapchecks);
+
+    $flagged{files}->{$samples{$ids{$tlines[0]}}->{name}}++     if $isSwapped;
+    $flagged{samples}->{$samples{$ids{$tlines[0]}}->{sample}}++ if $isSwapped;
     
   } else {
     next LINE;
@@ -226,6 +243,7 @@ foreach my $cl (sort {$a<=>$b} keys %preclusters) {
          } else {
              # Flag file and sample
              print STDERR "FOUND split file, putative swap\n" if DEBUG;
+             # TODO need to review this under GP-393
              $flagged{files}->{$samples{$file_id}->{name}}++;
              $flagged{samples}->{$samples{$file_id}->{sample}}++;
          }
@@ -547,6 +565,7 @@ sub printout_slice {
   map{if (scalar(@{$_}) == $maxfiles{$sample}){$havemax++}} (@{$seen_sample{$sample}});
   foreach my $clustr(@{$seen_sample{$sample}}) {
    if (scalar(@{$clustr}) < $maxfiles{$sample} || (scalar(@{$clustr}) == $maxfiles{$sample} && $havemax > 1)) {
+     # TODO review this under GP-393
      map{$flagged{files}->{$samples{$_}->{name}}++} (@{$clustr});
      $flagged{samples}->{$sample}++;
      $flagged = "TRUE";
@@ -697,4 +716,81 @@ sub create_popup {
  return $popname;
 }
 
+=head2 Swap Detection
+ 
+ New-ish swap-marking algorithm that would use filtered header and filtered coefficient
+ Headers are sorted according to coefficients and if N of items (files) on the top of 
+ the list doesn't match the total N of filtered files, file is marked as swapped.
 
+ Example:
+          	GHRT_0001	GHRT_0002	GHRT_0003	BLAH_001	BLAH_002	BLAH_003
+ GHRT_0001	0.65	        0.8	        0.6	        0.3	        0.25	        0.14
+
+ 
+ Sorted, Sample GHRT_0001 is not marked as swapped:
+
+ 	        BLAH_003	BLAH_002	BLAH_001	GHRT_0003	GHRT_0002	GHRT_0001
+ GHRT_0001	0.14	        0.25	        0.3	        0.6	        0.8	        1
+
+
+ Sorted, Sample GHRT_0002 marked as swap (related sample are NOT the closest):
+
+ 	        GHRT_0001	GHRT_0005	GHRT_0003	BLAH_002	BLAH_001	GHRT_0002
+ GHRT_0002	0.12	        0.34	        0.35	        0.45	        0.6	        1
+
+
+ More complex cases: 
+
+ GHRT_0001 is NOT marked as swap b/c it clusters with other GRHT items and together they rpresent more than 1/2 of all GRHT tems
+
+ 	        GHRT_0003	BLAH_003	BLAH_002	BLAH_001	GHRT_0005	GHRT_0002	GHRT_0001
+ GHRT_0001	0.1	        0.34	        0.45	        0.5	        0.8	        0.8	        1
+
+ GRHT_0001 IS marked as swap b/c with other GRHT cluster members it is 1/2 of all GRHT items (it is even more certain if 
+ there're fewer than 1/2 of all GRHT items stay together)
+
+                GHRT_0003       GHRT_0004	BLAH_003        BLAH_002        BLAH_001        GHRT_0002       GHRT_0001
+ GHRT_0001      0.1             0.2	        0.34            0.45            0.5             0.8             1
+
+ 
+=cut
+
+sub flagSwapped {
+ 
+ my $id    = shift @_;
+ my @files = @{shift @_};
+ my @data  = @{shift @_};
+
+ # Discard SNP data
+ pop(@files);
+ pop(@data);
+
+ if (scalar(@files) != scalar(@data)) {die "Couldn't proceed, we have different number of files and data points!";}
+
+ print "I got ID: $id\n";
+ print "From this list:\n";
+ print join("\n",@files);
+ print "\nHaving these data:\n";
+ print join ("\t",@data);
+
+ my %coeffs = map {$files[$_]=>$data[$_]} (0..scalar(@data) - 1); 
+ my @sorted_coeffs = (reverse sort values %coeffs);
+ # Need to know total files for sample S
+ # 
+  
+ #print STDERR Dumper($samples{$ids{$id}});
+ #print STDERR Dumper(%coeffs);
+ print STDERR Dumper(@sorted_coeffs);
+
+ my $co_clustred = 0;
+ foreach my $c (@sorted_coeffs) {
+   my $ok2continue = 0;
+   map{if ($coeffs{$_} == $c && $samples{$ids{$_}}->{sample} eq $samples{$ids{$id}}->{sample}){$ok2continue = 1}} @files; 
+   last if !$ok2continue;
+   $co_clustred++;
+ }
+
+ exit;
+
+
+}
