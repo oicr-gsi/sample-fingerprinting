@@ -140,7 +140,6 @@ if ($matrix && -e $matrix) {
   my @tlines = split("\t",$line);
   if ($line =~/^(\S+)\t/) {
     if ($filtered{$tlines[0]}){next LINE;}
-    # TODO a nice point to insert new swap - marking code
 
     print $fh $ids{$tlines[0]};     # Trimmed  name is printed into matrix_filtered.csv
     my @swapchecks = ();            # Contains coefficients for $heads[$line_idx]
@@ -159,10 +158,11 @@ if ($matrix && -e $matrix) {
        push(@file_ids, $ids{$heads[$line_idx]});
     }
 
-    my $isSwapped = &flagSwapped($tlines[0], \@filterhead, \@swapchecks);
+    # TODO this needs to be tested GP-393
+    #my $isSwapped = &flagSwapped($tlines[0], \@filterhead, \@swapchecks);
 
-    $flagged{files}->{$samples{$ids{$tlines[0]}}->{name}}++     if $isSwapped;
-    $flagged{samples}->{$samples{$ids{$tlines[0]}}->{sample}}++ if $isSwapped;
+    #$flagged{files}->{$samples{$ids{$tlines[0]}}->{name}}++     if $isSwapped;
+    #$flagged{samples}->{$samples{$ids{$tlines[0]}}->{sample}}++ if $isSwapped;
     
   } else {
     next LINE;
@@ -174,6 +174,9 @@ if ($matrix && -e $matrix) {
 } else {
  die "No valid matrix file supplied, I cannot continue with no input";
 }
+
+print STDERR Dumper(%flagged);
+exit;
 
 # ==============================================
 # Using R (heatmap) cluster samples, 
@@ -243,7 +246,8 @@ foreach my $cl (sort {$a<=>$b} keys %preclusters) {
          } else {
              # Flag file and sample
              print STDERR "FOUND split file, putative swap\n" if DEBUG;
-             # TODO need to review this under GP-393
+             # TODO need to review this under GP-393 (And remove)
+             #if (!$flagged{files}->{$samples{$file_id}->{name}}) {print STDERR "Old swap-checking code activated\n";}
              $flagged{files}->{$samples{$file_id}->{name}}++;
              $flagged{samples}->{$samples{$file_id}->{sample}}++;
          }
@@ -565,9 +569,9 @@ sub printout_slice {
   map{if (scalar(@{$_}) == $maxfiles{$sample}){$havemax++}} (@{$seen_sample{$sample}});
   foreach my $clustr(@{$seen_sample{$sample}}) {
    if (scalar(@{$clustr}) < $maxfiles{$sample} || (scalar(@{$clustr}) == $maxfiles{$sample} && $havemax > 1)) {
-     # TODO review this under GP-393
-     map{$flagged{files}->{$samples{$_}->{name}}++} (@{$clustr});
-     $flagged{samples}->{$sample}++;
+     # TODO review this under GP-393 (and remove if the new code works better
+     map{if (!$flagged{files}->{$samples{$_}->{name}}) {$flagged{files}->{$samples{$_}->{name}}++}else{print STDERR "Old code #2 activated\n"}} (@{$clustr});
+     #if (!$flagged{samples}->{$sample}){$flagged{samples}->{$sample}++;print STDERR "Old Code #2 updates sample $sample\n";}
      $flagged = "TRUE";
    }
   }
@@ -576,17 +580,18 @@ sub printout_slice {
  print STDERR Dumper(%flagged) if DEBUG;
 
  # Register the image name in the report hash
- $reports{$slice_id} = {img=>$filecard.".png",
-                        fp=>[@fingers],
-                        flagged=>$flagged eq "TRUE" ? "FLAGGED" : "OK",
-                        matrix=>$matname,
-                        title=>$pngtitle};
+ $reports{$slice_id} = {img    => $filecard.".png",
+                        fp     => [@fingers],
+                        flagged=> $flagged eq "TRUE" ? "FLAGGED" : "OK",
+                        matrix => $matname,
+                        title  => $pngtitle};
 }
 
 # ====================================================================================================================
 # Average Jaccard index for a set of lines (if sample variable passed, only values for files from the sample processed) 
 # ====================================================================================================================
 sub aver_ji {
+ 
  # If there's no sample, will use all values exept 1 (genotype compared with itself)
  my($lines,$sample,$include) = @_;
  my @values = ();
@@ -718,79 +723,64 @@ sub create_popup {
 
 =head2 Swap Detection
  
- New-ish swap-marking algorithm that would use filtered header and filtered coefficient
- Headers are sorted according to coefficients and if N of items (files) on the top of 
- the list doesn't match the total N of filtered files, file is marked as swapped.
+ New-ish swap-marking algorithm that would use dendrogram from heatmap - drawing script
+ An algoritm checks if we have all (or at least > 1/2 nodes for donor connected, unmarks
+ swap for connected files. Initially, all files and donors are marked as swapped
 
- Example:
-          	GHRT_0001	GHRT_0002	GHRT_0003	BLAH_001	BLAH_002	BLAH_003
- GHRT_0001	0.65	        0.8	        0.6	        0.3	        0.25	        0.14
+ --[dendrogram w/ 2 branches and 26 members at h = 1.44]
+  |--[dendrogram w/ 2 branches and 12 members at h = 1.2]
+  |  |--[dendrogram w/ 2 branches and 4 members at h = 0.934]
+  |  |  |--[dendrogram w/ 2 branches and 2 members at h = 0.0899]
+  |  |  |  |--leaf "JDRT_0032_nn_T_PE_289_EX_150305_D00353_0095_AC6DN8ANXX_ACGTATCA_L001_R1_001_SWID_1547258" ( value = NA )
+  |  |  |  `--leaf "JDRT_0032_nn_T_PE_289_EX_150325_D00343_0082_BC6DRRANXX_ACGTATCA_L003_R1_001_SWID_1659864" ( value = NA )
+  |  |  `--[dendrogram w/ 2 branches and 2 members at h = 0.177]
+  |  |     |--leaf "JDRT_0083_nn_T_PE_366_EX_150423_D00353_0101_AC6JH4ANXX_CGAACTTA_L001_R1_001_SWID_1793397" ( value = NA )
+  |  |     `--leaf "JDRT_0083_nn_T_PE_366_EX_150423_D00353_0101_AC6JH4ANXX_CGAACTTA_L002_R1_001_SWID_1793396" ( value = NA )
+  |  `--[dendrogram w/ 2 branches and 8 members at h = 0.98]
+  |     |--[dendrogram w/ 2 branches and 2 members at h = 0.328]
+  |     |  |--leaf "JDRT_0083_nn_R_PE_352_EX_150428_D00343_0085_AC5UT4ANXX_AACGTGAT_L007_R1_001_SWID_1841037" ( value = NA )
+  |     |  `--leaf "JDRT_0083_nn_R_PE_352_EX_150501_D00353_0102_AC6VTDANXX_AACGTGAT_L008_R1_001_SWID_1848027" ( value = NA )
+  |     `--[dendrogram w/ 2 branches and 6 members at h = 0.775]
+  |        |--[dendrogram w/ 2 branches and 2 members at h = 0.115]
+  |        |  |--leaf "JDRT_0027_nn_T_PE_383_EX_150423_D00353_0101_AC6JH4ANXX_CTGTAGCC_L001_R1_001_SWID_1793368" ( value = NA )
+  |        |  `--leaf "JDRT_0027_nn_T_PE_383_EX_150423_D00353_0101_AC6JH4ANXX_CTGTAGCC_L002_R1_001_SWID_1793366" ( value = NA )
+  |        `--[dendrogram w/ 2 branches and 4 members at h = 0.156]
+  |           |--[dendrogram w/ 2 branches and 2 members at h = 0.0488]
+  |           |  |--leaf "JDRT_0014_nn_T_PE_337_EX_150305_D00353_0095_AC6DN8ANXX_CAAGACTA_L002_R1_001_SWID_1547253" ( value = NA )
+  |           |  `--leaf "JDRT_0014_nn_T_PE_337_EX_150325_D00343_0082_BC6DRRANXX_CAAGACTA_L004_R1_001_SWID_1659858" ( value = NA )
+  |           `--[dendrogram w/ 2 branches and 2 members at h = 0.118]
+  |              |--leaf "JDRT_0014_nn_R_PE_337_EX_150305_D00353_0095_AC6DN8ANXX_AGATCGCA_L002_R1_001_SWID_1547254" ( value = TRUE )
+  |              `--leaf "JDRT_0014_nn_R_PE_337_EX_150325_D00343_0082_BC6DRRANXX_AGATCGCA_L004_R1_001_SWID_1659859" ( value = NA )
+  `--[dendrogram w/ 2 branches and 14 members at h = 1.25]
 
- 
- Sorted, Sample GHRT_0001 is not marked as swapped:
+  ....
 
- 	        BLAH_003	BLAH_002	BLAH_001	GHRT_0003	GHRT_0002	GHRT_0001
- GHRT_0001	0.14	        0.25	        0.3	        0.6	        0.8	        1
+  Algo:
+  
+  %nodes (keys - integers, autoincrimented)
+  
+  a sample node:
+  ...
+  {
+   dist     => 0.25,
+   branches => [ids, may be undef]
+   leafs    => [files, maybe undef]
+  }
+  ...
 
+  %distances {key = distance, values - node ids}
 
- Sorted, Sample GHRT_0002 marked as swap (related sample are NOT the closest):
+  Build nodes, sort distances and getLeafs from each sub-tree at a distance, noting node ids
+  if N of files = N total for donor (and there's one donor in subtree) mark as OK
 
- 	        GHRT_0001	GHRT_0005	GHRT_0003	BLAH_002	BLAH_001	GHRT_0002
- GHRT_0002	0.12	        0.34	        0.35	        0.45	        0.6	        1
-
-
- More complex cases: 
-
- GHRT_0001 is NOT marked as swap b/c it clusters with other GRHT items and together they rpresent more than 1/2 of all GRHT tems
-
- 	        GHRT_0003	BLAH_003	BLAH_002	BLAH_001	GHRT_0005	GHRT_0002	GHRT_0001
- GHRT_0001	0.1	        0.34	        0.45	        0.5	        0.8	        0.8	        1
-
- GRHT_0001 IS marked as swap b/c with other GRHT cluster members it is 1/2 of all GRHT items (it is even more certain if 
- there're fewer than 1/2 of all GRHT items stay together)
-
-                GHRT_0003       GHRT_0004	BLAH_003        BLAH_002        BLAH_001        GHRT_0002       GHRT_0001
- GHRT_0001      0.1             0.2	        0.34            0.45            0.5             0.8             1
-
+  if there's one donor and N <= 1/2 of total, leave marked as swapped, note the nodes to avoid repeat processing
  
 =cut
 
+#TODO encorporate code from eat_dendro.pl script here
 sub flagSwapped {
+
+ # This function will accept a single denrogram in text format
+ my $dendro = shift @_; 
  
- my $id    = shift @_;
- my @files = @{shift @_};
- my @data  = @{shift @_};
-
- # Discard SNP data
- pop(@files);
- pop(@data);
-
- if (scalar(@files) != scalar(@data)) {die "Couldn't proceed, we have different number of files and data points!";}
-
- print "I got ID: $id\n";
- print "From this list:\n";
- print join("\n",@files);
- print "\nHaving these data:\n";
- print join ("\t",@data);
-
- my %coeffs = map {$files[$_]=>$data[$_]} (0..scalar(@data) - 1); 
- my @sorted_coeffs = (reverse sort values %coeffs);
- # Need to know total files for sample S
- # 
-  
- #print STDERR Dumper($samples{$ids{$id}});
- #print STDERR Dumper(%coeffs);
- print STDERR Dumper(@sorted_coeffs);
-
- my $co_clustred = 0;
- foreach my $c (@sorted_coeffs) {
-   my $ok2continue = 0;
-   map{if ($coeffs{$_} == $c && $samples{$ids{$_}}->{sample} eq $samples{$ids{$id}}->{sample}){$ok2continue = 1}} @files; 
-   last if !$ok2continue;
-   $co_clustred++;
- }
-
- exit;
-
-
 }
