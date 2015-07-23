@@ -37,7 +37,7 @@ $vetted_emails = join(",",&vet_emails(\@emails));
 if (!$vetted_emails && $vetted_emails !~/\@/) {die "We don't have any valid email(s) for sending an alert to";}
 
 
-# 2 Open report and detect FLAGGED Hetmaps========================================================
+# 2 Open report and detect FLAGGED Heatmaps=======================================================
 # We rely on the assumption that by this time we nave an unvetted list of emails that is not empty
 # At the end of this step , we should have an array of titles that correspond to flagged hetmaps
 # ================================================================================================

@@ -33,7 +33,7 @@ use FindBin qw($Bin);
 use Data::Dumper;
 
 use constant THRESHOLD=>30; # That many SNPs every genotype should have
-use constant DEBUG=>1;
+use constant DEBUG=>0;
 use constant NOGARBAGE=>1; # Filter (or not) entries that have only 1 or/and 0
 use constant SAMPLESPERSLICE=>8;
 use constant JACCARDOFFSET=>0.1; # Allow lanes to be reassigned to their parent cluster if they similarity to the lanes from other donors is not that great
@@ -44,7 +44,6 @@ my %flagged = (samples=>{}, files=>{});
 my $pngsize = 750;
 
 # ===== Swap Detection variables =========
-my %distances; # For searching nodes by distance 
 my %n; #Parsed Dendrogram Nodes
 my @leafs_found;
 my @ids_tested;
@@ -83,7 +82,6 @@ if ($matrix && -e $matrix) {
  chomp($firstline);
  my @heads = split("\t",$firstline);
  map {if ($heads[$_]=~/^SNP/){$snp_index = $_}} (0..$#heads);
- #if ($heads[$#heads]=~/^SNP/){$snp_index = $_};
 
  $snp_index or die "The matrix file [$matrix] is missing the column with number of SNPs called per genotype";
  @lines = ($firstline);
@@ -192,7 +190,7 @@ my $count   = 0; # slice counter
 map{if(/(\S+)\t/ && $ids{$1}){$indexed_lines{$ids{$1}} = $_}} @lines;
 print STDERR "Got ".scalar(keys %indexed_lines)." indexed lines\n" if DEBUG;
 my %preclusters = ();
-print STDERR Dumper(%samples) if DEBUG;
+
 # ======================================================================================
 # Pre-clustering step, need to re-assign lanes to parent cluster if needed
 # pre-clustering results should be used to assemble final clusters for creating heatmaps
@@ -523,7 +521,7 @@ sub printout_slice {
  my $png = $datadir.$filecard.".png";
  print STDERR "Will Rscript $Bin/create_heatmap.r $outfile $pngtitle $refsnps $png $pngsize $flagged FALSE\n" if DEBUG;
  my $clustered_ids = `Rscript $Bin/create_heatmap.r $outfile $pngtitle $refsnps $png $pngsize $flagged FALSE`;
- my @clustered_ids = grep {/\S+/} split(" ",$clustered_ids); # grep {/$studyname/}
+ my @clustered_ids = grep {/\S+/}  map {if(/^([A-Z]{3,4}_\d+)_/ && $sample_counter{$1}){$_}} split(" ",$clustered_ids); 
  print STDERR "Clustered IDs:\n" if DEBUG;
  print STDERR Dumper(@clustered_ids) if DEBUG;
 
@@ -558,9 +556,7 @@ sub printout_slice {
   }
   ...
 
-  %distances {key = distance, values - node ids}
-
-  Build nodes, sort distances and getLeafs from each sub-tree at a distance, noting node ids
+  Build nodes, sort by id and getLeafs from each sub-tree, noting node ids
   if N of files = N total for donor (and there's one donor in subtree) mark as OK
 
   if there's one donor and N <= 1/2 of total, leave marked as swapped, note the nodes to avoid repeat processing
@@ -570,9 +566,8 @@ sub printout_slice {
 
  print STDERR "Rscript $Bin/create_heatmap.r $outfile $pngtitle $refsnps NoPngPlease $pngsize FALSE TRUE\n" if DEBUG;
  my @Dendro = `Rscript $Bin/create_heatmap.r $outfile $pngtitle $refsnps NoPngPlease $pngsize FALSE TRUE`;
- %distances = (); # For searching nodes by distance 
 
- print STDERR scalar(@Dendro)." Lines in dendrogram\n";
+ print STDERR scalar(@Dendro)." Lines in dendrogram\n" if DEBUG;
  %n = %{&getNodes(\@Dendro)};
  @leafs_found = ();
  @ids_tested  = ();
@@ -597,9 +592,6 @@ sub printout_slice {
 
    #====================Validation Code=================
   
-   # TODO this needs to be checked since donors may not have study name
-   # included into files' (leafs') names
-
    my $swap = isSwapPresent($test_id, \@leafs_found); 
    if ($swap) {
       print STDERR "Swap detected for [$test_id]\n" if DEBUG;
@@ -612,11 +604,8 @@ sub printout_slice {
   }
  }
 
+ #=============End of swap-checkiing code=================
 
- 
-
-
- #==========End GP-393===============================
 
  my @fingers = ();
  my %seen_sample = (); # Re-use this hash for calculating
@@ -625,11 +614,13 @@ sub printout_slice {
  my $lbuffer = [];     # lane buffer - for holding files in a cluster
 
  # Checking for broken clusters and generating fingerprint glyphs
+ # Re-shuffle pngtitle so that order reflects clustered order
+ my @titlebuf = ();
 
  for (my $cl = 0; $cl < @clustered_ids; $cl++) { 
-  next if $flagged{files}->{$samples{$clustered_ids[$cl]}->{name}};  # Skipping these should prevent marking clusters that have putative swap lanes inserted
 
   $current_sample ||= $samples{$clustered_ids[$cl]}->{sample};
+  unless($seen_sample{$current_sample}) {push @titlebuf,$current_sample;}
   $seen_sample{$current_sample} ||= [];
   $maxfiles{$current_sample} ||= 0;
   
@@ -657,36 +648,18 @@ sub printout_slice {
    } 
   }
  }
+ 
 
  if (scalar(@{$lbuffer}) > 0) {
   push(@{$seen_sample{$current_sample}},$lbuffer);
   if (!$maxfiles{$current_sample} || $maxfiles{$current_sample} < scalar(@{$lbuffer})){$maxfiles{$current_sample} = scalar(@{$lbuffer});}
  }
 
- # Updating flagging for files and samples 
- #print STDERR Dumper(%seen_sample) if DEBUG;
- #foreach my $sample (keys %seen_sample) {
- # next if (scalar(@{$seen_sample{$sample}}) <= 1); 
- # my $havemax = 0;
- # map{if (scalar(@{$_}) == $maxfiles{$sample}){$havemax++}} (@{$seen_sample{$sample}});
- # foreach my $clustr(@{$seen_sample{$sample}}) {
- #  if (scalar(@{$clustr}) < $maxfiles{$sample} || (scalar(@{$clustr}) == $maxfiles{$sample} && $havemax > 1)) {
- #    # TODO review this under GP-393 (and remove if the new code works better
- #    map{if (!$flagged{files}->{$samples{$_}->{name}}) {$flagged{files}->{$samples{$_}->{name}}++}else{print STDERR "Old code #2 activated\n"}} (@{$clustr});
- #    #if (!$flagged{samples}->{$sample}){$flagged{samples}->{$sample}++;print STDERR "Old Code #2 updates sample $sample\n";}
- #    $flagged = "TRUE";
- #  }
- # }
- #}
-
- #print STDERR Dumper(%flagged) if DEBUG;
-
  # Register the image name in the report hash
  $reports{$slice_id} = {img    => $filecard.".png",
                         fp     => [@fingers],
-                        flagged=> $flagged eq "TRUE" ? "FLAGGED" : "OK",
                         matrix => $matname,
-                        title  => $pngtitle};
+                        title  => join(",",@titlebuf)};
 }
 
 # ====================================================================================================================
@@ -751,7 +724,7 @@ sub heatmap_rep {
  return td(img({-src=>$reports{$heat}->{img},
                 -width=>500,
                 -height=>500,
-                -alt=>'Heatmap_'.$heat."_".$reports{$heat}->{flagged}}),br,
+                -alt=>'Heatmap_'.$heat}),br,
            image_button({-src=>$link_image,
                 -width=>111,
                 -height=>32,
@@ -829,9 +802,7 @@ sub create_popup {
 =head3 getNodes
 
  Function for getting hash with dendrogram nodes, linked to each other
- Only distance would allow to determine the parent node (the h will be the largest)
- Needs to be used for making %distances hash and finding out if nodes were properly
- clustered
+ Only branch info would allow to determine the parent node (the h will be the largest)
 
 =cut
 
@@ -859,7 +830,6 @@ sub getNodes {
                      branches => [],
                      leafs    => []};
     $parents[$level] = $id;
-    $distances{$2} = $distances{$2} ? [$id,$distances{$2}] : [$id];
     push (@{$nodes{$parents[$level - 1]}->{branches}}, $id) if $level > 0;
   } elsif ($line=~/--leaf.*\"(\S+?)\"/) {
     push (@{$nodes{$parents[$level]}->{leafs}}, $1);
@@ -889,7 +859,7 @@ sub getLeafs {
  push(@ids_tested, $id);
 
  if ($n{$id}->{leafs} && @{$n{$id}->{leafs}} > 0) { 
-     print STDERR "Found Leafs for id [$id]\n";
+     print STDERR "Found Leafs for id [$id]\n" if DEBUG;
      map{print STDERR "Saw $_\n"} (@{$n{$id}->{leafs}}) if DEBUG;
      map{push(@leafs_found, $_)} (@{$n{$id}->{leafs}});
  } 
