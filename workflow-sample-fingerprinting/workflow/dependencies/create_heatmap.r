@@ -42,6 +42,13 @@ plotfile<-function(f,title,maxSNPs,flagged=FALSE,dendro=FALSE) {
 
 }
 
-png(filename=pngname,width=image_width,height=image_height,units="px",pointsize=15,bg="white")
+# Make png only if we have valid name (ending with png) - Useful when requesting only dendrogram
+if (grepl(".png$", pngname)) { 
+ png(filename=pngname,width=image_width,height=image_height,units="px",pointsize=15,bg="white")
+}
+ 
 plotfile(f,title,maxSNPs,flagged,dendro)
-blah<-dev.off()
+
+if (grepl(".png$", pngname)) {
+ blah<-dev.off()
+}

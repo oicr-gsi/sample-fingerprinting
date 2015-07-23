@@ -25,6 +25,7 @@
 # =================================================================================================================
 
 use strict;
+use POSIX qw(floor);
 use Getopt::Long;
 use CGI qw/:standard/;
 use IO::File;
@@ -32,18 +33,21 @@ use FindBin qw($Bin);
 use Data::Dumper;
 
 use constant THRESHOLD=>30; # That many SNPs every genotype should have
-use constant DEBUG=>0;
+use constant DEBUG=>1;
 use constant NOGARBAGE=>1; # Filter (or not) entries that have only 1 or/and 0
 use constant SAMPLESPERSLICE=>8;
 use constant JACCARDOFFSET=>0.1; # Allow lanes to be reassigned to their parent cluster if they similarity to the lanes from other donors is not that great
 
 my($datadir,$tempdir,$matrix,$studyname,$refsnps); # external parameters
-my($snp_index,%samples,%sample_counter,%ids,%filtered,@lines,%reports,%flagged); # internal variables
-
-# %flagged structure: %flagged = (samples=>{} files=>{}) multiple levels of flagging
-%flagged = (samples=>{}, files=>{});
-
+my($snp_index,%samples,%sample_counter,%ids,%filtered,@lines,%reports); # internal variables
+my %flagged = (samples=>{}, files=>{});
 my $pngsize = 750;
+
+# ===== Swap Detection variables =========
+my %distances; # For searching nodes by distance 
+my %n; #Parsed Dendrogram Nodes
+my @leafs_found;
+my @ids_tested;
 
 =head2 reports hash structure
 
@@ -79,6 +83,7 @@ if ($matrix && -e $matrix) {
  chomp($firstline);
  my @heads = split("\t",$firstline);
  map {if ($heads[$_]=~/^SNP/){$snp_index = $_}} (0..$#heads);
+ #if ($heads[$#heads]=~/^SNP/){$snp_index = $_};
 
  $snp_index or die "The matrix file [$matrix] is missing the column with number of SNPs called per genotype";
  @lines = ($firstline);
@@ -101,8 +106,7 @@ if ($matrix && -e $matrix) {
     } 
   }
 
-  if ($temp[$snp_index] && $temp[$snp_index] >= THRESHOLD && $notgarbage && $trimmed_name=~/([A-Z]{3,4}_\d+)_/ ) { #|| $temp[0]=~/SWID_(\d+)_([A-Z]+.\d+)_/)) {
-    print STDERR "Registering $temp[0]\n" if DEBUG; 
+  if ($temp[$snp_index] && $temp[$snp_index] >= THRESHOLD && $notgarbage && $trimmed_name=~/([A-Z]{3,4}_\d+)_/ ) { 
     $ids{$temp[0]} = $trimmed_name;
     $samples{$ids{$temp[0]}} = {sample=>$1,file=>$temp[0],name=>$trimmed_name}; # register a file as pertaining to a certain sample (studyname_sampleid)
     $sample_counter{$1}++; 
@@ -142,28 +146,16 @@ if ($matrix && -e $matrix) {
     if ($filtered{$tlines[0]}){next LINE;}
 
     print $fh $ids{$tlines[0]};     # Trimmed  name is printed into matrix_filtered.csv
-    my @swapchecks = ();            # Contains coefficients for $heads[$line_idx]
-    my @file_ids   = ();            # Contains trimmed names of files corresponding
-                                    # to data in @swapchecks 
     IDX:
     foreach my $line_idx (1..$#tlines) {
       if ($filtered{$heads[$line_idx]}) {next IDX;}
        if ($tlines[$line_idx] =~/NA/) {
            print $fh "\t0";
-           push(@swapchecks, 0);
        } else {
            print $fh "\t$tlines[$line_idx]";
-           push (@swapchecks, $tlines[$line_idx]);
        }
-       push(@file_ids, $ids{$heads[$line_idx]});
     }
-
-    # TODO this needs to be tested GP-393
-    #my $isSwapped = &flagSwapped($tlines[0], \@filterhead, \@swapchecks);
-
-    #$flagged{files}->{$samples{$ids{$tlines[0]}}->{name}}++     if $isSwapped;
-    #$flagged{samples}->{$samples{$ids{$tlines[0]}}->{sample}}++ if $isSwapped;
-    
+        
   } else {
     next LINE;
   }
@@ -175,13 +167,16 @@ if ($matrix && -e $matrix) {
  die "No valid matrix file supplied, I cannot continue with no input";
 }
 
-print STDERR Dumper(%flagged);
-exit;
+=head2 
 
-# ==============================================
-# Using R (heatmap) cluster samples, 
-# we need the re-arranged list for next step
-# ==============================================
+ Using R (heatmap) cluster samples, 
+ we need the re-arranged list for next step
+
+ We need this step to see which donors (samples) cluster 
+ together so that we can distribute donors more precisely 
+ among final clusters
+
+=cut
 
 my $ordered      = `Rscript $Bin/cluster.r $datadir/matrix_filtered.csv`;
 my @ordered_list = split(" ",$ordered);
@@ -197,13 +192,13 @@ my $count   = 0; # slice counter
 map{if(/(\S+)\t/ && $ids{$1}){$indexed_lines{$ids{$1}} = $_}} @lines;
 print STDERR "Got ".scalar(keys %indexed_lines)." indexed lines\n" if DEBUG;
 my %preclusters = ();
- 
+print STDERR Dumper(%samples) if DEBUG;
 # ======================================================================================
 # Pre-clustering step, need to re-assign lanes to parent cluster if needed
 # pre-clustering results should be used to assemble final clusters for creating heatmaps
 # ======================================================================================
 my $current_sample;
-
+print STDERR "Found ".scalar(@ordered_list)." lines in ordered list\n" if DEBUG;
 ORDERED:
 foreach my $id (@ordered_list) {
  if (!$samples{$id}) {next ORDERED;}
@@ -223,10 +218,14 @@ foreach my $id (@ordered_list) {
 }
 print STDERR "Found ".scalar(keys %preclusters)." preclusters\n" if DEBUG;
 
-# ============================================================================================
-# Re-assign lanes to parent clusters, if needed. Flag those lanes which can not be re-assigned
-# Use the results in the next step (composing clusters)
-# ============================================================================================
+=head2
+
+ Entries that don't show strong affinity to any foreign clusters
+ may get re-assigned to their 'parent' clusters so that the data
+ stay together (it may be investigated more later using webtool)
+
+=cut 
+
 my $headerline = $lines[0];
 
 foreach my $cl (sort {$a<=>$b} keys %preclusters) {
@@ -243,22 +242,19 @@ foreach my $cl (sort {$a<=>$b} keys %preclusters) {
              print STDERR $file_id." gets reassigned to its parent cluster\n" if DEBUG;
              $preclusters{$cl}->{$file_id} = undef;
              $preclusters{$parent_clusters{$samples{$file_id}->{sample}}->{cluster}}->{$file_id}++;
-         } else {
-             # Flag file and sample
-             print STDERR "FOUND split file, putative swap\n" if DEBUG;
-             # TODO need to review this under GP-393 (And remove)
-             #if (!$flagged{files}->{$samples{$file_id}->{name}}) {print STDERR "Old swap-checking code activated\n";}
-             $flagged{files}->{$samples{$file_id}->{name}}++;
-             $flagged{samples}->{$samples{$file_id}->{sample}}++;
-         }
-    }
+         } 
+
+     }
   }
 }
 
-# ============================================================
-# Compose slices: Using list from previous step,  
-# assemble slices having fewer or 8 samples (final clustering)
-# ============================================================
+=head2 Composing Slices
+ 
+ Here we composing slices for final clustering and making images
+ Checking N samples per cluster, re-assigning if needed
+ (and if it's possible)
+
+=cut
 
 %sperslice = ();
 my $slice_id = 0;
@@ -275,10 +271,12 @@ foreach my $pre (sort {$a<=>$b} keys %preclusters) {
  }
 }
 
-# =================================================
-# Append last cluster to last-1 cluster if there's 
-# only one (or two) sample in the last one
-# =================================================
+=head2 If the last cluster is small
+
+ Append last cluster to last-1 cluster if there's 
+ only one (or two) sample in the last one
+
+=cut
 
 if (scalar(keys %{$sperslice{scalar(keys %sliced)-1}}) <= 2 && scalar(keys %sliced) > 1) {
  foreach my $f (keys %{$sliced{scalar(keys %sliced)-1}}) {
@@ -289,11 +287,15 @@ if (scalar(keys %{$sperslice{scalar(keys %sliced)-1}}) <= 2 && scalar(keys %slic
  $sliced{scalar(keys %sliced)-1} = undef;
 }
 
-print STDERR Dumper(%flagged) if DEBUG;
 
-# =================================================
-# Now print all slices 
-# =================================================
+=head2 Now print all slices 
+
+ Slices are processed one by one
+ Swap detection happens inside printout_slice function
+
+ At this point we are basically done, printing out HTML
+
+=cut
 
 foreach my $sl (sort {$a<=>$b} keys %sliced) {
  next if !$sliced{$sl};
@@ -314,11 +316,11 @@ foreach my $sl (sort {$a<=>$b} keys %sliced) {
 
 &printout_html;
 
-# =================================================================
-# make HTML report (will call a couple of subroutines)
-# =================================================================
+=head2 printout_html 
 
-# These images are hardcoded, not supposed to be customizable
+ make HTML report (will call a couple of subroutines)
+
+=cut
 
 sub printout_html {
 
@@ -344,7 +346,7 @@ sub printout_html {
  print br;
  #1. Suspicious samples
  if (scalar(keys %{$flagged{files}}) > 0) {
-  my @flagged = map{Tr({-align=>'LEFT',-valign=>'BOTTOM'},td($_))} (keys %{$flagged{files}});
+  my @flagged = map{if (defined $flagged{files}->{$_}){Tr({-align=>'LEFT',-valign=>'BOTTOM'},td($_))}} (keys %{$flagged{files}});
 
   print h3("Files flagged as potential sample swaps:");
   print br;
@@ -379,9 +381,13 @@ sub printout_html {
 
  print end_html;
 }
-#==========================================================================================================================
-# A subroutine for printing out genotype report for a heatmap (slice) - will list all SNPs in checked 'hotspots' in a table
-#==========================================================================================================================
+
+=head2 printout_snps
+
+ A subroutine for printing out genotype report for a heatmap (slice) - will list all SNPs in checked 'hotspots' in a table
+
+=cut
+
 sub printout_snps {
  my %sliced = %{shift @_};
  my($slice_id,$filecard,$datadir) = @_;
@@ -420,7 +426,7 @@ sub printout_snps {
  my $fname = join("_",($studyname,$slice_id,"genotype_report_$$.csv"));
  my $fpath = $datadir.$fname;
  $fh_fin->open(">$fpath") or die "Couldn't write genotype report to [$fpath]";
- print $fh_fin join("\t",@titles[0..2]);
+ print $fh_fin join("\t",@titles[0..2]) if @titles;
  my @fnames = map{$samples{$_}->{name}} (sort keys %sliced);
  print $fh_fin "\t",join("\t",@fnames),"\n";
 
@@ -437,10 +443,14 @@ sub printout_snps {
  $reports{$slice_id}->{genotype} = $fname;
 
 }
-#===========================================================================================
-# process slices with two R scripts - one for heatmap, one for 'barcode'-looking fingerprint
-# Here we are printing to two files, slightly different header and file ids
-#===========================================================================================
+
+=head2 printout_slice
+
+ process slices with two R scripts - one for heatmap, one for 'barcode'-looking fingerprint
+ Here we are printing to two files, slightly different header and file ids
+
+=cut
+
 sub printout_slice {
  my %sliced = %{shift @_};
  my $slice_id = shift @_;
@@ -511,14 +521,106 @@ sub printout_slice {
 
  # Produce images
  my $png = $datadir.$filecard.".png";
- print STDERR "Will Rscript $Bin/create_heatmap.r $outfile $pngtitle $refsnps $png $pngsize $flagged\n" if DEBUG;
- my $clustered_ids = `Rscript $Bin/create_heatmap.r $outfile $pngtitle $refsnps $png $pngsize $flagged`;
+ print STDERR "Will Rscript $Bin/create_heatmap.r $outfile $pngtitle $refsnps $png $pngsize $flagged FALSE\n" if DEBUG;
+ my $clustered_ids = `Rscript $Bin/create_heatmap.r $outfile $pngtitle $refsnps $png $pngsize $flagged FALSE`;
  my @clustered_ids = grep {/\S+/} split(" ",$clustered_ids); # grep {/$studyname/}
  print STDERR "Clustered IDs:\n" if DEBUG;
  print STDERR Dumper(@clustered_ids) if DEBUG;
+
+=head2 Swap Detection
+ 
+ New swap-marking algorithm that would use dendrogram from heatmap - drawing script
+ An algoritm checks if we have all (or at least > 1/2 nodes for donor connected, unmarks
+ swap for connected files. Initially, all files and donors are marked as swapped
+
+ --[dendrogram w/ 2 branches and 26 members at h = 1.44]
+  |--[dendrogram w/ 2 branches and 12 members at h = 1.2]
+  |  |--[dendrogram w/ 2 branches and 4 members at h = 0.934]
+  |  |  |--[dendrogram w/ 2 branches and 2 members at h = 0.0899]
+  |  |  |  |--leaf "JDRT_0032_nn_T_PE_289_EX_150305_D00353_0095_AC6DN8ANXX_ACGTATCA_L001_R1_001_SWID_1547258" ( value = NA )
+  |  |  |  `--leaf "JDRT_0032_nn_T_PE_289_EX_150325_D00343_0082_BC6DRRANXX_ACGTATCA_L003_R1_001_SWID_1659864" ( value = NA )
+  |  |  `--[dendrogram w/ 2 branches and 2 members at h = 0.177]
+  |  |     |--leaf "JDRT_0083_nn_T_PE_366_EX_150423_D00353_0101_AC6JH4ANXX_CGAACTTA_L001_R1_001_SWID_1793397" ( value = NA )
+  |  |     `--leaf "JDRT_0083_nn_T_PE_366_EX_150423_D00353_0101_AC6JH4ANXX_CGAACTTA_L002_R1_001_SWID_1793396" ( value = NA )
+  |  `--[dendrogram w/ 2 branches and 8 members at h = 0.98]
+  ....
+
+  Algo:
+  
+  %nodes (keys - integers, autoincrimented)
+  
+  a sample node:
+  ...
+  {
+   dist     => 0.25,
+   branches => [ids, may be undef]
+   leafs    => [files, maybe undef]
+  }
+  ...
+
+  %distances {key = distance, values - node ids}
+
+  Build nodes, sort distances and getLeafs from each sub-tree at a distance, noting node ids
+  if N of files = N total for donor (and there's one donor in subtree) mark as OK
+
+  if there's one donor and N <= 1/2 of total, leave marked as swapped, note the nodes to avoid repeat processing
+ 
+=cut
+
+
+ print STDERR "Rscript $Bin/create_heatmap.r $outfile $pngtitle $refsnps NoPngPlease $pngsize FALSE TRUE\n" if DEBUG;
+ my @Dendro = `Rscript $Bin/create_heatmap.r $outfile $pngtitle $refsnps NoPngPlease $pngsize FALSE TRUE`;
+ %distances = (); # For searching nodes by distance 
+
+ print STDERR scalar(@Dendro)." Lines in dendrogram\n";
+ %n = %{&getNodes(\@Dendro)};
+ @leafs_found = ();
+ @ids_tested  = ();
+ my %valid_nodes = ();
+
+
+ SWAPTEST:
+ foreach my $test_id(sort {$a<=>$b} keys %n) { 
+  print STDERR "\n\nLeafs requested for ID $test_id...\n" if DEBUG;
+  @leafs_found = ();
+  @ids_tested = ();
+ 
+  if ($valid_nodes{$test_id}) {
+   print STDERR "Node [$test_id] was tested before and found valid, will skip the tests\n" if DEBUG;
+   next SWAPTEST;
+  }
+
+  &getLeafs($test_id);
+  if (@leafs_found > 0) {
+    print STDERR "===== Id: $test_id =====\n" if DEBUG;
+    map {print STDERR $_."\n"} (@leafs_found) if DEBUG;
+
+   #====================Validation Code=================
+  
+   # TODO this needs to be checked since donors may not have study name
+   # included into files' (leafs') names
+
+   my $swap = isSwapPresent($test_id, \@leafs_found); 
+   if ($swap) {
+      print STDERR "Swap detected for [$test_id]\n" if DEBUG;
+   } else {
+      print STDERR "No swap detected for [$test_id]\n" if DEBUG;
+      map{$flagged{files}->{$_} = undef;} @leafs_found;
+      map{$valid_nodes{$_}++} @ids_tested;
+   }
+ 
+  }
+ }
+
+
+ 
+
+
+ #==========End GP-393===============================
+
  my @fingers = ();
  my %seen_sample = (); # Re-use this hash for calculating
- my %maxfiles = ();    # maximum number of files in a sample (donor) on this heatmap. 'Max' cluster doesn't get marked
+ my %maxfiles = ();    # maximum number of files in a sample (donor) on this heatmap. 'Max' cluster doesn't get marked may be obsolete after GP-393
  my $current_sample;
  my $lbuffer = [];     # lane buffer - for holding files in a cluster
 
@@ -562,22 +664,22 @@ sub printout_slice {
  }
 
  # Updating flagging for files and samples 
- print STDERR Dumper(%seen_sample) if DEBUG;
- foreach my $sample (keys %seen_sample) {
-  next if (scalar(@{$seen_sample{$sample}}) <= 1); 
-  my $havemax = 0;
-  map{if (scalar(@{$_}) == $maxfiles{$sample}){$havemax++}} (@{$seen_sample{$sample}});
-  foreach my $clustr(@{$seen_sample{$sample}}) {
-   if (scalar(@{$clustr}) < $maxfiles{$sample} || (scalar(@{$clustr}) == $maxfiles{$sample} && $havemax > 1)) {
-     # TODO review this under GP-393 (and remove if the new code works better
-     map{if (!$flagged{files}->{$samples{$_}->{name}}) {$flagged{files}->{$samples{$_}->{name}}++}else{print STDERR "Old code #2 activated\n"}} (@{$clustr});
-     #if (!$flagged{samples}->{$sample}){$flagged{samples}->{$sample}++;print STDERR "Old Code #2 updates sample $sample\n";}
-     $flagged = "TRUE";
-   }
-  }
- }
+ #print STDERR Dumper(%seen_sample) if DEBUG;
+ #foreach my $sample (keys %seen_sample) {
+ # next if (scalar(@{$seen_sample{$sample}}) <= 1); 
+ # my $havemax = 0;
+ # map{if (scalar(@{$_}) == $maxfiles{$sample}){$havemax++}} (@{$seen_sample{$sample}});
+ # foreach my $clustr(@{$seen_sample{$sample}}) {
+ #  if (scalar(@{$clustr}) < $maxfiles{$sample} || (scalar(@{$clustr}) == $maxfiles{$sample} && $havemax > 1)) {
+ #    # TODO review this under GP-393 (and remove if the new code works better
+ #    map{if (!$flagged{files}->{$samples{$_}->{name}}) {$flagged{files}->{$samples{$_}->{name}}++}else{print STDERR "Old code #2 activated\n"}} (@{$clustr});
+ #    #if (!$flagged{samples}->{$sample}){$flagged{samples}->{$sample}++;print STDERR "Old Code #2 updates sample $sample\n";}
+ #    $flagged = "TRUE";
+ #  }
+ # }
+ #}
 
- print STDERR Dumper(%flagged) if DEBUG;
+ #print STDERR Dumper(%flagged) if DEBUG;
 
  # Register the image name in the report hash
  $reports{$slice_id} = {img    => $filecard.".png",
@@ -721,66 +823,139 @@ sub create_popup {
  return $popname;
 }
 
-=head2 Swap Detection
- 
- New-ish swap-marking algorithm that would use dendrogram from heatmap - drawing script
- An algoritm checks if we have all (or at least > 1/2 nodes for donor connected, unmarks
- swap for connected files. Initially, all files and donors are marked as swapped
 
- --[dendrogram w/ 2 branches and 26 members at h = 1.44]
-  |--[dendrogram w/ 2 branches and 12 members at h = 1.2]
-  |  |--[dendrogram w/ 2 branches and 4 members at h = 0.934]
-  |  |  |--[dendrogram w/ 2 branches and 2 members at h = 0.0899]
-  |  |  |  |--leaf "JDRT_0032_nn_T_PE_289_EX_150305_D00353_0095_AC6DN8ANXX_ACGTATCA_L001_R1_001_SWID_1547258" ( value = NA )
-  |  |  |  `--leaf "JDRT_0032_nn_T_PE_289_EX_150325_D00343_0082_BC6DRRANXX_ACGTATCA_L003_R1_001_SWID_1659864" ( value = NA )
-  |  |  `--[dendrogram w/ 2 branches and 2 members at h = 0.177]
-  |  |     |--leaf "JDRT_0083_nn_T_PE_366_EX_150423_D00353_0101_AC6JH4ANXX_CGAACTTA_L001_R1_001_SWID_1793397" ( value = NA )
-  |  |     `--leaf "JDRT_0083_nn_T_PE_366_EX_150423_D00353_0101_AC6JH4ANXX_CGAACTTA_L002_R1_001_SWID_1793396" ( value = NA )
-  |  `--[dendrogram w/ 2 branches and 8 members at h = 0.98]
-  |     |--[dendrogram w/ 2 branches and 2 members at h = 0.328]
-  |     |  |--leaf "JDRT_0083_nn_R_PE_352_EX_150428_D00343_0085_AC5UT4ANXX_AACGTGAT_L007_R1_001_SWID_1841037" ( value = NA )
-  |     |  `--leaf "JDRT_0083_nn_R_PE_352_EX_150501_D00353_0102_AC6VTDANXX_AACGTGAT_L008_R1_001_SWID_1848027" ( value = NA )
-  |     `--[dendrogram w/ 2 branches and 6 members at h = 0.775]
-  |        |--[dendrogram w/ 2 branches and 2 members at h = 0.115]
-  |        |  |--leaf "JDRT_0027_nn_T_PE_383_EX_150423_D00353_0101_AC6JH4ANXX_CTGTAGCC_L001_R1_001_SWID_1793368" ( value = NA )
-  |        |  `--leaf "JDRT_0027_nn_T_PE_383_EX_150423_D00353_0101_AC6JH4ANXX_CTGTAGCC_L002_R1_001_SWID_1793366" ( value = NA )
-  |        `--[dendrogram w/ 2 branches and 4 members at h = 0.156]
-  |           |--[dendrogram w/ 2 branches and 2 members at h = 0.0488]
-  |           |  |--leaf "JDRT_0014_nn_T_PE_337_EX_150305_D00353_0095_AC6DN8ANXX_CAAGACTA_L002_R1_001_SWID_1547253" ( value = NA )
-  |           |  `--leaf "JDRT_0014_nn_T_PE_337_EX_150325_D00343_0082_BC6DRRANXX_CAAGACTA_L004_R1_001_SWID_1659858" ( value = NA )
-  |           `--[dendrogram w/ 2 branches and 2 members at h = 0.118]
-  |              |--leaf "JDRT_0014_nn_R_PE_337_EX_150305_D00353_0095_AC6DN8ANXX_AGATCGCA_L002_R1_001_SWID_1547254" ( value = TRUE )
-  |              `--leaf "JDRT_0014_nn_R_PE_337_EX_150325_D00343_0082_BC6DRRANXX_AGATCGCA_L004_R1_001_SWID_1659859" ( value = NA )
-  `--[dendrogram w/ 2 branches and 14 members at h = 1.25]
+#==================SWAP DETECTION CODE================
 
-  ....
+=head3 getNodes
 
-  Algo:
-  
-  %nodes (keys - integers, autoincrimented)
-  
-  a sample node:
-  ...
-  {
-   dist     => 0.25,
-   branches => [ids, may be undef]
-   leafs    => [files, maybe undef]
-  }
-  ...
+ Function for getting hash with dendrogram nodes, linked to each other
+ Only distance would allow to determine the parent node (the h will be the largest)
+ Needs to be used for making %distances hash and finding out if nodes were properly
+ clustered
 
-  %distances {key = distance, values - node ids}
-
-  Build nodes, sort distances and getLeafs from each sub-tree at a distance, noting node ids
-  if N of files = N total for donor (and there's one donor in subtree) mark as OK
-
-  if there's one donor and N <= 1/2 of total, leave marked as swapped, note the nodes to avoid repeat processing
- 
 =cut
 
-#TODO encorporate code from eat_dendro.pl script here
-sub flagSwapped {
+sub getNodes {
 
- # This function will accept a single denrogram in text format
- my $dendro = shift @_; 
- 
+ my %nodes = ();
+ my @dendro = @{shift @_};
+ my $count  = 0;
+ my $id     = 0;
+
+ my @parents = ();    # will have a root node as element 0, other elements change from branch to branch
+ my %levels  = ();    # track the depth of tree (key = number of padding symbols until '[dendro', key - level
+
+ map{if(/(.+)\[dendrogram/){$levels{length($1)} = 1}} @dendro;
+ map{$levels{$_} = $count++} (sort {$a<=>$b} keys %levels);
+
+ my $level = 0;
+
+ foreach my $line(@dendro) {
+  chomp($line);
+
+  if ($line =~/(.+)\[dendrogram.*h = (\d\.*\d+)\]/) {
+    $level = $levels{length($1)};
+    $nodes{++$id} = {dist     => $2,
+                     branches => [],
+                     leafs    => []};
+    $parents[$level] = $id;
+    $distances{$2} = $distances{$2} ? [$id,$distances{$2}] : [$id];
+    push (@{$nodes{$parents[$level - 1]}->{branches}}, $id) if $level > 0;
+  } elsif ($line=~/--leaf.*\"(\S+?)\"/) {
+    push (@{$nodes{$parents[$level]}->{leafs}}, $1);
+    $flagged{files}->{$1} = 1;
+    if ($line=~/\"([A-Z]{3,4}_\d+)_/) {
+      $flagged{samples}->{$1} = 1;
+    }
+  }
+ }
+
+ return \%nodes;
 }
+
+=head3 getLeafs
+
+ This function would push values into global arrays @leaf_found and @ids_tested
+
+ Recursion applied, needs id of the next root node (we rely on global var %n for that)
+ checking if the node was parsed should be done elsewhere
+ @ids_tested must be used for this purpose
+
+=cut
+
+sub getLeafs {
+
+ my $id    = shift @_;
+ push(@ids_tested, $id);
+
+ if ($n{$id}->{leafs} && @{$n{$id}->{leafs}} > 0) { 
+     print STDERR "Found Leafs for id [$id]\n";
+     map{print STDERR "Saw $_\n"} (@{$n{$id}->{leafs}}) if DEBUG;
+     map{push(@leafs_found, $_)} (@{$n{$id}->{leafs}});
+ } 
+ # Node may have both branches and leafs
+ if ($n{$id}->{branches} && @{$n{$id}->{branches}} > 0) {
+     print STDERR "Found Branches for id [$id]:".join(" ",@{$n{$id}->{branches}})."\n" if DEBUG;
+     foreach my $b (@{$n{$id}->{branches}}) {
+       print STDERR "Tracing branch with id [$b]\n" if DEBUG;
+       &getLeafs($b);
+     }
+ }
+}
+
+=head3 isSwapPresent
+
+ This function will look into list of files (ids)
+ and check if there's a putative sample swap
+ 
+ If a sub-cluster of files pertaining to one donor has more than half of all
+ files for this donor, files get unflagged, donor still flagged as w/swap
+
+ Will also look at special cases when a small (less than 2) number of files
+ are mixed with a larger cluster and unflag larger claster if it is complete
+ (includes all files for a donor) 
+
+=cut
+
+
+sub isSwapPresent {
+
+ # Pass all arrays/hashes as refs 
+ my ($test_id, $list) = @_;
+ my %found_donors = ();
+ map{if (/^([A-Z]{3,4}_\d+)_/){$found_donors{$1}++}} (@{$list});
+
+ if (scalar(keys %found_donors) > 1) {
+    # Special Case when small number (up to 2) of files mix with valid large cluster
+    if (scalar(keys %found_donors) == 2) {
+       my @sizes    = map{$found_donors{(keys %found_donors)[$_]}} (0..1);
+       my @complete = map{$sizes[$_] == $sample_counter{(keys %found_donors)[$_]} ? 1 : 0} (0..1);
+       my $unflag = -1;
+
+       if ($sizes[0]/$sizes[1] >= 2 && $complete[0] && $sizes[0] > 2) {
+         $unflag = 0;
+       } elsif ($sizes[1]/$sizes[0] >= 2 && $complete[1] && $sizes[1] > 2) {
+         $unflag = 1;
+       }
+
+       # Unflagging larger complete sub-cluster
+       if ($unflag > 0) {
+         $flagged{samples}->{(keys %found_donors)[$unflag]} = undef;
+         map{if (/^([A-Z]{3,4}_\d+)_/ && $1 eq (keys %found_donors)[$unflag]){$flagged{files}->{$_} = undef;}}  @{$list}
+       }
+    }
+    print STDERR "Node [$test_id] is invalid, need to trace deeper\n" if DEBUG;
+    return 1;
+ } elsif (scalar(keys %found_donors) == 1) {
+   my $total = $sample_counter{(keys %found_donors)[0]}; 
+   if ($found_donors{(keys %found_donors)[0]} == $total) {
+        $flagged{samples}->{(keys %found_donors)[0]} = undef;
+   }
+   return $found_donors{(keys %found_donors)[0]} > floor($total/2) ? 0 : 1;
+ } else {
+   print STDERR "Node [$test_id] is invalid, no valid donors found\n" if DEBUG;
+   return 1;
+ }
+
+}
+
