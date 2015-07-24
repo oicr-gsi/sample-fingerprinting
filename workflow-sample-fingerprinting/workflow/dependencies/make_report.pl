@@ -6,16 +6,16 @@
 
 =head2 USAGE
 
- make_report.pl --datadir=[required] --studyname=[required] --matrix=[required] --refsnps=[required] --tempdir=[optional]
+ make_report.pl --datadir [required] --studyname [required] --matrix [required] --refsnps [required] --tempdir [optional]
 
  Script requires similarity matrix (tab-delimited), directory with data (vcf files) studyname and number of control points (SNPs)
  Optionally it uses tempdir parameter which may point to a directory with coverage depth data if that is different than datadir
 
 =head2 EXAMPLES
 
- ./make_report.pl --matrix=PCSI_WG.matrix.all.txt --datadir=. --tempdir=./GATK.out/PCSI_EX.depth/ --studyname=PCSI --refsnps=400 > index.html
+ ./make_report.pl --matrix PCSI_WG.matrix.all.txt --datadir . --tempdir ./GATK.out/PCSI_EX.depth/ --studyname PCSI --refsnps 400 > index.html
 
- ./make_report.pl --matrix=PCSI_EX.matrix.all.txt --datadir=blah/ --studyname=PCSI --refsnps=400 > PCSI_test.html 
+ ./make_report.pl --matrix PCSI_EX.matrix.all.txt --datadir blah/ --studyname PCSI --refsnps 400 > PCSI_test.html 
 
 =cut
 
@@ -344,7 +344,7 @@ sub printout_html {
  print br;
  #1. Suspicious samples
  if (scalar(keys %{$flagged{files}}) > 0) {
-  my @flagged = map{if (defined $flagged{files}->{$_}){Tr({-align=>'LEFT',-valign=>'BOTTOM'},td($_))}} (keys %{$flagged{files}});
+  my @flagged = map{if (defined $flagged{files}->{$_}){Tr({-align=>'LEFT',-valign=>'BOTTOM'},td($_))}} (sort keys %{$flagged{files}});
 
   print h3("Files flagged as potential sample swaps:");
   print br;
@@ -355,7 +355,7 @@ sub printout_html {
 
  #2. Filtered files:
  if (scalar(keys %filtered) > 0) {
-  my @filtered = map{Tr({-align=>'LEFT',-valign=>'BOTTOM'},td($_))} (values %filtered);
+  my @filtered = map{Tr({-align=>'LEFT',-valign=>'BOTTOM'},td($_))} (sort values %filtered);
 
   print h3("Files skipped due to low coverage/small number of SNPs or single file in a sample:");
   print br;
