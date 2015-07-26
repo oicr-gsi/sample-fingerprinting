@@ -11,8 +11,10 @@ image_width  = as.numeric(cmd_args[5])
 image_height = image_width
 
 flagged = cmd_args[6]
+dendro  = cmd_args[7]
 
-plotfile<-function(f,title,maxSNPs,flagged=FALSE) {
+
+plotfile<-function(f,title,maxSNPs,flagged=FALSE,dendro=FALSE) {
  maincol<-ifelse(flagged,"red","black")
  par(cex.main=0.7,col.main=maincol)
  DATA<-read.table(f,header=T)
@@ -29,12 +31,24 @@ plotfile<-function(f,title,maxSNPs,flagged=FALSE) {
  normSNPs<-with(DATA,(SNPs) / max(SNPs))
 
 
- HEAT<-heatmap(as.matrix(DATA[,1:lim]),na.rm= TRUE,Rowv=TRUE,Colv=TRUE,col=rgb(COLFUN(seq(from=0,to=1,by=0.01)),maxColorValue=255),symm=TRUE, cexRow=0.9, cexCol=0.9, labRow=FALSE, labCol=FALSE, main=paste("Genotype proximity for",title),RowSideColors=as.character(DATA$Color),ColSideColors=rgb(NUMFUN(normSNPs),maxColorValue=255),distfun=function(c) as.dist(1-cor(t(c), method="pearson")),margins=c(7,7),cex.main=0.6,bg="salmon")
- indexes = HEAT$rowInd
- cat(rev(rownames(DATA)[indexes]),"\n")
+ HEAT<-heatmap(as.matrix(DATA[,1:lim]),na.rm= TRUE,Rowv=TRUE,Colv=TRUE,col=rgb(COLFUN(seq(from=0,to=1,by=0.01)),maxColorValue=255),symm=TRUE, cexRow=0.9, cexCol=0.9, labRow=FALSE, labCol=FALSE, main=paste("Genotype proximity for ",title),RowSideColors=as.character(DATA$Color),ColSideColors=rgb(NUMFUN(normSNPs),maxColorValue=255),distfun=function(c) as.dist(1-cor(t(c), method="pearson")),margins=c(7,7),cex.main=0.6,bg="salmon",keep.dendro=TRUE)
+ 
+ if (dendro) {
+   utils::str(HEAT$Rowv)
+ } else {
+   indexes = HEAT$rowInd
+   cat(rev(rownames(DATA)[indexes]),"\n")
+ }
 
 }
 
-png(filename=pngname,width=image_width,height=image_height,units="px",pointsize=15,bg="white")
-plotfile(f,title,maxSNPs,flagged)
-blah<-dev.off()
+# Make png only if we have valid name (ending with png) - Useful when requesting only dendrogram
+if (grepl(".png$", pngname)) { 
+ png(filename=pngname,width=image_width,height=image_height,units="px",pointsize=15,bg="white")
+}
+ 
+plotfile(f,title,maxSNPs,flagged,dendro)
+
+if (grepl(".png$", pngname)) {
+ blah<-dev.off()
+}
