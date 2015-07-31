@@ -818,7 +818,7 @@ sub getNodes {
 
  map{if(/(.+)\[dendrogram/){$levels{length($1)} = 1}} @dendro;
  map{$levels{$_} = $count++} (sort {$a<=>$b} keys %levels);
-
+ map{push(@parents,0)} (keys %levels);
  my $level = 0;
 
  foreach my $line(@dendro) {
