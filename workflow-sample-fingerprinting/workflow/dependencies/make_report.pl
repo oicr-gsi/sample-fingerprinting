@@ -824,7 +824,7 @@ sub getNodes {
  foreach my $line(@dendro) {
   chomp($line);
 
-  if ($line =~/(.+)\[dendrogram.*h = (\d\.*\d+)\]/) {
+  if ($line =~/(.+)\[dendrogram.*h = (\S+)\]/) {
     $level = $levels{length($1)};
     $nodes{++$id} = {dist     => $2,
                      branches => [],

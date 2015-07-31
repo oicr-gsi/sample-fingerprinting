@@ -1,3 +1,5 @@
+## 2.1.1 - 2015-07-31
+- Had to fix a regex in new swap detection code that could miss some branches in dendrogram b/c of scientific notation for the distance value
 ## 2.1   - 2015-07-24
 - New Swap-detection algorithm based on dendrogram analysis
 ## 2.0.2 - 2015-05-25
