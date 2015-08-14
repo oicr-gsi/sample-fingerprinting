@@ -1,3 +1,5 @@
+## 2.1.2 - 2015-08-14
+- Fixed an issue with executing touch, adjusted memory for matrix-producing step, regex for extracting donor name
 ## 2.1   - 2015-07-24
 - New Swap-detection algorithm based on dendrogram analysis
 ## 2.0.2 - 2015-05-25

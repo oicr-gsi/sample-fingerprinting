@@ -288,7 +288,11 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
                 job_jaccard.getCommand().addArgument("--existing_matrix " + this.existingMatrix);
             }
 
-            job_jaccard.setMaxMemory("4000");
+            if (this.vcfFiles.length > MAX_INPUTS) {
+                job_jaccard.setMaxMemory("12000");
+            } else {
+                job_jaccard.setMaxMemory("6000");
+            }
             if (!this.queue.isEmpty()) {
                 job_jaccard.setQueue(this.queue);
             }
