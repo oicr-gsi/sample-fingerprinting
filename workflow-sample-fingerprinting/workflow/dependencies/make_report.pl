@@ -818,13 +818,13 @@ sub getNodes {
 
  map{if(/(.+)\[dendrogram/){$levels{length($1)} = 1}} @dendro;
  map{$levels{$_} = $count++} (sort {$a<=>$b} keys %levels);
-
+ map{push(@parents,0)} (keys %levels);
  my $level = 0;
 
  foreach my $line(@dendro) {
   chomp($line);
 
-  if ($line =~/(.+)\[dendrogram.*h = (\d\.*\d+)\]/) {
+  if ($line =~/(.+)\[dendrogram.*h = (\S+)\]/) {
     $level = $levels{length($1)};
     $nodes{++$id} = {dist     => $2,
                      branches => [],
