@@ -187,8 +187,8 @@ foreach my $id(@{$sublists[0]}) { #keys %ids) {
   print STDERR "Will run $vcf_compare $file1 $file2 ...\n" if DEBUG;
 
   # Touch .tbi files to make sure that index is newer than vcf
-  `touch $file1.tbi`;
-  `touch $file2.tbi`;
+  `touch -h $file1.tbi || echo "Couldn't touch $file1.tbi"`;
+  `touch -h $file2.tbi || echo "Couldn't touch $file2.tbi"`;
 
   my @compares = `$vcf_compare $file1 $file2 | grep \"^VN\"`;
   my @numbers = (0,0,0);
