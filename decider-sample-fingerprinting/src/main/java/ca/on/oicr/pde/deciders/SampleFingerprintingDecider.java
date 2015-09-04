@@ -12,6 +12,7 @@ import java.util.*;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import net.sourceforge.seqware.common.hibernate.FindAllTheFiles.Header;
+import net.sourceforge.seqware.common.model.FileAttribute;
 import net.sourceforge.seqware.common.module.FileMetadata;
 import net.sourceforge.seqware.common.module.ReturnValue;
 import net.sourceforge.seqware.common.util.Log;
@@ -57,7 +58,8 @@ public class SampleFingerprintingDecider extends OicrDecider {
     private static final String TBI_METATYPE      = "application/tbi";
     private static final String FIN_METATYPE      = "text/plain";
     private static final String DEFAULT_SNPCONFIG_FILE = "/.mounts/labs/PDE/data/SampleFingerprinting/hotspots.config.xml";
-
+    private static final String HOTSPOTS_TOKEN = "hotspots_file";
+    
     public SampleFingerprintingDecider() {
         super();
         fileSwaToSmall = new HashMap<String, BeSmall>();
@@ -233,7 +235,16 @@ public class SampleFingerprintingDecider extends OicrDecider {
         if (null == targetTemplateType || targetTemplateType.isEmpty()) {
             targetTemplateType = "NA";
         }
-
+        
+        //GP-470 TODO Check hotspot file attribute - don't use the file if hotspots list is not matching the one we want
+        if (fm.getAnnotations().contains(HOTSPOTS_TOKEN) && !this.SNPConfigFile.equals(DEFAULT_SNPCONFIG_FILE)) {
+            
+         //   String allowedHotspots = this.reseqType.get(targetTemplateType + targetResequencingType).get("file").toString();
+          //  for (FileAttribute fa : fm.getAnnotations().) {
+         //       if fa.
+         //   }
+        }
+        
         // Check filters
         if (!this.reseqTypeFilter.isEmpty() && !this.reseqTypeFilter.equals(targetResequencingType)) {
             return false;
@@ -362,7 +373,8 @@ public class SampleFingerprintingDecider extends OicrDecider {
         
         for (FileAttributes atts : run.getFiles()) {
             if (checkedSNPs.isEmpty()) {
-                String fileKey = fileSwaToSmall.get(atts.getOtherAttribute(Header.FILE_SWA.getTitle())).getGroupByAttribute();
+                String fileKey = fileSwaToSmall.get(atts.getOtherAttribute(Header.FILE_SWA.getTitle())).getTemplateType() +
+                                 fileSwaToSmall.get(atts.getOtherAttribute(Header.FILE_SWA.getTitle())).getReseqType();
                 if (this.reseqType.containsKey(fileKey)) {
                     checkedSNPs = this.reseqType.get(fileKey).get("file").toString();
                     checkPoints = this.reseqType.get(fileKey).get("points").toString();
@@ -507,6 +519,8 @@ public class SampleFingerprintingDecider extends OicrDecider {
         private String iusDetails = null;
         private String groupByAttribute = null;
         private String path = null;
+        private String templateType;
+        private String reseqType;
         
         public BeSmall(ReturnValue rv) {
             try {
@@ -520,13 +534,16 @@ public class SampleFingerprintingDecider extends OicrDecider {
             // Having metatype as part of details is needed since we deal with multiple mime types her
             iusDetails = fa.getLibrarySample() + fa.getSequencerRun() + fa.getLane() + fa.getBarcode() + fa.getMetatype();
             // We are going to group by template type only (if we did not receive template type as a parameter)
-            StringBuilder groupBy = new StringBuilder(fa.getLimsValue(Lims.LIBRARY_TEMPLATE_TYPE));
-            String tgtReseq = fa.getLimsValue(Lims.TARGETED_RESEQUENCING);
-            String platformID = rv.getAttribute("Sequencer Run Platform ID");
-            if (null != tgtReseq) {
-                groupBy.append(":").append(tgtReseq);
+            this.templateType = fa.getLimsValue(Lims.LIBRARY_TEMPLATE_TYPE);
+            this.reseqType    = fa.getLimsValue(Lims.TARGETED_RESEQUENCING);
+            
+            StringBuilder groupBy = new StringBuilder(this.templateType);
+             String platformID = rv.getAttribute("Sequencer Run Platform ID");
+            if (null != this.reseqType) {
+                groupBy.append(":").append(this.reseqType);
             } else {
-                groupBy.append(":").append("NA");
+                this.reseqType = "NA";
+                groupBy.append(":").append(this.reseqType);
             }
             //Depending on user's options, platformID may be used for grouping
             if (separate_platforms)
@@ -566,6 +583,20 @@ public class SampleFingerprintingDecider extends OicrDecider {
 
         public final void setPath(String path) {
             this.path = path;
+        }
+
+        /**
+         * @return the templateType
+         */
+        public String getTemplateType() {
+            return templateType;
+        }
+
+        /**
+         * @return the reseqType
+         */
+        public String getReseqType() {
+            return reseqType;
         }
     }
 

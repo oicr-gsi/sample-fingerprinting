@@ -65,6 +65,7 @@ public class FingerprintCollectorWorkflow extends OicrWorkflow {
     private static final String STEMIT_DEFAULT = "10.0";
     private static final String DCOV_DEFAULT = "200";
     private static final String SNPFILE_SUFFIX = ".snps.raw.vcf";
+    private static final String HOTSPOTS_TOKEN = "hotspots_file";
     private List<String> baseNames;
     private String bundledJRE;
     private String[] rgDetails;
@@ -377,7 +378,9 @@ public class FingerprintCollectorWorkflow extends OicrWorkflow {
                         .append(" --outdir=").append(this.dataDir).append(this.finDir)
                         .append(" --basename=").append(basename);
                 // provision .fin file
-                jobFin.addFile(this.createOutputFile(this.dataDir + this.finDir + basename + ".fin", "text/plain", this.manualOutput));
+                SqwFile finFile = this.createOutputFile(this.dataDir + this.finDir + basename + ".fin", "text/plain", this.manualOutput);
+                finFile.getAnnotations().put(HOTSPOTS_TOKEN, this.checkedSNPs);
+                jobFin.addFile(finFile);
 
                 jobFin.setCommand(finCommand.toString());
                 jobFin.setMaxMemory("4000");
@@ -414,8 +417,14 @@ public class FingerprintCollectorWorkflow extends OicrWorkflow {
             }
 
             for (String base : baseNames) {
-                jobVcfPrep.addFile(this.createOutputFile(this.dataDir + base + SNPFILE_SUFFIX + ".gz.tbi", "application/tbi", this.manualOutput));
-                jobVcfPrep.addFile(this.createOutputFile(this.dataDir + base + SNPFILE_SUFFIX + ".gz", "application/vcf-4-gzip", this.manualOutput));
+                SqwFile tbiFile = this.createOutputFile(this.dataDir + base + SNPFILE_SUFFIX + ".gz.tbi", "application/tbi", this.manualOutput);
+                SqwFile vcfFile = this.createOutputFile(this.dataDir + base + SNPFILE_SUFFIX + ".gz", "application/vcf-4-gzip", this.manualOutput);
+                
+                tbiFile.getAnnotations().put(HOTSPOTS_TOKEN, this.checkedSNPs);
+                vcfFile.getAnnotations().put(HOTSPOTS_TOKEN, this.checkedSNPs);
+                
+                jobVcfPrep.addFile(tbiFile);
+                jobVcfPrep.addFile(vcfFile);
             }
 
             /*
