@@ -38,7 +38,7 @@ public class FingerprintCollectorWorkflow extends OicrWorkflow {
     private String dataDir;
     private final String tempDir = "tempfiles/";
     private final String gatkTmp = "temp";
-    private final String finDir = "finfiles/";
+    private final String finDir  = "finfiles/";
     //private final int batchCount = 100; // Use for job batching, this many jobs
     private String gatkPrefix = "./";
 
@@ -63,7 +63,7 @@ public class FingerprintCollectorWorkflow extends OicrWorkflow {
     private static final int RANDOM_PICK = 9;
     private static final String STCALLCONF_DEFAULT = "50.0";
     private static final String STEMIT_DEFAULT = "10.0";
-    private static final String DCOV_DEFAULT = "200";
+    private static final String DCOV_DEFAULT   = "200";
     private static final String SNPFILE_SUFFIX = ".snps.raw.vcf";
     private static final String HOTSPOTS_TOKEN = "hotspots_file";
     private List<String> baseNames;

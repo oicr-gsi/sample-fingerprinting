@@ -65,13 +65,13 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
                 }
             }
 
-            this.checkPoints = getProperty("check_points");           
-            this.existingMatrix = getOptionalProperty("existing_matrix","");
-            this.watchersList = getOptionalProperty("watchers_list", "");
+            this.checkPoints     = getProperty("check_points");           
+            this.existingMatrix  = getOptionalProperty("existing_matrix","");
+            this.watchersList    = getOptionalProperty("watchers_list", "");
             this.tabixVersion    = getProperty("tabix_version");
             this.vcftoolsVersion = getProperty("vcftools_version");
-            this.studyName = getOptionalProperty("study_name", "");
-            this.studyName = getOptionalProperty("queue", "");
+            this.studyName       = getOptionalProperty("study_name", "");
+            this.studyName       = getOptionalProperty("queue", "");
 
             if (getProperty("manual_output") == null) {
                 this.manualOutput = false;

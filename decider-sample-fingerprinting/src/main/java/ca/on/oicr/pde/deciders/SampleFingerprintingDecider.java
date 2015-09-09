@@ -8,11 +8,17 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import net.sourceforge.seqware.common.hibernate.FindAllTheFiles.Header;
-import net.sourceforge.seqware.common.model.FileAttribute;
 import net.sourceforge.seqware.common.module.FileMetadata;
 import net.sourceforge.seqware.common.module.ReturnValue;
 import net.sourceforge.seqware.common.util.Log;
@@ -58,7 +64,7 @@ public class SampleFingerprintingDecider extends OicrDecider {
     private static final String TBI_METATYPE      = "application/tbi";
     private static final String FIN_METATYPE      = "text/plain";
     private static final String DEFAULT_SNPCONFIG_FILE = "/.mounts/labs/PDE/data/SampleFingerprinting/hotspots.config.xml";
-    private static final String HOTSPOTS_TOKEN = "hotspots_file";
+    private static final String HOTSPOTS_DB_TOKEN = "file.hotspots_file";
     
     public SampleFingerprintingDecider() {
         super();
@@ -222,12 +228,12 @@ public class SampleFingerprintingDecider extends OicrDecider {
         ReturnValue val = super.init();
         return val;
     }
-
+       
     @Override
     protected boolean checkFileDetails(ReturnValue returnValue, FileMetadata fm) {
 
         String targetResequencingType = returnValue.getAttribute(Header.SAMPLE_TAG_PREFIX.getTitle() + "geo_targeted_resequencing");
-        String targetTemplateType = returnValue.getAttribute(Header.SAMPLE_TAG_PREFIX.getTitle() + "geo_library_source_template_type");
+        String targetTemplateType     = returnValue.getAttribute(Header.SAMPLE_TAG_PREFIX.getTitle() + "geo_library_source_template_type");
         // If nulls, set to NA
         if (null == targetResequencingType || targetResequencingType.isEmpty()) {
             targetResequencingType = "NA";
@@ -236,23 +242,6 @@ public class SampleFingerprintingDecider extends OicrDecider {
             targetTemplateType = "NA";
         }
         
-        //GP-470 TODO Check hotspot file attribute - don't use the file if hotspots list is not matching the one we want
-        if (fm.getAnnotations().contains(HOTSPOTS_TOKEN) && !this.SNPConfigFile.equals(DEFAULT_SNPCONFIG_FILE)) {
-            
-         //   String allowedHotspots = this.reseqType.get(targetTemplateType + targetResequencingType).get("file").toString();
-          //  for (FileAttribute fa : fm.getAnnotations().) {
-         //       if fa.
-         //   }
-        }
-        
-        // Check filters
-        if (!this.reseqTypeFilter.isEmpty() && !this.reseqTypeFilter.equals(targetResequencingType)) {
-            return false;
-        }
-        if (!this.templateTypeFilter.isEmpty() && !this.templateTypeFilter.equals(targetTemplateType)) {
-            return false;
-        }
-
         // Get config if don't have it yet
         if (!this.reseqType.containsKey(targetTemplateType + targetResequencingType)) {
             boolean refsOK = this.configFromParsedXML(this.SNPConfigFile, targetTemplateType, targetResequencingType);
@@ -260,6 +249,30 @@ public class SampleFingerprintingDecider extends OicrDecider {
                 Log.error("References are not set for " + targetResequencingType + ", skipping");
                 return false;
             }
+        }
+        
+        //GP-470 TODO Check hotspot file attribute - don't use the file if hotspots list is not matching the one we want
+        String allowedHotspots = this.reseqType.get(targetTemplateType + targetResequencingType).get("file").toString();
+
+        if (null != returnValue.getAttribute(HOTSPOTS_DB_TOKEN)) {
+            if (!returnValue.getAttribute(HOTSPOTS_DB_TOKEN).equals(allowedHotspots)) {
+                return false;
+            }
+        } else {
+            // We can only assume that hotspots (if not annotated) will be from the
+            // original set therefore we should fail all files without hotspots annotated
+            // if current hotspots are not from the default file
+            if (!this.SNPConfigFile.equals(DEFAULT_SNPCONFIG_FILE)) {
+                return false;
+            }
+        }
+                              
+        // Check filters
+        if (!this.reseqTypeFilter.isEmpty() && !this.reseqTypeFilter.equals(targetResequencingType)) {
+            return false;
+        }
+        if (!this.templateTypeFilter.isEmpty() && !this.templateTypeFilter.equals(targetTemplateType)) {
+            return false;
         }
 
         return super.checkFileDetails(returnValue, fm);
@@ -324,7 +337,8 @@ public class SampleFingerprintingDecider extends OicrDecider {
             if (iusDeetsToRV.get(fileDeets) == null) {
                 Log.debug("Adding file " + fileDeets + " -> \n\t" + currentSmall.getPath());
                 iusDeetsToRV.put(fileDeets, r);
-            } //if there is an entry, compare the current value to the 'old' one in
+            } 
+            //if there is an entry, compare the current value to the 'old' one in
             //the map. if the current date is newer than the 'old' date, replace
             //it in the map
             else {
@@ -602,7 +616,7 @@ public class SampleFingerprintingDecider extends OicrDecider {
 
     // Service Functions
     private String makeBasePath(String name, String ext) {
-        return name.substring(0, name.lastIndexOf(ext));
+        return name.contains(ext) ? name.substring(0, name.lastIndexOf(ext)) : name;
     }
 
 }
