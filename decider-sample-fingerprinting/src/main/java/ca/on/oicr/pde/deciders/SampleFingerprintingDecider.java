@@ -119,7 +119,7 @@ public class SampleFingerprintingDecider extends OicrDecider {
             if (this.options.has("root-sample-name")) {
                 // TODO: net.sourceforge.seqware.common.hibernate.FindAllTheFiles.Header needs to be updated to support ROOT_SAMPLE_SWA
                 // uncomment when fixed... this.setGroupingStrategy(Header.ROOT_SAMPLE_SWA);
-                // error out until the above TODO is implemented
+                // error out until the above is implemented
                 throw new RuntimeException("ROOT_SAMPLE_SWA needs to be implemented in FindAllTheFiles.Header");
             }
             if (this.options.has("sequencer-run-name")) {
@@ -251,7 +251,7 @@ public class SampleFingerprintingDecider extends OicrDecider {
             }
         }
         
-        //GP-470 TODO Check hotspot file attribute - don't use the file if hotspots list is not matching the one we want
+        //GP-470 Check hotspot file attribute - don't use the file if hotspots list is not matching the one we want
         String allowedHotspots = this.reseqType.get(targetTemplateType + targetResequencingType).get("file").toString();
 
         if (null != returnValue.getAttribute(HOTSPOTS_DB_TOKEN)) {
