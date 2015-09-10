@@ -46,6 +46,7 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
     private final static String VCF_EXT   = ".snps.raw.vcf.gz";
     private final static String TABIX_EXT = ".snps.raw.vcf.gz.tbi";
     private final static String FIN_EXT   = ".fin";
+    private static final String HOTSPOTS_TOKEN = "hotspots_file";
 
     @Override
     public Map<String, SqwFile> setupFiles() {
@@ -71,7 +72,8 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
             this.tabixVersion    = getProperty("tabix_version");
             this.vcftoolsVersion = getProperty("vcftools_version");
             this.studyName       = getOptionalProperty("study_name", "");
-            this.studyName       = getOptionalProperty("queue", "");
+            this.queue           = getOptionalProperty("queue", "");
+            this.checkedSnps     = getProperty("checked_snps");
 
             if (getProperty("manual_output") == null) {
                 this.manualOutput = false;
@@ -258,6 +260,7 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
             if (!this.queue.isEmpty()) {
                 job_jaccard.setQueue(this.queue);
             }
+            matrix.getAnnotations().put(HOTSPOTS_TOKEN, this.checkedSnps);
             job_jaccard.addFile(matrix);
             job_jaccard.addParent(job_list_writer2);
 
@@ -303,6 +306,7 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
             zip_report.addParent(zip_fins);
             zip_report.setMaxMemory("2000");
 
+            report_file.getAnnotations().put(HOTSPOTS_TOKEN, this.checkedSnps);
             zip_report.addFile(report_file);
 
             if (!this.queue.isEmpty()) {
