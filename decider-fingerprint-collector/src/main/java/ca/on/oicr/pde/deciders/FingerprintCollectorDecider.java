@@ -245,11 +245,18 @@ public class FingerprintCollectorDecider extends OicrDecider {
         if (!this.resequenceTypeFilter.isEmpty() && !this.resequenceTypeFilter.equals(targetResequencingType)) {
             return false;
         }
-        //Check organism
+        //Check organism GP-473 check if it is indeed an integer
         String organismId  = returnValue.getAttribute("Sample Organism ID");
-        if (null != organismId && !organismId.equals(Integer.toString(HUMAN_ORG_ID))) {
-            Log.error("Organism other than H.sapience is not supported");
-            return false;
+        if (null != organismId) {
+            try {
+                int passedId = Integer.valueOf(organismId);
+                if (passedId != HUMAN_ORG_ID) {
+                    Log.error("Organism other than H.sapience is not supported");
+                    return false;
+                }
+            } catch (NumberFormatException nfe) {
+                Log.error("Invalid value passed as Organism ID, assuming H.sapience");
+            }   
         }
 
         // Get config if don't have it yet
