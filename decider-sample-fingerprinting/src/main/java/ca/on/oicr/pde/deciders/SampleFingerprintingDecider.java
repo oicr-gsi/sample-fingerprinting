@@ -8,7 +8,14 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import net.sourceforge.seqware.common.hibernate.FindAllTheFiles.Header;
@@ -57,7 +64,8 @@ public class SampleFingerprintingDecider extends OicrDecider {
     private static final String TBI_METATYPE      = "application/tbi";
     private static final String FIN_METATYPE      = "text/plain";
     private static final String DEFAULT_SNPCONFIG_FILE = "/.mounts/labs/PDE/data/SampleFingerprinting/hotspots.config.xml";
-
+    private static final String HOTSPOTS_DB_TOKEN = "file.hotspots_file";
+    
     public SampleFingerprintingDecider() {
         super();
         fileSwaToSmall = new HashMap<String, BeSmall>();
@@ -111,7 +119,7 @@ public class SampleFingerprintingDecider extends OicrDecider {
             if (this.options.has("root-sample-name")) {
                 // TODO: net.sourceforge.seqware.common.hibernate.FindAllTheFiles.Header needs to be updated to support ROOT_SAMPLE_SWA
                 // uncomment when fixed... this.setGroupingStrategy(Header.ROOT_SAMPLE_SWA);
-                // error out until the above TODO is implemented
+                // error out until the above is implemented
                 throw new RuntimeException("ROOT_SAMPLE_SWA needs to be implemented in FindAllTheFiles.Header");
             }
             if (this.options.has("sequencer-run-name")) {
@@ -220,12 +228,12 @@ public class SampleFingerprintingDecider extends OicrDecider {
         ReturnValue val = super.init();
         return val;
     }
-
+       
     @Override
     protected boolean checkFileDetails(ReturnValue returnValue, FileMetadata fm) {
 
         String targetResequencingType = returnValue.getAttribute(Header.SAMPLE_TAG_PREFIX.getTitle() + "geo_targeted_resequencing");
-        String targetTemplateType = returnValue.getAttribute(Header.SAMPLE_TAG_PREFIX.getTitle() + "geo_library_source_template_type");
+        String targetTemplateType     = returnValue.getAttribute(Header.SAMPLE_TAG_PREFIX.getTitle() + "geo_library_source_template_type");
         // If nulls, set to NA
         if (null == targetResequencingType || targetResequencingType.isEmpty()) {
             targetResequencingType = "NA";
@@ -233,15 +241,7 @@ public class SampleFingerprintingDecider extends OicrDecider {
         if (null == targetTemplateType || targetTemplateType.isEmpty()) {
             targetTemplateType = "NA";
         }
-
-        // Check filters
-        if (!this.reseqTypeFilter.isEmpty() && !this.reseqTypeFilter.equals(targetResequencingType)) {
-            return false;
-        }
-        if (!this.templateTypeFilter.isEmpty() && !this.templateTypeFilter.equals(targetTemplateType)) {
-            return false;
-        }
-
+        
         // Get config if don't have it yet
         if (!this.reseqType.containsKey(targetTemplateType + targetResequencingType)) {
             boolean refsOK = this.configFromParsedXML(this.SNPConfigFile, targetTemplateType, targetResequencingType);
@@ -249,6 +249,30 @@ public class SampleFingerprintingDecider extends OicrDecider {
                 Log.error("References are not set for " + targetResequencingType + ", skipping");
                 return false;
             }
+        }
+        
+        //GP-470 Check hotspot file attribute - don't use the file if hotspots list is not matching the one we want
+        String allowedHotspots = this.reseqType.get(targetTemplateType + targetResequencingType).get("file").toString();
+
+        if (null != returnValue.getAttribute(HOTSPOTS_DB_TOKEN)) {
+            if (!returnValue.getAttribute(HOTSPOTS_DB_TOKEN).equals(allowedHotspots)) {
+                return false;
+            }
+        } else {
+            // We can only assume that hotspots (if not annotated) will be from the
+            // original set therefore we should fail all files without hotspots annotated
+            // if current hotspots are not from the default file
+            if (!this.SNPConfigFile.equals(DEFAULT_SNPCONFIG_FILE)) {
+                return false;
+            }
+        }
+                              
+        // Check filters
+        if (!this.reseqTypeFilter.isEmpty() && !this.reseqTypeFilter.equals(targetResequencingType)) {
+            return false;
+        }
+        if (!this.templateTypeFilter.isEmpty() && !this.templateTypeFilter.equals(targetTemplateType)) {
+            return false;
         }
 
         return super.checkFileDetails(returnValue, fm);
@@ -313,7 +337,8 @@ public class SampleFingerprintingDecider extends OicrDecider {
             if (iusDeetsToRV.get(fileDeets) == null) {
                 Log.debug("Adding file " + fileDeets + " -> \n\t" + currentSmall.getPath());
                 iusDeetsToRV.put(fileDeets, r);
-            } //if there is an entry, compare the current value to the 'old' one in
+            } 
+            //if there is an entry, compare the current value to the 'old' one in
             //the map. if the current date is newer than the 'old' date, replace
             //it in the map
             else {
@@ -362,7 +387,8 @@ public class SampleFingerprintingDecider extends OicrDecider {
         
         for (FileAttributes atts : run.getFiles()) {
             if (checkedSNPs.isEmpty()) {
-                String fileKey = fileSwaToSmall.get(atts.getOtherAttribute(Header.FILE_SWA.getTitle())).getGroupByAttribute();
+                String fileKey = fileSwaToSmall.get(atts.getOtherAttribute(Header.FILE_SWA.getTitle())).getTemplateType() +
+                                 fileSwaToSmall.get(atts.getOtherAttribute(Header.FILE_SWA.getTitle())).getReseqType();
                 if (this.reseqType.containsKey(fileKey)) {
                     checkedSNPs = this.reseqType.get(fileKey).get("file").toString();
                     checkPoints = this.reseqType.get(fileKey).get("points").toString();
@@ -507,6 +533,8 @@ public class SampleFingerprintingDecider extends OicrDecider {
         private String iusDetails = null;
         private String groupByAttribute = null;
         private String path = null;
+        private String templateType;
+        private String reseqType;
         
         public BeSmall(ReturnValue rv) {
             try {
@@ -520,13 +548,16 @@ public class SampleFingerprintingDecider extends OicrDecider {
             // Having metatype as part of details is needed since we deal with multiple mime types her
             iusDetails = fa.getLibrarySample() + fa.getSequencerRun() + fa.getLane() + fa.getBarcode() + fa.getMetatype();
             // We are going to group by template type only (if we did not receive template type as a parameter)
-            StringBuilder groupBy = new StringBuilder(fa.getLimsValue(Lims.LIBRARY_TEMPLATE_TYPE));
-            String tgtReseq = fa.getLimsValue(Lims.TARGETED_RESEQUENCING);
-            String platformID = rv.getAttribute("Sequencer Run Platform ID");
-            if (null != tgtReseq) {
-                groupBy.append(":").append(tgtReseq);
+            this.templateType = fa.getLimsValue(Lims.LIBRARY_TEMPLATE_TYPE);
+            this.reseqType    = fa.getLimsValue(Lims.TARGETED_RESEQUENCING);
+            
+            StringBuilder groupBy = new StringBuilder(this.templateType);
+             String platformID = rv.getAttribute("Sequencer Run Platform ID");
+            if (null != this.reseqType) {
+                groupBy.append(":").append(this.reseqType);
             } else {
-                groupBy.append(":").append("NA");
+                this.reseqType = "NA";
+                groupBy.append(":").append(this.reseqType);
             }
             //Depending on user's options, platformID may be used for grouping
             if (separate_platforms)
@@ -567,11 +598,25 @@ public class SampleFingerprintingDecider extends OicrDecider {
         public final void setPath(String path) {
             this.path = path;
         }
+
+        /**
+         * @return the templateType
+         */
+        public String getTemplateType() {
+            return templateType;
+        }
+
+        /**
+         * @return the reseqType
+         */
+        public String getReseqType() {
+            return reseqType;
+        }
     }
 
     // Service Functions
     private String makeBasePath(String name, String ext) {
-        return name.substring(0, name.lastIndexOf(ext));
+        return name.contains(ext) ? name.substring(0, name.lastIndexOf(ext)) : name;
     }
 
 }

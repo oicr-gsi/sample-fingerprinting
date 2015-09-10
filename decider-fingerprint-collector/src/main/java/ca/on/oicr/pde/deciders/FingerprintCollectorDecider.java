@@ -4,15 +4,20 @@
  */
 package ca.on.oicr.pde.deciders;
 
-import java.util.*;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
-import net.sourceforge.seqware.common.module.FileMetadata;
 import net.sourceforge.seqware.common.hibernate.FindAllTheFiles.Header;
+import net.sourceforge.seqware.common.module.FileMetadata;
 import net.sourceforge.seqware.common.module.ReturnValue;
 import net.sourceforge.seqware.common.util.Log;
 import net.sourceforge.seqware.common.util.maptools.MapTools;
@@ -41,40 +46,43 @@ public class FingerprintCollectorDecider extends OicrDecider {
     private String queue = " ";
     private final static String BAM_METATYPE = "application/bam";
     private final static int HUMAN_ORG_ID = 31;
-
+   
     private String templateTypeFilter   = "";
     private String resequenceTypeFilter = "";
     private String studyName;
     private boolean preprocessBam = false;
     private Map<String, Map> reseqType;
-    private final String SNPConfigFile = "/.mounts/labs/PDE/data/SampleFingerprinting/hotspots.config.xml";
+    private String SNPConfigFile;
+    private static final String DEFAULT_SNPCONFIG_FILE = "/.mounts/labs/PDE/data/SampleFingerprinting/hotspots.config.xml";
 
     public FingerprintCollectorDecider () {
         super();
         fileSwaToSmall = new HashMap<String, BeSmall>();
         parser.acceptsAll(Arrays.asList("ini-file"), "Optional: the location of the INI file.").withRequiredArg();
-        parser.accepts("preprocess-bam", "Optional. Set the flag that tells the workflow to run bam re-ordering "
-                + "and adding RG (read groups) which may be absent in some cases").withRequiredArg();
-        parser.accepts("template-type", "Optional. Set the template type to limit the workflow run "
-                + "so that it runs on data only of this template type").withRequiredArg();
-        parser.accepts("resequencing-type", "Optional. Set the resequencing type filter to limit the workflow run "
-                + "so that it runs on data only of this resequencing type").withRequiredArg();
-        parser.accepts("output-path", "Optional: the path where the files should be copied to "
-                + "after analysis. Corresponds to output-prefix in INI file. Default: ./").withRequiredArg();
-        parser.accepts("output-folder", "Optional: the name of the folder to put the output into relative to "
-                + "the output-path. Corresponds to output-dir in INI file. Default: seqware-results").withRequiredArg();
-        parser.accepts("queue", "Optional: Set the queue (for example, to production)").withRequiredArg();
-        parser.accepts("manual-output", "Optional. Set the manual output either to true or false "
-                + "when running the workflow, the default is false").withRequiredArg();
-        parser.accepts("gatk-memory", "Optional. Set the memory allocated to GATK jobs "
-                + "when running the workflow, the default is 5000").withRequiredArg();
-        parser.accepts("stand-call-conf", "Optional. Set GATK parameter stand_call_conf "
-                + "when running the workflow, the default is 50.0").withRequiredArg();
-        parser.accepts("stand-emit-conf", "Optional. Set GATK parameter stand_emit_conf "
-                + "when running the workflow, the default is 10.0").withRequiredArg();
-        parser.accepts("dcov", "Optional. Set GATK parameter dcov when running the workflow, the default is 200").withRequiredArg();
-        parser.accepts("gatk-prefix", "Optional: the path to a dir on a low-latency filesystem for writing " 
-                + "GATK temporary data. May prevent possible failures of a workflow run. Default: ./").withRequiredArg();
+        defineArgument("preprocess-bam", "Optional. Set the flag that tells the workflow to run bam re-ordering "
+                + "and adding RG (read groups) which may be absent in some cases", false);
+        defineArgument("template-type", "Optional. Set the template type to limit the workflow run "
+                + "so that it runs on data only of this template type", false);
+        defineArgument("resequencing-type", "Optional. Set the resequencing type filter to limit the workflow run "
+                + "so that it runs on data only of this resequencing type", false);
+        defineArgument("config-file", "Optional. Path to a config file in .xml format "
+                     + "Default: /.mounts/labs/PDE/data/SampleFingerprinting/hotspots.config.xml", false);
+        defineArgument("output-path", "Optional: the path where the files should be copied to "
+                + "after analysis. Corresponds to output-prefix in INI file. Default: ./", false);
+        defineArgument("output-folder", "Optional: the name of the folder to put the output into relative to "
+                + "the output-path. Corresponds to output-dir in INI file. Default: seqware-results", false);
+        defineArgument("queue", "Optional: Set the queue (for example, to production)", false);
+        defineArgument("manual-output", "Optional. Set the manual output either to true or false "
+                + "when running the workflow, the default is false", false);
+        defineArgument("gatk-memory", "Optional. Set the memory allocated to GATK jobs "
+                + "when running the workflow, the default is 5000", false);
+        defineArgument("stand-call-conf", "Optional. Set GATK parameter stand_call_conf "
+                + "when running the workflow, the default is 50.0", false);
+        defineArgument("stand-emit-conf", "Optional. Set GATK parameter stand_emit_conf "
+                + "when running the workflow, the default is 10.0", false);
+        defineArgument("dcov", "Optional. Set GATK parameter dcov when running the workflow, the default is 200", false);
+        defineArgument("gatk-prefix", "Optional: the path to a dir on a low-latency filesystem for writing " 
+                + "GATK temporary data. May prevent possible failures of a workflow run. Default: ./", false);
 
     }
 
@@ -117,6 +125,13 @@ public class FingerprintCollectorDecider extends OicrDecider {
                   Log.debug("group-by [" + this.groupBy + "] passed, it will override the default (FILE_SWA)");
               }
             }
+        }
+        
+        //Very important - picking config file for hotspot locations
+        if (this.options.has("config-file")) {
+            this.SNPConfigFile = options.valueOf("config-file").toString();
+        } else {
+            this.SNPConfigFile = DEFAULT_SNPCONFIG_FILE;
         }
 
         if (this.options.has("queue")) {

@@ -1,3 +1,5 @@
+## 2.2   - 2015-09-09
+- Added additional code for attaching annotations to result files showing which set of hotspots to use
 ## 2.1.2 - 2015-08-14
 - Fixed an issue with executing touch, adjusted memory for matrix-producing step, regex for extracting donor name
 ## 2.1.1 - 2015-07-31

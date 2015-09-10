@@ -31,6 +31,7 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
     private String tabixVersion;
     private String vcftoolsVersion;
     private String checkPoints;
+    private String checkedSnps;
     private String queue;
     private boolean manualOutput;
     private int jChunkSize; // Optimal (for speed) allowed number of vcf files when jaccard_indexing step doesn't fork into multiple sub-jobs
@@ -45,6 +46,7 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
     private final static String VCF_EXT   = ".snps.raw.vcf.gz";
     private final static String TABIX_EXT = ".snps.raw.vcf.gz.tbi";
     private final static String FIN_EXT   = ".fin";
+    private static final String HOTSPOTS_TOKEN = "hotspots_file";
 
     @Override
     public Map<String, SqwFile> setupFiles() {
@@ -64,52 +66,14 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
                 }
             }
 
-            if (getProperty("check_points") == null) {
-                Logger.getLogger(SampleFingerprintingWorkflow.class.getName()).log(Level.SEVERE, "check_points (checkpoints) is not set, we need it to generate a report");
-                return (null);
-            } else {
-                this.checkPoints = getProperty("check_points");
-            }
-
-            if (getProperty("existing_matrix") == null) {
-                Logger.getLogger(SampleFingerprintingWorkflow.class.getName()).log(Level.WARNING, "existing_matrix not provided, will calclate jaccard indexes for all genotypes");
-            } else {
-                this.existingMatrix = getProperty("existing_matrix");
-            }
-
-            if (getProperty("watchers_list") == null) {
-                Logger.getLogger(SampleFingerprintingWorkflow.class.getName()).log(Level.WARNING, "watchers list not provided, will not send alerts");
-            } else {
-                this.watchersList = getProperty("watchers_list");
-            }
-
-            if (getProperty("tabix_version") == null) {
-                Logger.getLogger(SampleFingerprintingWorkflow.class.getName()).log(Level.SEVERE, "tabix_version is not set, we need it to call tabix correctly");
-                return (null);
-            } else {
-                this.tabixVersion = getProperty("tabix_version");
-            }
-
-            if (getProperty("vcftools_version") == null) {
-                Logger.getLogger(SampleFingerprintingWorkflow.class.getName()).log(Level.SEVERE, "vcftools_version is not set, we need it to call vcftools correctly");
-                return (null);
-            } else {
-                this.vcftoolsVersion = getProperty("vcftools_version");
-            }
-
-            if (getProperty("queue") == null) {
-                Logger.getLogger(SampleFingerprintingWorkflow.class.getName()).log(Level.WARNING, "Queue not set, most likely will run as default queue");
-                this.queue = "";
-            } else {
-                this.queue = getProperty("queue");
-            }
-
-            if (getProperty("study_name") == null) {
-                Logger.getLogger(SampleFingerprintingWorkflow.class.getName()).log(Level.WARNING, "Study name isn't not set, will try to extract it from file names");
-                this.studyName = "";
-            } else {
-                this.studyName = getProperty("study_name");
-            }
+            this.checkPoints     = getProperty("check_points");           
+            this.existingMatrix  = getOptionalProperty("existing_matrix","");
+            this.watchersList    = getOptionalProperty("watchers_list", "");
+            this.tabixVersion    = getProperty("tabix_version");
+            this.vcftoolsVersion = getProperty("vcftools_version");
+            this.studyName       = getOptionalProperty("study_name", "");
+            this.queue           = getOptionalProperty("queue", "");
+            this.checkedSnps     = getProperty("checked_snps");
 
             if (getProperty("manual_output") == null) {
                 this.manualOutput = false;
@@ -296,6 +260,7 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
             if (!this.queue.isEmpty()) {
                 job_jaccard.setQueue(this.queue);
             }
+            matrix.getAnnotations().put(HOTSPOTS_TOKEN, this.checkedSnps);
             job_jaccard.addFile(matrix);
             job_jaccard.addParent(job_list_writer2);
 
@@ -341,6 +306,7 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
             zip_report.addParent(zip_fins);
             zip_report.setMaxMemory("2000");
 
+            report_file.getAnnotations().put(HOTSPOTS_TOKEN, this.checkedSnps);
             zip_report.addFile(report_file);
 
             if (!this.queue.isEmpty()) {
