@@ -1,3 +1,5 @@
+## 2.2.1 - 2015-09-30
+- Added fix for removing leading zeros (was appearing with small number of samples that was possible to fit on one heatmap)
 ## 2.2   - 2015-09-09
 - Added additional code for attaching annotations to result files showing which set of hotspots to use
 ## 2.1.2 - 2015-08-14

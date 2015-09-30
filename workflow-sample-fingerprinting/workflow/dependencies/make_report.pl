@@ -79,6 +79,7 @@ $tempdir.="/" if $tempdir !~m!/$!;
 if ($matrix && -e $matrix) {
  my $fh = new IO::File("<$matrix") or die "There was an error reading file [$matrix]";
  my $firstline = <$fh>;
+ $firstline=~s/^0*//; # Funny entries should be removed by this command
  chomp($firstline);
  my @heads = split("\t",$firstline);
  map {if ($heads[$_]=~/^SNP/){$snp_index = $_}} (0..$#heads);
