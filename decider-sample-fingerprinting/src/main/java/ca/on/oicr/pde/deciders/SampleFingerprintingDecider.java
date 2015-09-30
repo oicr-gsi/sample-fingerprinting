@@ -188,6 +188,9 @@ public class SampleFingerprintingDecider extends OicrDecider {
 
         if (this.options.has("study-name")) {
             this.studyName = options.valueOf("study-name").toString();
+            if (this.studyName.contains(" ")) {
+                this.studyName = this.studyName.replaceAll(" ", "_");
+            }
         } else {
             Log.warn("study-name parameter is not set, will try to determine it automatically");
         }
