@@ -30,5 +30,9 @@
       <checked_snps>/.mounts/labs/PDE/data/SampleFingerprinting/snps/dbsnp137.hg19.402.overlap.vcf.gz</checked_snps>
       <check_points>400</check_points>
      </resequencing_type>
+     <resequencing_type id="SureSelect v5">
+      <checked_snps>/.mounts/labs/PDE/data/SampleFingerprinting/snps/dbsnp137.hg19.402.overlap.vcf.gz</checked_snps>
+      <check_points>400</check_points>
+     </resequencing_type>
    </template_type>
 </references> 
