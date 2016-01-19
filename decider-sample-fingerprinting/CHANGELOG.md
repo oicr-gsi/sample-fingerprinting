@@ -1,3 +1,5 @@
+## 2.2.2 - 2016-01-19
+- pom.xml changed to reflect wf version change
 ## 2.2.1 - 2015-09-30
 - Replace all spaces in study name (obtained from the list of arguments) with underline symbol
 ## 2.2   - 2015-09-09
