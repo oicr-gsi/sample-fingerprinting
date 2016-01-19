@@ -1,3 +1,5 @@
+## 2.2.2 - 2016-01-19
+- Introduced another solution to older tbi indices (tbi files are copied instead of linked to)
 ## 2.2.1 - 2015-09-30
 - Added fix for removing leading zeros (was appearing with small number of samples that was possible to fit on one heatmap)
 ## 2.2   - 2015-09-09

@@ -417,14 +417,15 @@ public class FingerprintCollectorWorkflow extends OicrWorkflow {
             }
 
             for (String base : baseNames) {
-                SqwFile tbiFile = this.createOutputFile(this.dataDir + base + SNPFILE_SUFFIX + ".gz.tbi", "application/tbi", this.manualOutput);
                 SqwFile vcfFile = this.createOutputFile(this.dataDir + base + SNPFILE_SUFFIX + ".gz", "application/vcf-4-gzip", this.manualOutput);
+                SqwFile tbiFile = this.createOutputFile(this.dataDir + base + SNPFILE_SUFFIX + ".gz.tbi", "application/tbi", this.manualOutput);
                 
-                tbiFile.getAnnotations().put(HOTSPOTS_TOKEN, this.checkedSNPs);
                 vcfFile.getAnnotations().put(HOTSPOTS_TOKEN, this.checkedSNPs);
+                tbiFile.getAnnotations().put(HOTSPOTS_TOKEN, this.checkedSNPs);               
                 
-                jobVcfPrep.addFile(tbiFile);
                 jobVcfPrep.addFile(vcfFile);
+                jobVcfPrep.addFile(tbiFile);
+                
             }
 
             /*
