@@ -221,10 +221,10 @@ public class SampleFingerprintingDecider extends OicrDecider {
         }
         
         // Setting resequencing type works like setting up a filter, the decider should fiure out reseq. type automatically
-        if (this.options.has("resequencing_type")) {
+        if (this.options.has("resequencing-type")) {
             this.reseqTypeFilter = this.options.valueOf("resequencing-type").toString();
         } else {
-            Log.debug("resequencing_type parameter ids not set, will include all available types from the study");
+            Log.debug("resequencing type parameter ids not set, will include all available types from the study");
         }
 
         // allows anything defined on the command line to override the defaults here.
@@ -380,8 +380,9 @@ public class SampleFingerprintingDecider extends OicrDecider {
 
         return map;
     }
-
+    
     @Override
+
     public ReturnValue customizeRun(WorkflowRun run) {
         Log.debug("INI FILE:" + run.getIniFile().toString());
         String checkedSNPs = "";
