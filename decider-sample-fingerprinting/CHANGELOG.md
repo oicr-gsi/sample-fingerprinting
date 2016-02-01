@@ -1,3 +1,5 @@
+## 2.2.3 - 2016-02-01
+- Fixed a minor error with parameter name
 ## 2.2.2 - 2016-01-19
 - pom.xml changed to reflect wf version change
 ## 2.2.1 - 2015-09-30
