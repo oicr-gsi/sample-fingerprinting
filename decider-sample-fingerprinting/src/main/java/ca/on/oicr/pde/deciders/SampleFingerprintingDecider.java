@@ -382,7 +382,6 @@ public class SampleFingerprintingDecider extends OicrDecider {
     }
     
     @Override
-
     public ReturnValue customizeRun(WorkflowRun run) {
         Log.debug("INI FILE:" + run.getIniFile().toString());
         String checkedSNPs = "";
