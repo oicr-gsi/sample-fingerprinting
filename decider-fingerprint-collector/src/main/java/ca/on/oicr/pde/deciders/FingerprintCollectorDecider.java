@@ -162,20 +162,20 @@ public class FingerprintCollectorDecider extends OicrDecider {
               this.gatkPrefix += "/";
         }
         
-        if (this.options.has("stand_call_conf")) {
+        if (this.options.has("stand-call-conf")) {
             try {
-                this.standCallConf = Double.valueOf(options.valueOf("stand_conf_call").toString());
+                this.standCallConf = Double.valueOf(options.valueOf("stand-conf-call").toString());
             } catch (NumberFormatException nf) {
-                Log.error("stand_conf_call failed to pass as double, make sure you supply a valid number");
+                Log.error("stand-conf-call failed to pass as double, make sure you supply a valid number");
                 System.exit(1);
             }
         }
 
-        if (this.options.has("stand_emit_conf")) {
+        if (this.options.has("stand-emit-conf")) {
             try {
-                this.standEmitConf = Double.valueOf(options.valueOf("stand_emit_call").toString());
+                this.standEmitConf = Double.valueOf(options.valueOf("stand-emit-call").toString());
             } catch (NumberFormatException nf) {
-                Log.error("stand_emit_call failed to pass as double, make sure you supply a valid number");
+                Log.error("stand-emit-call failed to pass as double, make sure you supply a valid number");
                 System.exit(1);
             }
         }
@@ -221,6 +221,34 @@ public class FingerprintCollectorDecider extends OicrDecider {
         //allows anything defined on the command line to override the defaults here.
         ReturnValue val = super.init();
         return val;
+    }
+    
+    @Override
+    protected ReturnValue doFinalCheck(String commaSeparatedFilePaths, String commaSeparatedParentAccessions) {
+        String[] filePaths = commaSeparatedFilePaths.split(",");
+        boolean haveRStype = false;
+
+        for (String p : filePaths) {
+            for (BeSmall bs : fileSwaToSmall.values()) {
+                if (!bs.getPath().equals(p)) {
+                    continue;
+                }
+                String fileKey = bs.getReseqTemplateID();
+                if (this.reseqType.containsKey(fileKey)) {
+                    haveRStype = true;
+                } else {
+                    haveRStype = false;
+                    break; // even if one of the files does not have reseq type supported, break
+                }
+            }
+        }
+
+        if (haveRStype) {
+            return super.doFinalCheck(commaSeparatedFilePaths, commaSeparatedParentAccessions);
+        }
+
+        Log.error("Resequencing Data for at least some of the inputs are not available, WON'T RUN");
+        return new ReturnValue(ReturnValue.INVALIDPARAMETERS);
     }
 
     @Override
@@ -408,12 +436,9 @@ public class FingerprintCollectorDecider extends OicrDecider {
         run.addProperty("gatk_prefix",this.gatkPrefix);
         run.addProperty("manual_output", this.manualOutput);
         run.addProperty("preprocess_bam", Boolean.toString(this.preprocessBam));
+        run.addProperty("checked_snps", checkedSNPs);
+        run.addProperty("check_points", checkPoints);
 
-        
-        if (null != checkedSNPs && !checkedSNPs.isEmpty()) {
-          run.addProperty("checked_snps", checkedSNPs);
-          run.addProperty("check_points", checkPoints);
-        }
                
         if (this.standCallConf > 0) {
           run.addProperty("stand_call_conf", "" + this.standCallConf);
@@ -444,8 +469,8 @@ public class FingerprintCollectorDecider extends OicrDecider {
             DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
             Document doc = dBuilder.parse(fXmlFile);
 
-	//optional, but recommended
-            //read this - http://stackoverflow.com/questions/13786607/normalization-in-dom-parsing-with-java-how-does-it-work
+	// optional, but recommended
+        // read this - http://stackoverflow.com/questions/13786607/normalization-in-dom-parsing-with-java-how-does-it-work
             doc.getDocumentElement().normalize();
             NodeList nList = doc.getElementsByTagName("template_type");
             for (int temp = 0; temp < nList.getLength(); temp++) {
@@ -522,8 +547,12 @@ public class FingerprintCollectorDecider extends OicrDecider {
             }
             FileAttributes fa = new FileAttributes(rv, rv.getFiles().get(0));
             this.rgId = rv.getAttribute(Header.FILE_SWA.getTitle());
-            this.rgPl = rv.getAttribute(Header.SAMPLE_TAG_PREFIX.getTitle() + "geo_template_type");
- 
+            this.rgPl = rv.getAttribute(Header.SAMPLE_TAG_PREFIX.getTitle()     + "geo_template_type");
+            String rsType = rv.getAttribute(Header.SAMPLE_TAG_PREFIX.getTitle() + "geo_targeted_resequencing");
+            if (rsType == null || rsType.isEmpty() || rsType.equals(" ")) {
+                rsType = "NA";
+            }
+            
             if (null != this.rgPl && !this.rgPl.isEmpty() && this.rgPl.contains(" ")) {
                 this.rgPl = this.rgPl.substring(0, this.rgPl.indexOf(" "));
             }
@@ -533,7 +562,8 @@ public class FingerprintCollectorDecider extends OicrDecider {
             this.rgSm = fa.getDonor();
             
             iusDetails = fa.getLibrarySample() + fa.getSequencerRun() + fa.getLane() + fa.getBarcode();
-            reseqTemplateID = fa.getDonor() + fa.getLimsValue(Lims.LIBRARY_TEMPLATE_TYPE);
+            
+            reseqTemplateID = fa.getLimsValue(Lims.LIBRARY_TEMPLATE_TYPE) + rsType;
             groupByAttribute = iusDetails;
             // If groupBy
             if (!groupBy.isEmpty()) {

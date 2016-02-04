@@ -1,3 +1,5 @@
+## 1.2.2 - 2016-02-02
+- Fixing an issue with picking up wrong hotspots file
 ## 1.2.1 - 2016-01-19
 - Small changes: order of provosioning changed for files (vcf and tbi)
 ## 1.2   - 2015-09-08
