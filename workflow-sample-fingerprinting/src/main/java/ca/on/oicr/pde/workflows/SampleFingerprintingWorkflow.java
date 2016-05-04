@@ -34,6 +34,7 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
     private String checkedSnps;
     private String queue;
     private boolean manualOutput;
+    private boolean allowSingletons;
     private int jChunkSize; // Optimal (for speed) allowed number of vcf files when jaccard_indexing step doesn't fork into multiple sub-jobs
     //Static integers
     private final int MIN_CHUNK_SIZE = 50;
@@ -84,6 +85,18 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
                     this.manualOutput = Boolean.valueOf(manualCheck);
                 } catch (NumberFormatException e) {
                     this.manualOutput = false;
+                }
+            }
+            
+            if (getProperty("allow_singletons") == null) {
+                this.allowSingletons = false;
+                Logger.getLogger(SampleFingerprintingWorkflow.class.getName()).log(Level.WARNING, "Setting allow singletons to default (false)");
+            } else {
+                String manualCheck = getOptionalProperty("allow_singletons", "false");
+                try {
+                    this.allowSingletons = Boolean.valueOf(manualCheck);
+                } catch (NumberFormatException e) {
+                    this.allowSingletons = false;
                 }
             }
 
@@ -240,7 +253,7 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
 
             //Similarity-calculating job, operates on chunks
             SqwFile matrix = this.createOutputFile(this.dataDir + this.studyName + "_jaccard.matrix.csv", "text/plain", this.manualOutput);
-            Job job_jaccard = workflow.createBashJob("make_matrix");
+            Job job_jaccard = workflow.createBashJob("make_matrix");           
             job_jaccard.setCommand(getWorkflowBaseDir() + "/dependencies/jaccard_coeff.matrix.pl"
                     + " --list "        + this.dataDir + chunkList
                     + " --vcf-compare " + getWorkflowBaseDir() + "/bin/vcftools_" + this.vcftoolsVersion + "/bin/vcf-compare"
@@ -266,14 +279,18 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
 
             // Images generated here: matrix slicing/color assignment, flagging suspicious files, wrapper for R script
             Job make_pics = workflow.createBashJob("make_report");
-            make_pics.setCommand("perl " + getWorkflowBaseDir() + "/dependencies/make_report.pl"
-                    + " --matrix "    + matrix.getSourcePath()
-                    + " --refsnps "   + this.checkPoints
-                    + " --tempdir "   + this.dataDir + this.finDir
-                    + " --datadir "   + this.dataDir
-                    + " --studyname=" + this.studyName
-                    + " > " + this.dataDir + "index.html");
+            StringBuilder reportCommand = new StringBuilder();
+            reportCommand.append("perl ").append(getWorkflowBaseDir()).append("/dependencies/make_report.pl")
+                    .append(" --matrix ").append(matrix.getSourcePath())
+                    .append(" --refsnps ").append(this.checkPoints)
+                    .append(" --tempdir ").append(this.dataDir).append(this.finDir)
+                    .append(" --datadir ").append(this.dataDir)
+                    .append(" --studyname ").append(this.studyName);
+            
+            if (this.allowSingletons) {reportCommand.append(" --allow-singletons "); }               
+            reportCommand.append(" > ").append(this.dataDir).append("index.html");
 
+            make_pics.setCommand(reportCommand.toString());
             make_pics.addParent(job_jaccard);
             make_pics.setMaxMemory("6000");
             if (!this.queue.isEmpty()) {

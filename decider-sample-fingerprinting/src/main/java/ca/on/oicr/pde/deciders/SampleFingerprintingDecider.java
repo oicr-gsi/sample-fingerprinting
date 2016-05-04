@@ -52,6 +52,7 @@ public class SampleFingerprintingDecider extends OicrDecider {
     private String reseqTypeFilter = "";
     private String manual_output = "false";
     private boolean separate_platforms = true;
+    private boolean allow_singletons   = false;
     private Map<String, Map> reseqType;
     private String SNPConfigFile;
     private Map<String, BeSmall> fileSwaToSmall;
@@ -81,6 +82,7 @@ public class SampleFingerprintingDecider extends OicrDecider {
         defineArgument("config-file", "Optional. Path to a config file in .xml format "
                      + "Default: /.mounts/labs/PDE/data/SampleFingerprinting/hotspots.config.xml", false);
         defineArgument("watchers-list", "Optional: Comma-separated list of emails for people interested in monitoring this workflow", false);
+        defineArgument("allow-singletons", "Optional: A boolean flag that control inclusion singletons (donors with one bam file) in the final report", false);
         defineArgument("manual-output", "Optional: Set the manual output. Default: false", false);
         defineArgument("separate-platforms", "Optional: Separate sequencing platforms, i.e. MiSeq and HiSeq. Default: true", false);
         defineArgument("verbose", "Optional: Set the verbosity to true", false);
@@ -161,6 +163,15 @@ public class SampleFingerprintingDecider extends OicrDecider {
                this.separate_platforms = false; 
             } else {
                 Log.debug("Invalid setting for separate-platforms, using default [true]");
+            }
+	}
+        
+        if (this.options.has("allow-singletons")) {
+            String newSepValue = options.valueOf("allow-singletons").toString();
+            if (newSepValue.equalsIgnoreCase("true")) {
+               this.allow_singletons = true; 
+            } else {
+                Log.debug("Invalid setting for allow-singletons, using default [false]");
             }
 	}
 
@@ -435,6 +446,7 @@ public class SampleFingerprintingDecider extends OicrDecider {
         run.addProperty("output_prefix", this.output_prefix);
         run.addProperty("output_dir", this.output_dir);
         run.addProperty("manual_output",  this.manual_output);
+        run.addProperty("allow_singletons", Boolean.toString(this.allow_singletons));
         
         if (!this.queue.isEmpty()) {
           run.addProperty("queue", this.queue);
