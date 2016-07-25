@@ -40,5 +40,9 @@
       <checked_snps>/.mounts/labs/PDE/data/SampleFingerprinting/snps/dbsnp142.hg19.GECCO.test.406.vcf.gz</checked_snps>
       <check_points>400</check_points>
      </resequencing_type>
+     <resequencing_type id="xGen Lockdown AML">
+      <checked_snps>/.mounts/labs/PDE/data/SampleFingerprinting/snps/dbsnp142.hg19.xgen_aml.533.himaf.vcf.gz</checked_snps>
+      <check_points>533</check_points>
+     </resequencing_type>
    </template_type>
 </references> 
