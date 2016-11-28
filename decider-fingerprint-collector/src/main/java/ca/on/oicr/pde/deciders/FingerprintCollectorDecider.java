@@ -547,7 +547,7 @@ public class FingerprintCollectorDecider extends OicrDecider {
             }
             FileAttributes fa = new FileAttributes(rv, rv.getFiles().get(0));
             this.rgId = rv.getAttribute(Header.FILE_SWA.getTitle());
-            this.rgPl = rv.getAttribute(Header.SAMPLE_TAG_PREFIX.getTitle()     + "geo_template_type");
+            this.rgPl = rv.getAttribute("Sequencer Run Platform Name");
             String rsType = rv.getAttribute(Header.SAMPLE_TAG_PREFIX.getTitle() + "geo_targeted_resequencing");
             if (rsType == null || rsType.isEmpty() || rsType.equals(" ")) {
                 rsType = "NA";
