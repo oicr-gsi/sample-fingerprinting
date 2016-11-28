@@ -30,7 +30,7 @@
       "preprocess_bam" : "false",
       "provision_vcfs" : "true",
       "queue" : "",
-      "rg_details" : "531707:Illumina:130321_SN203_0175_AC1MWPACXX_2_TAGCTT:PCSI_0191_St_R_PE_391_EX:PCSI_0191,531686:Illumina:130321_SN203_0175_AC1MWPACXX_1_GGCTAC:PCSI_0191_Pa_P_PE_410_EX:PCSI_0191",
+      "rg_details" : "531707:ILLUMINA:130321_SN203_0175_AC1MWPACXX_2_TAGCTT:PCSI_0191_St_R_PE_391_EX:PCSI_0191,531686:ILLUMINA:130321_SN203_0175_AC1MWPACXX_1_GGCTAC:PCSI_0191_Pa_P_PE_410_EX:PCSI_0191",
       "samtools_version" : "0.1.19",
       "stand_call_conf" : "50.0",
       "stand_emit_conf" : "10.0",
@@ -41,27 +41,33 @@
     "files" : [ {
       "studyTitle" : [ "PCSI" ],
       "studyAttributes" : {
-        "study.geo_lab_group_id" : [ [ "33" ] ]
+        "geo_lab_group_id" : [ [ "33" ] ]
       },
-      "experimentName" : [ "Geo_PCSI_ILLUMINA_EX_{F*101}{..}{R*101}" ],
+      "experimentName" : [ ],
       "experimentAttributes" : { },
       "sampleName" : [ "PCSI_0191_Pa_P_PE_410_EX" ],
       "sampleAttributes" : {
-        "sample.geo_library_source_template_type" : [ [ "EX" ] ],
-        "sample.geo_run_id_and_position_and_slot" : [ [ "1355_1_1" ] ],
-        "sample.geo_targeted_resequencing" : [ [ "Agilent SureSelect ICGC/Sanger Exon" ] ],
-        "sample.geo_template_id" : [ [ "29956" ] ],
-        "sample.geo_template_type" : [ [ "Illumina PE Library Seq" ] ],
-        "sample.geo_tissue_origin" : [ [ "Pa" ] ],
-        "sample.geo_tissue_type" : [ [ "P" ] ]
+        "geo_external_name" : [ [ "MGH1457", "MGH1457 " ] ],
+        "geo_library_source_template_type" : [ [ "EX" ] ],
+        "geo_prep_kit" : [ [ "GA_multiplex" ] ],
+        "geo_purpose" : [ [ "Library", "Stock" ] ],
+        "geo_receive_date" : [ [ "2012-01-25" ] ],
+        "geo_run_id_and_position_and_slot" : [ [ "1355_1_1" ] ],
+        "geo_str_result" : [ [ "Pass" ] ],
+        "geo_targeted_resequencing" : [ [ "Agilent SureSelect ICGC/Sanger Exon" ] ],
+        "geo_template_id" : [ [ "17095", "17161", "18175", "20281", "29955", "29956" ] ],
+        "geo_template_type" : [ [ "Identity", "Illumina PE Library", "Illumina PE Library Seq", "Primary Tumor Tissue", "gDNA" ] ],
+        "geo_tissue_origin" : [ [ "Pa" ] ],
+        "geo_tissue_preparation" : [ [ "Fresh Frozen" ] ],
+        "geo_tissue_type" : [ [ "P" ] ]
       },
       "sequencerRunName" : [ "130321_SN203_0175_AC1MWPACXX" ],
       "sequencerRunAttributes" : {
-        "sequencerrun.geo_instrument_run_id" : [ [ "1355" ] ]
+        "geo_instrument_run_id" : [ [ "1355" ] ]
       },
       "laneName" : [ "130321_SN203_0175_AC1MWPACXX_lane_1" ],
       "laneAttributes" : {
-        "lane.geo_lane" : [ [ "1" ] ]
+        "geo_lane" : [ [ "1" ] ]
       },
       "iusTag" : [ "GGCTAC" ],
       "iusAttributes" : { },
@@ -74,27 +80,33 @@
     }, {
       "studyTitle" : [ "PCSI" ],
       "studyAttributes" : {
-        "study.geo_lab_group_id" : [ [ "33" ] ]
+        "geo_lab_group_id" : [ [ "33" ] ]
       },
-      "experimentName" : [ "Geo_PCSI_ILLUMINA_EX_{F*101}{..}{R*101}" ],
+      "experimentName" : [ ],
       "experimentAttributes" : { },
       "sampleName" : [ "PCSI_0191_St_R_PE_391_EX" ],
       "sampleAttributes" : {
-        "sample.geo_library_source_template_type" : [ [ "EX" ] ],
-        "sample.geo_run_id_and_position_and_slot" : [ [ "1355_2_1" ] ],
-        "sample.geo_targeted_resequencing" : [ [ "Agilent SureSelect ICGC/Sanger Exon" ] ],
-        "sample.geo_template_id" : [ [ "29974" ] ],
-        "sample.geo_template_type" : [ [ "Illumina PE Library Seq" ] ],
-        "sample.geo_tissue_origin" : [ [ "St" ] ],
-        "sample.geo_tissue_type" : [ [ "R" ] ]
+        "geo_external_name" : [ [ "MGH1457", "MGH1457 " ] ],
+        "geo_library_source_template_type" : [ [ "EX" ] ],
+        "geo_prep_kit" : [ [ "GA_multiplex" ] ],
+        "geo_purpose" : [ [ "Library", "Stock" ] ],
+        "geo_receive_date" : [ [ "2012-01-25" ] ],
+        "geo_run_id_and_position_and_slot" : [ [ "1355_2_1" ] ],
+        "geo_str_result" : [ [ "Pass" ] ],
+        "geo_targeted_resequencing" : [ [ "Agilent SureSelect ICGC/Sanger Exon" ] ],
+        "geo_template_id" : [ [ "17095", "17162", "21275", "21342", "29973", "29974" ] ],
+        "geo_template_type" : [ [ "Identity", "Illumina PE Library", "Illumina PE Library Seq", "Reference Tissue", "gDNA" ] ],
+        "geo_tissue_origin" : [ [ "St" ] ],
+        "geo_tissue_preparation" : [ [ "Fresh Frozen" ] ],
+        "geo_tissue_type" : [ [ "R" ] ]
       },
       "sequencerRunName" : [ "130321_SN203_0175_AC1MWPACXX" ],
       "sequencerRunAttributes" : {
-        "sequencerrun.geo_instrument_run_id" : [ [ "1355" ] ]
+        "geo_instrument_run_id" : [ [ "1355" ] ]
       },
       "laneName" : [ "130321_SN203_0175_AC1MWPACXX_lane_2" ],
       "laneAttributes" : {
-        "lane.geo_lane" : [ [ "2" ] ]
+        "geo_lane" : [ [ "2" ] ]
       },
       "iusTag" : [ "TAGCTT" ],
       "iusAttributes" : { },

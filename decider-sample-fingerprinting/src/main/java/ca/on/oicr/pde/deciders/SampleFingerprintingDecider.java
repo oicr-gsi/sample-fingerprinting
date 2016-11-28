@@ -85,8 +85,6 @@ public class SampleFingerprintingDecider extends OicrDecider {
         defineArgument("allow-singletons", "Optional: A boolean flag that control inclusion singletons (donors with one bam file) in the final report", false);
         defineArgument("manual-output", "Optional: Set the manual output. Default: false", false);
         defineArgument("separate-platforms", "Optional: Separate sequencing platforms, i.e. MiSeq and HiSeq. Default: true", false);
-        defineArgument("verbose", "Optional: Set the verbosity to true", false);
-
     }
 
     @Override
@@ -116,7 +114,7 @@ public class SampleFingerprintingDecider extends OicrDecider {
         // Group by template type if no other grouping selected
         if (!this.options.has("group-by")) {
             if (this.options.has("study-name")) {
-                this.setGroupingStrategy(Header.STUDY_SWA);
+                this.setGroupingStrategy(Header.STUDY_TITLE);
             }
             if (this.options.has("root-sample-name")) {
                 // TODO: net.sourceforge.seqware.common.hibernate.FindAllTheFiles.Header needs to be updated to support ROOT_SAMPLE_SWA
@@ -125,7 +123,7 @@ public class SampleFingerprintingDecider extends OicrDecider {
                 throw new RuntimeException("ROOT_SAMPLE_SWA needs to be implemented in FindAllTheFiles.Header");
             }
             if (this.options.has("sequencer-run-name")) {
-                this.setGroupingStrategy(Header.SEQUENCER_RUN_SWA);
+                this.setGroupingStrategy(Header.SEQUENCER_RUN_NAME);
             }
         } else {
             Log.warn("Passing group-by parameter overrides the defaults, I hope you know what you are doing");
@@ -147,10 +145,6 @@ public class SampleFingerprintingDecider extends OicrDecider {
                 this.output_dir = "seqware-results";
             }
         }
-        
-        if (this.options.has("verbose")) {
-            Log.setVerbose(true);
-	} 
         
         if (this.options.has("manual-output")) {
             this.manual_output = options.valueOf("manual_output").toString();
