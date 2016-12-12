@@ -13,15 +13,31 @@ use strict;
 use Getopt::Long;
 use constant DEBUG=>0;
 
-my($list,$outfile,$use_uncovered,$short);
-my $USAGE = "./jaccard_coeffi.matrix.mc.pl --list [list of .fin file] --out [output file] --use-uncovered [Optional flag to include locations with N flag]";
+my($list,$findir,$outfile,$use_uncovered,$short);
+my $USAGE = "./jaccard_coeffi.matrix.mc.pl --list [list of .fin file] --use-uncovered [Optional flag to include locations with N flag]";
 my $results = GetOptions("list=s"        => \$list,
-                         "out|outfile=s" => \$outfile,
+                         "findir=s"      => \$findir,
                          "short-name"    => \$short, # Shorten ids (false by default)
                          "use-uncovered" => \$use_uncovered);
 
-if (!$list || !$outfile || !-e $list) {die $USAGE;}
-open(FINS,"<$list") or die "Couldn't read from list of finfiles";
+if ((!$list && !$findir)) {die $USAGE;}
+=head2 Assembling a list of files
+ We read from either list or
+ directory containing .fin files
+=cut
+
+my @finfiles = ();
+if ($list && -e $list) {
+  open(FINS,"<$list") or die "Couldn't read from list of finfiles";
+  map {chomp;push @finfiles, $_} (<FINS>);
+  close FINS;
+} elsif (-d $findir) {
+  opendir(DIR,"$findir") or die "Couldn't read from directory [$findir]";
+  my @fins = grep {/.fin$/} sort readdir DIR;
+  map{push @finfiles,join("/",($findir,$_))} @fins;
+  closedir DIR;
+} else { die "Wrong source of fin files, won't run!";}
+
 my %snps   = ();
 my %counts = ();
 
@@ -31,7 +47,7 @@ my %counts = ();
  and then use the values to populate snps hash
 =cut
 
-while(my $file = <FINS>) {
+foreach my $file(@finfiles) {
  next if $file=~/^#/;
  chomp($file);
  if ( !-e $file || -S $file) {
@@ -50,7 +66,6 @@ while(my $file = <FINS>) {
 
  map{chomp;my @temp=split("\t");$snps{$id}->{$temp[0]} = $temp[1];$counts{$id}++ if $temp[1]=~/[ACTG]/} @lines;
 }
-close FINS;
 
 =head2 Calculate coefficients
  Making Jaccard coefficient matrix

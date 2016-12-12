@@ -35,6 +35,7 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
     private String queue;
     private boolean manualOutput;
     private boolean allowSingletons;
+    private boolean mixedCoverageMode = false;
     private int jChunkSize; // Optimal (for speed) allowed number of vcf files when jaccard_indexing step doesn't fork into multiple sub-jobs
     //Static integers
     private final int MIN_CHUNK_SIZE = 50;
@@ -88,6 +89,14 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
                 }
             }
             
+            if (getProperty("mixed_coverage") != null ) {
+               try {
+                   this.mixedCoverageMode = Boolean.valueOf(getProperty("mixed_coverage"));
+               } catch (NumberFormatException ne) {
+                   this.mixedCoverageMode = false;
+               }
+            }
+
             if (getProperty("allow_singletons") == null) {
                 this.allowSingletons = false;
                 Logger.getLogger(SampleFingerprintingWorkflow.class.getName()).log(Level.WARNING, "Setting allow singletons to default (false)");
@@ -251,18 +260,25 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
                 job_list_writer2.addParent(upstreamJob);
             }
 
-            //Similarity-calculating job, operates on chunks
+            //Similarity-calculating job, operates on chunks or list of finfiles
             SqwFile matrix = this.createOutputFile(this.dataDir + this.studyName + "_jaccard.matrix.csv", "text/plain", this.manualOutput);
             Job job_jaccard = workflow.createBashJob("make_matrix");           
-            job_jaccard.setCommand(getWorkflowBaseDir() + "/dependencies/jaccard_coeff.matrix.pl"
-                    + " --list "        + this.dataDir + chunkList
-                    + " --vcf-compare " + getWorkflowBaseDir() + "/bin/vcftools_" + this.vcftoolsVersion + "/bin/vcf-compare"
-                    + " --datadir "     + this.dataDir
-                    + " --tabix "       + getWorkflowBaseDir() + "/bin/tabix-" + this.tabixVersion
-                    + " --studyname "   + this.studyName
-                    + " > " + matrix.getSourcePath());
-            if (!this.existingMatrix.isEmpty()) {
-                job_jaccard.getCommand().addArgument("--existing_matrix " + this.existingMatrix);
+
+            if (this.mixedCoverageMode) {
+                job_jaccard.setCommand(getWorkflowBaseDir() + "/dependencies/jaccard_coeff.matrix.mc.pl"
+                        + " --findir "  + this.dataDir + this.finDir 
+                        + " > " + matrix.getSourcePath());
+            } else {
+                job_jaccard.setCommand(getWorkflowBaseDir() + "/dependencies/jaccard_coeff.matrix.pl"
+                        + " --list "        + this.dataDir + chunkList
+                        + " --vcf-compare " + getWorkflowBaseDir() + "/bin/vcftools_" + this.vcftoolsVersion + "/bin/vcf-compare"
+                        + " --datadir "     + this.dataDir
+                        + " --tabix "       + getWorkflowBaseDir() + "/bin/tabix-" + this.tabixVersion
+                        + " --studyname "   + this.studyName
+                        + " > " + matrix.getSourcePath());
+                if (!this.existingMatrix.isEmpty()) {
+                    job_jaccard.getCommand().addArgument("--existing_matrix " + this.existingMatrix);
+                }
             }
 
             if (this.vcfFiles.length > MAX_INPUTS) {
@@ -297,12 +313,26 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
                 make_pics.setQueue(this.queue);
             }
 
+            // Make report table here using index.html and jaccard_coeff.matrix.csv
+            Job prox_table = workflow.createBashJob("proximity_table");
+            prox_table.setCommand("perl " + getWorkflowBaseDir() + "/dependencies/make_table.pl"
+                                + " --index "  + this.dataDir + "index.html"
+                                + " --matrix " + this.dataDir + matrix.getSourcePath()
+                                + " --out " + this.dataDir + this.studyName + ".proximity_table.csv");
+            if (this.allowSingletons) {prox_table.getCommand().addArgument(" --singletons "); }
+
+            prox_table.addParent(make_pics);
+            prox_table.setMaxMemory("8000");
+            if (!this.queue.isEmpty()) {
+                prox_table.setQueue(this.queue);
+            }
+
             // Zip finfiles and similarity matrix for customization in the webtool
             Job zip_fins = workflow.createBashJob("zip_finfiles");
             zip_fins.setCommand("zip -r " + this.dataDir + "customize.me.zip "
                     + this.dataDir + this.finDir + " "
                     + matrix.getSourcePath());
-            zip_fins.addParent(make_pics);
+            zip_fins.addParent(prox_table);
             zip_fins.setMaxMemory("2000");
             if (!this.queue.isEmpty()) {
                 zip_fins.setQueue(this.queue);
@@ -318,6 +348,7 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
                     + this.dataDir + "*_genotype_report*.csv "
                     + this.dataDir + "*_similarity_matrix*.csv "
                     + matrix.getSourcePath() + " "
+                    + this.dataDir + this.studyName + ".proximity_table.csv "
                     + this.dataDir + "customize.me.zip "
                     + this.dataDir + "*.html");
             zip_report.addParent(zip_fins);
