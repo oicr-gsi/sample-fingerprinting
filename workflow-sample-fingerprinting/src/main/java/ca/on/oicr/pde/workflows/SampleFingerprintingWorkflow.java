@@ -187,6 +187,9 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
                 linkerJobs.add(job_link_maker);
             }
 
+            String chunkList = null;
+            
+            if (!this.mixedCoverageMode) {
             if (this.existingMatrix.isEmpty() && this.vcfFiles.length > this.jChunkSize) {
 
                 StringBuilder chunkedResults = new StringBuilder();
@@ -198,7 +201,7 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
                     for (int cc = c; cc < vcf_chunks; cc++) {
 
                         Job job_list_writer = workflow.createBashJob("make_list" + resultID);
-                        String chunkList = "jaccard.chunk." + resultID + ".list";
+                        chunkList = "jaccard.chunk." + resultID + ".list";
                         job_list_writer.setCommand(getWorkflowBaseDir() + "/dependencies/write_list.pl"
                                 + " --datadir "    + this.dataDir
                                 + " --segments \"" + c * this.jChunkSize + ":" + ((c + 1) * this.jChunkSize - 1) + ","
@@ -246,7 +249,7 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
             // Next job is jaccard_coeff.matrix script, need to create|update giant matrix of jaccard indexes
             // using vcftools, colors should not be assigned at his step. Will be final jaccard index job          
             Job job_list_writer2 = workflow.createBashJob("make_Final_list");
-            String chunkList = "jaccard.chunks.list";
+            chunkList = "jaccard.chunks.list";
             job_list_writer2.setCommand(getWorkflowBaseDir() + "/dependencies/write_list.pl"
                     + " --datadir " + this.dataDir
                     + " > "         + this.dataDir + chunkList);
@@ -259,6 +262,9 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
             for (Job upstreamJob : upstreamJobs) {
                 job_list_writer2.addParent(upstreamJob);
             }
+            upstreamJobs.clear();
+            upstreamJobs.add(job_list_writer2);
+        }
 
             //Similarity-calculating job, operates on chunks or list of finfiles
             SqwFile matrix = this.createOutputFile(this.dataDir + this.studyName + "_jaccard.matrix.csv", "text/plain", this.manualOutput);
@@ -291,7 +297,9 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
             }
             matrix.getAnnotations().put(HOTSPOTS_TOKEN, this.checkedSnps);
             job_jaccard.addFile(matrix);
-            job_jaccard.addParent(job_list_writer2);
+            for (Job upstreamJob : upstreamJobs) {
+                job_jaccard.addParent(upstreamJob);
+            }
 
             // Images generated here: matrix slicing/color assignment, flagging suspicious files, wrapper for R script
             Job make_pics = workflow.createBashJob("make_report");
@@ -317,7 +325,7 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
             Job prox_table = workflow.createBashJob("proximity_table");
             prox_table.setCommand("perl " + getWorkflowBaseDir() + "/dependencies/make_table.pl"
                                 + " --index "  + this.dataDir + "index.html"
-                                + " --matrix " + this.dataDir + matrix.getSourcePath()
+                                + " --matrix " + matrix.getSourcePath()
                                 + " --out " + this.dataDir + this.studyName + ".proximity_table.csv");
             if (this.allowSingletons) {prox_table.getCommand().addArgument(" --singletons "); }
 

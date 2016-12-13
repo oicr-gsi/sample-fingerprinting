@@ -72,13 +72,14 @@ open(MATRIX,$matrix_pipe) or die "Couldn't open pipe for matrix file [$matrix]";
 while(my $line = <MATRIX>) {
  chomp($line);
  my @fields = split("\t",$line);
+ # This regex assumes that id complies with OICR naming ideosyncrasis
  # | FLAG | Sample | FlowCell | Lane | Type | SNPs | Score | SimilarTo |
- if ($fields[0] =~/^SWID_\d+_(\w+?_\d+)_\S+?_(\S+?)_\S+?_\d+_\w+?_(\d+_\S+?_\d+_\S+?)_(\S+?)_L(\d+)_/) {
+ if ($fields[0] =~/^SWID_\d+_(\w+?_\d+)_\S+?_(\S+?)_\S+?_\d+_[A-Z]+?(_\d+)*_(\d+_\S+?_\d+_\S+?)_(\S+?)_L(\d+)_/) {
    $data{$fields[0]} = {FLAG     => $flagged{$fields[0]} ? 1 : 0,
                         Sample   => $1,
-                        FlowCell => $3,
-                        Lane     => $5,
-                        Barcode  => $4,
+                        FlowCell => $4,
+                        Lane     => $6,
+                        Barcode  => $5,
                         Type     => $2};
    $samples{$1}++;
                         
