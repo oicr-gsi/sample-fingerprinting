@@ -20,6 +20,7 @@
       "genome_file" : "/.mounts/labs/PDE/data/SampleFingerprinting/fasta/hg19.fa",
       "manual_output" : "false",
       "metadata" : "metadata",
+      "mixed_coverage" : "false",
       "output_dir" : "seqware-results",
       "queue" : "",
       "samtools_version" : "0.1.19",

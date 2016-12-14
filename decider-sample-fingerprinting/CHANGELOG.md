@@ -1,3 +1,5 @@
+## 2.4   - 2016-12-13
+- Version updated to match the workflow's upgrade
 ## 2.2.3 - 2016-02-01
 - Fixed a minor error with parameter name
 ## 2.2.2 - 2016-01-19
