@@ -49,6 +49,7 @@
       "sampleAttributes" : {
         "geo_external_name" : [ [ "MGH1457", "MGH1457 " ] ],
         "geo_library_source_template_type" : [ [ "EX" ] ],
+        "geo_organism" : [ [ "Homo sapiens" ] ],
         "geo_prep_kit" : [ [ "GA_multiplex" ] ],
         "geo_purpose" : [ [ "Library", "Stock" ] ],
         "geo_receive_date" : [ [ "2012-01-25" ] ],
@@ -88,6 +89,7 @@
       "sampleAttributes" : {
         "geo_external_name" : [ [ "MGH1457", "MGH1457 " ] ],
         "geo_library_source_template_type" : [ [ "EX" ] ],
+        "geo_organism" : [ [ "Homo sapiens" ] ],
         "geo_prep_kit" : [ [ "GA_multiplex" ] ],
         "geo_purpose" : [ [ "Library", "Stock" ] ],
         "geo_receive_date" : [ [ "2012-01-25" ] ],

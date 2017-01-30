@@ -39,6 +39,7 @@
       "sampleAttributes" : {
         "geo_external_name" : [ [ "70596" ] ],
         "geo_library_source_template_type" : [ [ "WG" ] ],
+        "geo_organism" : [ [ "Homo sapiens" ] ],
         "geo_purpose" : [ [ "Library" ] ],
         "geo_run_id_and_position_and_slot" : [ [ "1715_1_1", "1715_2_1", "1715_3_1", "1715_4_1", "1715_5_1", "1736_3_2", "1994_3_2" ] ],
         "geo_str_result" : [ [ "Not Submitted" ] ],
