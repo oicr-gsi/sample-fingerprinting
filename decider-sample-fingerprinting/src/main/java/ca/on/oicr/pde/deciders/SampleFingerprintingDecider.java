@@ -53,6 +53,7 @@ public class SampleFingerprintingDecider extends OicrDecider {
     private String manual_output = "false";
     private boolean separate_platforms = true;
     private boolean allow_singletons   = false;
+    private boolean mixedCoverageMode  = false;
     private Map<String, Map> reseqType;
     private String SNPConfigFile;
     private Map<String, BeSmall> fileSwaToSmall;
@@ -83,6 +84,7 @@ public class SampleFingerprintingDecider extends OicrDecider {
                      + "Default: /.mounts/labs/PDE/data/SampleFingerprinting/hotspots.config.xml", false);
         defineArgument("watchers-list", "Optional: Comma-separated list of emails for people interested in monitoring this workflow", false);
         defineArgument("allow-singletons", "Optional: A boolean flag that control inclusion singletons (donors with one bam file) in the final report", false);
+        defineArgument("mixed-coverage", "Optional: A boolean flag that defines the algorithm of jaccard matrix calculation", false);
         defineArgument("manual-output", "Optional: Set the manual output. Default: false", false);
         defineArgument("separate-platforms", "Optional: Separate sequencing platforms, i.e. MiSeq and HiSeq. Default: true", false);
     }
@@ -149,6 +151,11 @@ public class SampleFingerprintingDecider extends OicrDecider {
         if (this.options.has("manual-output")) {
             this.manual_output = options.valueOf("manual_output").toString();
             Log.debug("Setting manual output, default is false and needs to be set only in special cases");
+	}
+        
+        if (this.options.has("mixed-coverage")) {
+            this.mixedCoverageMode = Boolean.valueOf(options.valueOf("mixed-coverage").toString());
+            Log.debug("Setting mixed coverage mode, default is false");
 	}
         
         if (this.options.has("separate-platforms")) {
@@ -440,6 +447,7 @@ public class SampleFingerprintingDecider extends OicrDecider {
         run.addProperty("output_prefix", this.output_prefix);
         run.addProperty("output_dir", this.output_dir);
         run.addProperty("manual_output",  this.manual_output);
+        run.addProperty("mixed_coverage", Boolean.toString(this.mixedCoverageMode));
         run.addProperty("allow_singletons", Boolean.toString(this.allow_singletons));
         
         if (!this.queue.isEmpty()) {

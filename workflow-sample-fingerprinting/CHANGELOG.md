@@ -1,3 +1,5 @@
+## 2.4   - 2016-12-13
+- Added two new jobs - optional alternative to jaccard matric building and proximity table generator script (specs for table in perldoc of make_table.pl script)
 ## 2.2.2 - 2016-01-19
 - Introduced another solution to older tbi indices (tbi files are copied instead of linked to)
 ## 2.2.1 - 2015-09-30
