@@ -1,3 +1,5 @@
+## 1.3 - 2017-01-30
+- [GP-875](https://jira.oicr.on.ca/browse/GP-875) - Update decider to SeqWare 1.1.1-gsi
 ## 1.2.2 - 2016-02-02
 - Fixing an issue with picking up wrong hotspots file
 ## 1.2.1 - 2016-01-19

@@ -32,29 +32,31 @@
     "files" : [ {
       "studyTitle" : [ "ABvsInvitrogenReagentComp" ],
       "studyAttributes" : {
-        "study.geo_lab_group_id" : [ [ "53" ] ]
+        "geo_lab_group_id" : [ [ "53" ] ]
       },
-      "experimentName" : [ "Geo_ABvsInvitrogenReagentComp_ILLUMINA_EX_{F*101}{..}{R*101}" ],
+      "experimentName" : [ ],
       "experimentAttributes" : { },
       "sampleName" : [ "PCSI_0100_Ly_R_PE_446_EX" ],
       "sampleAttributes" : {
-        "sample.geo_library_source_template_type" : [ [ "EX" ] ],
-        "sample.geo_prep_kit" : [ [ "GA_multiplex" ] ],
-        "sample.geo_reaction_id" : [ [ "5388" ] ],
-        "sample.geo_run_id_and_position_and_slot" : [ [ "852_7_1" ] ],
-        "sample.geo_targeted_resequencing" : [ [ "Agilent SureSelect ICGC/Sanger Exon" ] ],
-        "sample.geo_template_id" : [ [ "14420" ] ],
-        "sample.geo_template_type" : [ [ "Illumina PE Library Seq" ] ],
-        "sample.geo_tissue_origin" : [ [ "Ly" ] ],
-        "sample.geo_tissue_type" : [ [ "R" ] ]
+        "geo_external_name" : [ [ "2537-1" ] ],
+        "geo_library_source_template_type" : [ [ "EX" ] ],
+        "geo_organism" : [ [ "Homo sapiens" ] ],
+        "geo_prep_kit" : [ [ "GA_multiplex" ] ],
+        "geo_reaction_id" : [ [ "5388" ] ],
+        "geo_run_id_and_position_and_slot" : [ [ "852_7_1" ] ],
+        "geo_targeted_resequencing" : [ [ "Agilent SureSelect ICGC/Sanger Exon" ] ],
+        "geo_template_id" : [ [ "13147", "13158", "13594", "14419", "14420" ] ],
+        "geo_template_type" : [ [ "Identity", "Illumina PE Library", "Illumina PE Library Seq", "gDNA" ] ],
+        "geo_tissue_origin" : [ [ "Ly" ] ],
+        "geo_tissue_type" : [ [ "R" ] ]
       },
       "sequencerRunName" : [ "111027_SN203_0127_BC08J8ACXX" ],
       "sequencerRunAttributes" : {
-        "sequencerrun.geo_instrument_run_id" : [ [ "852" ] ]
+        "geo_instrument_run_id" : [ [ "852" ] ]
       },
       "laneName" : [ "111027_SN203_0127_BC08J8ACXX_lane_7" ],
       "laneAttributes" : {
-        "lane.geo_lane" : [ [ "7" ] ]
+        "geo_lane" : [ [ "7" ] ]
       },
       "iusTag" : [ "ATCACG" ],
       "iusAttributes" : { },
@@ -67,29 +69,31 @@
     }, {
       "studyTitle" : [ "ABvsInvitrogenReagentComp" ],
       "studyAttributes" : {
-        "study.geo_lab_group_id" : [ [ "53" ] ]
+        "geo_lab_group_id" : [ [ "53" ] ]
       },
-      "experimentName" : [ "Geo_ABvsInvitrogenReagentComp_ILLUMINA_EX_{F*101}{..}{R*101}" ],
+      "experimentName" : [ ],
       "experimentAttributes" : { },
       "sampleName" : [ "PCSI_0112_Ly_R_PE_446_EX" ],
       "sampleAttributes" : {
-        "sample.geo_library_source_template_type" : [ [ "EX" ] ],
-        "sample.geo_prep_kit" : [ [ "GA_multiplex" ] ],
-        "sample.geo_reaction_id" : [ [ "5389" ] ],
-        "sample.geo_run_id_and_position_and_slot" : [ [ "852_7_1" ] ],
-        "sample.geo_targeted_resequencing" : [ [ "Agilent SureSelect ICGC/Sanger Exon" ] ],
-        "sample.geo_template_id" : [ [ "14422" ] ],
-        "sample.geo_template_type" : [ [ "Illumina PE Library Seq" ] ],
-        "sample.geo_tissue_origin" : [ [ "Ly" ] ],
-        "sample.geo_tissue_type" : [ [ "R" ] ]
+        "geo_external_name" : [ [ "932-1" ] ],
+        "geo_library_source_template_type" : [ [ "EX" ] ],
+        "geo_organism" : [ [ "Homo sapiens" ] ],
+        "geo_prep_kit" : [ [ "GA_multiplex" ] ],
+        "geo_reaction_id" : [ [ "5389" ] ],
+        "geo_run_id_and_position_and_slot" : [ [ "852_7_1" ] ],
+        "geo_targeted_resequencing" : [ [ "Agilent SureSelect ICGC/Sanger Exon" ] ],
+        "geo_template_id" : [ [ "13117", "13160", "13595", "14421", "14422" ] ],
+        "geo_template_type" : [ [ "Identity", "Illumina PE Library", "Illumina PE Library Seq", "gDNA" ] ],
+        "geo_tissue_origin" : [ [ "Ly" ] ],
+        "geo_tissue_type" : [ [ "R" ] ]
       },
       "sequencerRunName" : [ "111027_SN203_0127_BC08J8ACXX" ],
       "sequencerRunAttributes" : {
-        "sequencerrun.geo_instrument_run_id" : [ [ "852" ] ]
+        "geo_instrument_run_id" : [ [ "852" ] ]
       },
       "laneName" : [ "111027_SN203_0127_BC08J8ACXX_lane_7" ],
       "laneAttributes" : {
-        "lane.geo_lane" : [ [ "7" ] ]
+        "geo_lane" : [ [ "7" ] ]
       },
       "iusTag" : [ "CGATGT" ],
       "iusAttributes" : { },
@@ -102,29 +106,31 @@
     }, {
       "studyTitle" : [ "ABvsInvitrogenReagentComp" ],
       "studyAttributes" : {
-        "study.geo_lab_group_id" : [ [ "53" ] ]
+        "geo_lab_group_id" : [ [ "53" ] ]
       },
-      "experimentName" : [ "Geo_ABvsInvitrogenReagentComp_ILLUMINA_EX_{F*101}{..}{R*101}" ],
+      "experimentName" : [ ],
       "experimentAttributes" : { },
       "sampleName" : [ "PCSI_0115_Ly_R_PE_449_EX" ],
       "sampleAttributes" : {
-        "sample.geo_library_source_template_type" : [ [ "EX" ] ],
-        "sample.geo_prep_kit" : [ [ "GA_multiplex" ] ],
-        "sample.geo_reaction_id" : [ [ "5390" ] ],
-        "sample.geo_run_id_and_position_and_slot" : [ [ "852_7_1" ] ],
-        "sample.geo_targeted_resequencing" : [ [ "Agilent SureSelect ICGC/Sanger Exon" ] ],
-        "sample.geo_template_id" : [ [ "14424" ] ],
-        "sample.geo_template_type" : [ [ "Illumina PE Library Seq" ] ],
-        "sample.geo_tissue_origin" : [ [ "Ly" ] ],
-        "sample.geo_tissue_type" : [ [ "R" ] ]
+        "geo_external_name" : [ [ "1196-1" ] ],
+        "geo_library_source_template_type" : [ [ "EX" ] ],
+        "geo_organism" : [ [ "Homo sapiens" ] ],
+        "geo_prep_kit" : [ [ "GA_multiplex" ] ],
+        "geo_reaction_id" : [ [ "5390" ] ],
+        "geo_run_id_and_position_and_slot" : [ [ "852_7_1" ] ],
+        "geo_targeted_resequencing" : [ [ "Agilent SureSelect ICGC/Sanger Exon" ] ],
+        "geo_template_id" : [ [ "13120", "13165", "13593", "14423", "14424" ] ],
+        "geo_template_type" : [ [ "Identity", "Illumina PE Library", "Illumina PE Library Seq", "gDNA" ] ],
+        "geo_tissue_origin" : [ [ "Ly" ] ],
+        "geo_tissue_type" : [ [ "R" ] ]
       },
       "sequencerRunName" : [ "111027_SN203_0127_BC08J8ACXX" ],
       "sequencerRunAttributes" : {
-        "sequencerrun.geo_instrument_run_id" : [ [ "852" ] ]
+        "geo_instrument_run_id" : [ [ "852" ] ]
       },
       "laneName" : [ "111027_SN203_0127_BC08J8ACXX_lane_7" ],
       "laneAttributes" : {
-        "lane.geo_lane" : [ [ "7" ] ]
+        "geo_lane" : [ [ "7" ] ]
       },
       "iusTag" : [ "TTAGGC" ],
       "iusAttributes" : { },
@@ -137,29 +143,31 @@
     }, {
       "studyTitle" : [ "ABvsInvitrogenReagentComp" ],
       "studyAttributes" : {
-        "study.geo_lab_group_id" : [ [ "53" ] ]
+        "geo_lab_group_id" : [ [ "53" ] ]
       },
-      "experimentName" : [ "Geo_ABvsInvitrogenReagentComp_ILLUMINA_EX_{F*101}{..}{R*101}" ],
+      "experimentName" : [ ],
       "experimentAttributes" : { },
       "sampleName" : [ "PCSI_0116_Sp_R_PE_444_EX" ],
       "sampleAttributes" : {
-        "sample.geo_library_source_template_type" : [ [ "EX" ] ],
-        "sample.geo_prep_kit" : [ [ "GA_multiplex" ] ],
-        "sample.geo_reaction_id" : [ [ "5391" ] ],
-        "sample.geo_run_id_and_position_and_slot" : [ [ "852_8_1" ] ],
-        "sample.geo_targeted_resequencing" : [ [ "Agilent SureSelect ICGC/Sanger Exon" ] ],
-        "sample.geo_template_id" : [ [ "14426" ] ],
-        "sample.geo_template_type" : [ [ "Illumina PE Library Seq" ] ],
-        "sample.geo_tissue_origin" : [ [ "Sp" ] ],
-        "sample.geo_tissue_type" : [ [ "R" ] ]
+        "geo_external_name" : [ [ "1452" ] ],
+        "geo_library_source_template_type" : [ [ "EX" ] ],
+        "geo_organism" : [ [ "Homo sapiens" ] ],
+        "geo_prep_kit" : [ [ "GA_multiplex" ] ],
+        "geo_reaction_id" : [ [ "5391" ] ],
+        "geo_run_id_and_position_and_slot" : [ [ "852_8_1" ] ],
+        "geo_targeted_resequencing" : [ [ "Agilent SureSelect ICGC/Sanger Exon" ] ],
+        "geo_template_id" : [ [ "13121", "13167", "13596", "14425", "14426" ] ],
+        "geo_template_type" : [ [ "Identity", "Illumina PE Library", "Illumina PE Library Seq", "gDNA" ] ],
+        "geo_tissue_origin" : [ [ "Sp" ] ],
+        "geo_tissue_type" : [ [ "R" ] ]
       },
       "sequencerRunName" : [ "111027_SN203_0127_BC08J8ACXX" ],
       "sequencerRunAttributes" : {
-        "sequencerrun.geo_instrument_run_id" : [ [ "852" ] ]
+        "geo_instrument_run_id" : [ [ "852" ] ]
       },
       "laneName" : [ "111027_SN203_0127_BC08J8ACXX_lane_8" ],
       "laneAttributes" : {
-        "lane.geo_lane" : [ [ "8" ] ]
+        "geo_lane" : [ [ "8" ] ]
       },
       "iusTag" : [ "TGACCA" ],
       "iusAttributes" : { },
@@ -172,29 +180,31 @@
     }, {
       "studyTitle" : [ "ABvsInvitrogenReagentComp" ],
       "studyAttributes" : {
-        "study.geo_lab_group_id" : [ [ "53" ] ]
+        "geo_lab_group_id" : [ [ "53" ] ]
       },
-      "experimentName" : [ "Geo_ABvsInvitrogenReagentComp_ILLUMINA_EX_{F*101}{..}{R*101}" ],
+      "experimentName" : [ ],
       "experimentAttributes" : { },
       "sampleName" : [ "PCSI_0117_St_R_PE_434_EX" ],
       "sampleAttributes" : {
-        "sample.geo_library_source_template_type" : [ [ "EX" ] ],
-        "sample.geo_prep_kit" : [ [ "GA_multiplex" ] ],
-        "sample.geo_reaction_id" : [ [ "5392" ] ],
-        "sample.geo_run_id_and_position_and_slot" : [ [ "852_8_1" ] ],
-        "sample.geo_targeted_resequencing" : [ [ "Agilent SureSelect ICGC/Sanger Exon" ] ],
-        "sample.geo_template_id" : [ [ "14428" ] ],
-        "sample.geo_template_type" : [ [ "Illumina PE Library Seq" ] ],
-        "sample.geo_tissue_origin" : [ [ "St" ] ],
-        "sample.geo_tissue_type" : [ [ "R" ] ]
+        "geo_external_name" : [ [ "1454" ] ],
+        "geo_library_source_template_type" : [ [ "EX" ] ],
+        "geo_organism" : [ [ "Homo sapiens" ] ],
+        "geo_prep_kit" : [ [ "GA_multiplex" ] ],
+        "geo_reaction_id" : [ [ "5392" ] ],
+        "geo_run_id_and_position_and_slot" : [ [ "852_8_1" ] ],
+        "geo_targeted_resequencing" : [ [ "Agilent SureSelect ICGC/Sanger Exon" ] ],
+        "geo_template_id" : [ [ "13122", "13169", "13597", "14427", "14428" ] ],
+        "geo_template_type" : [ [ "Identity", "Illumina PE Library", "Illumina PE Library Seq", "gDNA" ] ],
+        "geo_tissue_origin" : [ [ "St" ] ],
+        "geo_tissue_type" : [ [ "R" ] ]
       },
       "sequencerRunName" : [ "111027_SN203_0127_BC08J8ACXX" ],
       "sequencerRunAttributes" : {
-        "sequencerrun.geo_instrument_run_id" : [ [ "852" ] ]
+        "geo_instrument_run_id" : [ [ "852" ] ]
       },
       "laneName" : [ "111027_SN203_0127_BC08J8ACXX_lane_8" ],
       "laneAttributes" : {
-        "lane.geo_lane" : [ [ "8" ] ]
+        "geo_lane" : [ [ "8" ] ]
       },
       "iusTag" : [ "ACAGTG" ],
       "iusAttributes" : { },
@@ -207,29 +217,31 @@
     }, {
       "studyTitle" : [ "ABvsInvitrogenReagentComp" ],
       "studyAttributes" : {
-        "study.geo_lab_group_id" : [ [ "53" ] ]
+        "geo_lab_group_id" : [ [ "53" ] ]
       },
-      "experimentName" : [ "Geo_ABvsInvitrogenReagentComp_ILLUMINA_EX_{F*101}{..}{R*101}" ],
+      "experimentName" : [ ],
       "experimentAttributes" : { },
       "sampleName" : [ "PCSI_0118_Sp_R_PE_432_EX" ],
       "sampleAttributes" : {
-        "sample.geo_library_source_template_type" : [ [ "EX" ] ],
-        "sample.geo_prep_kit" : [ [ "GA_multiplex" ] ],
-        "sample.geo_reaction_id" : [ [ "5393" ] ],
-        "sample.geo_run_id_and_position_and_slot" : [ [ "852_8_1" ] ],
-        "sample.geo_targeted_resequencing" : [ [ "Agilent SureSelect ICGC/Sanger Exon" ] ],
-        "sample.geo_template_id" : [ [ "14430" ] ],
-        "sample.geo_template_type" : [ [ "Illumina PE Library Seq" ] ],
-        "sample.geo_tissue_origin" : [ [ "Sp" ] ],
-        "sample.geo_tissue_type" : [ [ "R" ] ]
+        "geo_external_name" : [ [ "1458" ] ],
+        "geo_library_source_template_type" : [ [ "EX" ] ],
+        "geo_organism" : [ [ "Homo sapiens" ] ],
+        "geo_prep_kit" : [ [ "GA_multiplex" ] ],
+        "geo_reaction_id" : [ [ "5393" ] ],
+        "geo_run_id_and_position_and_slot" : [ [ "852_8_1" ] ],
+        "geo_targeted_resequencing" : [ [ "Agilent SureSelect ICGC/Sanger Exon" ] ],
+        "geo_template_id" : [ [ "13123", "13171", "13598", "14429", "14430" ] ],
+        "geo_template_type" : [ [ "Identity", "Illumina PE Library", "Illumina PE Library Seq", "gDNA" ] ],
+        "geo_tissue_origin" : [ [ "Sp" ] ],
+        "geo_tissue_type" : [ [ "R" ] ]
       },
       "sequencerRunName" : [ "111027_SN203_0127_BC08J8ACXX" ],
       "sequencerRunAttributes" : {
-        "sequencerrun.geo_instrument_run_id" : [ [ "852" ] ]
+        "geo_instrument_run_id" : [ [ "852" ] ]
       },
       "laneName" : [ "111027_SN203_0127_BC08J8ACXX_lane_8" ],
       "laneAttributes" : {
-        "lane.geo_lane" : [ [ "8" ] ]
+        "geo_lane" : [ [ "8" ] ]
       },
       "iusTag" : [ "GCCAAT" ],
       "iusAttributes" : { },
@@ -242,29 +254,31 @@
     }, {
       "studyTitle" : [ "ABvsInvitrogenReagentComp" ],
       "studyAttributes" : {
-        "study.geo_lab_group_id" : [ [ "53" ] ]
+        "geo_lab_group_id" : [ [ "53" ] ]
       },
-      "experimentName" : [ "Geo_ABvsInvitrogenReagentComp_ILLUMINA_EX_{F*101}{..}{R*101}" ],
+      "experimentName" : [ ],
       "experimentAttributes" : { },
       "sampleName" : [ "PCSI_0119_Sp_R_PE_428_EX" ],
       "sampleAttributes" : {
-        "sample.geo_library_source_template_type" : [ [ "EX" ] ],
-        "sample.geo_prep_kit" : [ [ "GA_multiplex" ] ],
-        "sample.geo_reaction_id" : [ [ "5394" ] ],
-        "sample.geo_run_id_and_position_and_slot" : [ [ "860_5_1" ] ],
-        "sample.geo_targeted_resequencing" : [ [ "Agilent SureSelect ICGC/Sanger Exon" ] ],
-        "sample.geo_template_id" : [ [ "14432" ] ],
-        "sample.geo_template_type" : [ [ "Illumina PE Library Seq" ] ],
-        "sample.geo_tissue_origin" : [ [ "Sp" ] ],
-        "sample.geo_tissue_type" : [ [ "R" ] ]
+        "geo_external_name" : [ [ "1464" ] ],
+        "geo_library_source_template_type" : [ [ "EX" ] ],
+        "geo_organism" : [ [ "Homo sapiens" ] ],
+        "geo_prep_kit" : [ [ "GA_multiplex" ] ],
+        "geo_reaction_id" : [ [ "5394" ] ],
+        "geo_run_id_and_position_and_slot" : [ [ "860_5_1" ] ],
+        "geo_targeted_resequencing" : [ [ "Agilent SureSelect ICGC/Sanger Exon" ] ],
+        "geo_template_id" : [ [ "13124", "13173", "13599", "14431", "14432" ] ],
+        "geo_template_type" : [ [ "Identity", "Illumina PE Library", "Illumina PE Library Seq", "gDNA" ] ],
+        "geo_tissue_origin" : [ [ "Sp" ] ],
+        "geo_tissue_type" : [ [ "R" ] ]
       },
       "sequencerRunName" : [ "111110_h1080_0084_AC08UPACXX" ],
       "sequencerRunAttributes" : {
-        "sequencerrun.geo_instrument_run_id" : [ [ "860" ] ]
+        "geo_instrument_run_id" : [ [ "860" ] ]
       },
       "laneName" : [ "111110_h1080_0084_AC08UPACXX_lane_5" ],
       "laneAttributes" : {
-        "lane.geo_lane" : [ [ "5" ] ]
+        "geo_lane" : [ [ "5" ] ]
       },
       "iusTag" : [ "CAGATC" ],
       "iusAttributes" : { },
@@ -277,29 +291,31 @@
     }, {
       "studyTitle" : [ "ABvsInvitrogenReagentComp" ],
       "studyAttributes" : {
-        "study.geo_lab_group_id" : [ [ "53" ] ]
+        "geo_lab_group_id" : [ [ "53" ] ]
       },
-      "experimentName" : [ "Geo_ABvsInvitrogenReagentComp_ILLUMINA_EX_{F*101}{..}{R*101}" ],
+      "experimentName" : [ ],
       "experimentAttributes" : { },
       "sampleName" : [ "PCSI_0120_St_R_PE_420_EX" ],
       "sampleAttributes" : {
-        "sample.geo_library_source_template_type" : [ [ "EX" ] ],
-        "sample.geo_prep_kit" : [ [ "GA_multiplex" ] ],
-        "sample.geo_reaction_id" : [ [ "5395" ] ],
-        "sample.geo_run_id_and_position_and_slot" : [ [ "860_6_1" ] ],
-        "sample.geo_targeted_resequencing" : [ [ "Agilent SureSelect ICGC/Sanger Exon" ] ],
-        "sample.geo_template_id" : [ [ "14434" ] ],
-        "sample.geo_template_type" : [ [ "Illumina PE Library Seq" ] ],
-        "sample.geo_tissue_origin" : [ [ "St" ] ],
-        "sample.geo_tissue_type" : [ [ "R" ] ]
+        "geo_external_name" : [ [ "1465" ] ],
+        "geo_library_source_template_type" : [ [ "EX" ] ],
+        "geo_organism" : [ [ "Homo sapiens" ] ],
+        "geo_prep_kit" : [ [ "GA_multiplex" ] ],
+        "geo_reaction_id" : [ [ "5395" ] ],
+        "geo_run_id_and_position_and_slot" : [ [ "860_6_1" ] ],
+        "geo_targeted_resequencing" : [ [ "Agilent SureSelect ICGC/Sanger Exon" ] ],
+        "geo_template_id" : [ [ "13125", "13175", "13600", "14433", "14434" ] ],
+        "geo_template_type" : [ [ "Identity", "Illumina PE Library", "Illumina PE Library Seq", "gDNA" ] ],
+        "geo_tissue_origin" : [ [ "St" ] ],
+        "geo_tissue_type" : [ [ "R" ] ]
       },
       "sequencerRunName" : [ "111110_h1080_0084_AC08UPACXX" ],
       "sequencerRunAttributes" : {
-        "sequencerrun.geo_instrument_run_id" : [ [ "860" ] ]
+        "geo_instrument_run_id" : [ [ "860" ] ]
       },
       "laneName" : [ "111110_h1080_0084_AC08UPACXX_lane_6" ],
       "laneAttributes" : {
-        "lane.geo_lane" : [ [ "6" ] ]
+        "geo_lane" : [ [ "6" ] ]
       },
       "iusTag" : [ "ACTTGA" ],
       "iusAttributes" : { },

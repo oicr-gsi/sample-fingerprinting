@@ -1,14 +1,16 @@
 {
-    "defaultDescription": "SampleFingerprinting decider test",
-    "defaultMetricsResources": "/expected_output/development/",
-    "defaultParameters": {
-        "--output-path": "./",
-        "--parent-wf-accessions": "1753099",
-        "--before-date": "2015-05-12"
+    "defaults": {
+        "description": "SampleFingerprinting decider test",
+        "metricsResources": "/expected_output/development/",
+        "parameters": {
+            "--output-path": "./",
+            "--parent-wf-accessions": "1753099",
+            "--before-date": "2015-05-12"
+        },
+        "iniExclusions": ["parent-accessions", "workflow_run_accession", "workflow-run-accession",
+            "unique_string", "parent_accessions", "parent_accession", "input_file", "input_files", "workflow_bundle_dir",
+            "output_prefix"]
     },
-    "defaultIniExclusions": ["parent-accessions", "workflow_run_accession", "workflow-run-accession",
-        "unique_string", "parent_accessions", "parent_accession", "input_file", "input_files", "workflow_bundle_dir",
-        "output_prefix"],
     "tests": [
         {
             "id": "AshPC study test",
