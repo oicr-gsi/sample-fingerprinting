@@ -1,3 +1,5 @@
+## 2.5 - 2017-01-30
+- [GP-875](https://jira.oicr.on.ca/browse/GP-875) - Update decider to SeqWare 1.1.1-gsi
 ## 2.4   - 2016-12-13
 - Version updated to match the workflow's upgrade
 ## 2.2.3 - 2016-02-01

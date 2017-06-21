@@ -32,9 +32,6 @@ public class FingerprintCollectorDecider extends OicrDecider {
     private Map<String, BeSmall> fileSwaToSmall;
     private String gatkMemory;
 
-    private String outputPrefix = "./";
-    private String outputDir = "seqware-results";
-    private String manualOutput = "false";
     private String groupBy = "";
     private String customBamList = "";
     //GATK:
@@ -67,13 +64,7 @@ public class FingerprintCollectorDecider extends OicrDecider {
                 + "so that it runs on data only of this resequencing type", false);
         defineArgument("config-file", "Optional. Path to a config file in .xml format "
                      + "Default: /.mounts/labs/PDE/data/SampleFingerprinting/hotspots.config.xml", false);
-        defineArgument("output-path", "Optional: the path where the files should be copied to "
-                + "after analysis. Corresponds to output-prefix in INI file. Default: ./", false);
-        defineArgument("output-folder", "Optional: the name of the folder to put the output into relative to "
-                + "the output-path. Corresponds to output-dir in INI file. Default: seqware-results", false);
         defineArgument("queue", "Optional: Set the queue (for example, to production)", false);
-        defineArgument("manual-output", "Optional. Set the manual output either to true or false "
-                + "when running the workflow, the default is false", false);
         defineArgument("gatk-memory", "Optional. Set the memory allocated to GATK jobs "
                 + "when running the workflow, the default is 5000", false);
         defineArgument("stand-call-conf", "Optional. Set GATK parameter stand_call_conf "
@@ -191,21 +182,6 @@ public class FingerprintCollectorDecider extends OicrDecider {
 
         if (this.options.has("verbose")) {
             Log.setVerbose(true);
-        }
-
-        if (this.options.has("manual-output")) {
-            this.manualOutput = Boolean.valueOf(options.valueOf("manual-output").toString()) ? "true" : "false";
-        }
-
-        if (this.options.has("output-path")) {
-            this.outputPrefix = options.valueOf("output-path").toString();
-            if (!this.outputPrefix.endsWith("/")) {
-                this.outputPrefix += "/";
-            }
-        }
-
-        if (this.options.has("output-folder")) {
-            this.outputDir = options.valueOf("output-folder").toString();
         }
         
         if (this.options.has("study-name")) {
@@ -431,10 +407,7 @@ public class FingerprintCollectorDecider extends OicrDecider {
         }
         run.addProperty("input_files", inputFiles.toString());
         run.addProperty("rg_details", rgDetails.toString());
-        run.addProperty("output_prefix",this.outputPrefix);
-        run.addProperty("output_dir", this.outputDir);
         run.addProperty("gatk_prefix",this.gatkPrefix);
-        run.addProperty("manual_output", this.manualOutput);
         run.addProperty("preprocess_bam", Boolean.toString(this.preprocessBam));
         run.addProperty("checked_snps", checkedSNPs);
         run.addProperty("check_points", checkPoints);
@@ -547,7 +520,7 @@ public class FingerprintCollectorDecider extends OicrDecider {
             }
             FileAttributes fa = new FileAttributes(rv, rv.getFiles().get(0));
             this.rgId = rv.getAttribute(Header.FILE_SWA.getTitle());
-            this.rgPl = rv.getAttribute(Header.SAMPLE_TAG_PREFIX.getTitle()     + "geo_template_type");
+            this.rgPl = rv.getAttribute("Sequencer Run Platform Name");
             String rsType = rv.getAttribute(Header.SAMPLE_TAG_PREFIX.getTitle() + "geo_targeted_resequencing");
             if (rsType == null || rsType.isEmpty() || rsType.equals(" ")) {
                 rsType = "NA";
