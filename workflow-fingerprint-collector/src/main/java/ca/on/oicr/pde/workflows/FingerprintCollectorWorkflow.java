@@ -24,11 +24,9 @@ public class FingerprintCollectorWorkflow extends OicrWorkflow {
     private String[] vcfFiles;
     private String[] gatkDirs;
     private String dataDir;
-    private final static String TEMP_DIR = "tempfiles/";
-    private final static String GATK_TMP = "temp";
-    private final static String FINDIR  = "finfiles/";
-    //private final int batchCount = 100; // Use for job batching, this many jobs
-    private String gatkPrefix = "./";
+    private static final String TEMP_DIR = "tempfiles/";
+    private static final String GATK_TMP = "temp";
+    private static final String FINDIR  = "finfiles/";
 
     //Additional one for GATK:
     private String gatkVersion;
@@ -197,9 +195,9 @@ public class FingerprintCollectorWorkflow extends OicrWorkflow {
                 this.dataDir += "/";
             }
             //Setup gatk prefix
-            this.gatkPrefix = getOptionalProperty("gatk_prefix", "./");
-            if (!this.gatkPrefix.endsWith("/")) {
-                this.gatkPrefix += "/";
+            String gatkPrefix = getOptionalProperty("gatk_prefix", "./");
+            if (!gatkPrefix.endsWith("/")) {
+                gatkPrefix += "/";
             }
 
             this.addDirectory(this.dataDir);
@@ -210,7 +208,7 @@ public class FingerprintCollectorWorkflow extends OicrWorkflow {
             this.gatkDirs = new String[numberOfFiles];
             int seed = this.makeRandom(RANDOM_SEED);
             for (int b = 0; b < numberOfFiles; b++) {
-                this.gatkDirs[b] = this.gatkPrefix + GATK_TMP + seed++;
+                this.gatkDirs[b] = gatkPrefix + GATK_TMP + seed++;
                 this.addDirectory(gatkDirs[b]);
             }
 
