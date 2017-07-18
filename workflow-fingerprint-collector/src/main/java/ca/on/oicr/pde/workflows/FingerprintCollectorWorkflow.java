@@ -23,11 +23,10 @@ public class FingerprintCollectorWorkflow extends OicrWorkflow {
     private String[] bamFiles;
     private String[] vcfFiles;
     private String[] gatkDirs;
-    private String studyName = "";
     private String dataDir;
-    private final String tempDir = "tempfiles/";
-    private final String gatkTmp = "temp";
-    private final String finDir  = "finfiles/";
+    private final static String tempDir = "tempfiles/";
+    private final static String gatkTmp = "temp";
+    private final static String finDir  = "finfiles/";
     //private final int batchCount = 100; // Use for job batching, this many jobs
     private String gatkPrefix = "./";
 
@@ -66,7 +65,7 @@ public class FingerprintCollectorWorkflow extends OicrWorkflow {
         // Set up reference, bam and vcf files here
         try {
             if (getProperty(INPUT_FILES) == null) {
-                Logger.getLogger(FingerprintCollectorWorkflow.class.getName()).log(Level.SEVERE, INPUT_FILES+" is not set, we need at least one bam file");
+                Logger.getLogger(FingerprintCollectorWorkflow.class.getName()).log(Level.SEVERE, "% is not set, we need at least one bam file", INPUT_FILES);
                 return (null);
             } else {
                 this.bamFiles = getProperty(INPUT_FILES).split(",");
@@ -139,12 +138,14 @@ public class FingerprintCollectorWorkflow extends OicrWorkflow {
             } else {
                 this.queue = getProperty("queue");
             }
+            
+            String studyName = "";
 
             if (getProperty("study_name") == null) {
                 Logger.getLogger(FingerprintCollectorWorkflow.class.getName()).log(Level.WARNING, "Study name isn't not set, will try to extract it from file names");
-                this.studyName = "";
+                studyName = "";
             } else {
-                this.studyName = getProperty("study_name");
+                studyName = getProperty("study_name");
             }
 
             if (getProperty("manual_output") == null) {
@@ -159,12 +160,12 @@ public class FingerprintCollectorWorkflow extends OicrWorkflow {
             this.baseNames = new ArrayList<String>();
             for (int i = 0; i < this.bamFiles.length; i++) {
                 //Using first file, try to guess the study name if it was not provided as an argument in .ini file
-                if (i == 0 && this.studyName.isEmpty()) {
+                if (i == 0 && studyName.isEmpty()) {
                     if (bamFiles[i].matches("SWID_\\d+_\\D+_\\d+")) {
                         String tempName = bamFiles[i].substring(bamFiles[i].lastIndexOf("SWID_"));
-                        this.studyName = tempName.substring(0, tempName.indexOf('_') - 1);
+                        studyName = tempName.substring(0, tempName.indexOf('_') - 1);
                     } else {
-                        this.studyName = "UNDEF";
+                        studyName = "UNDEF";
                     }
                 }
 
@@ -441,9 +442,9 @@ public class FingerprintCollectorWorkflow extends OicrWorkflow {
     }
 
     private String makeBasename(final String name) {
-        String basename = name.substring(name.lastIndexOf("/") + 1, name.lastIndexOf(".bam"));
+        String basename = name.substring(name.lastIndexOf('/') + 1, name.lastIndexOf(".bam"));
         if (basename.contains(".")) {
-            basename = basename.substring(0, basename.indexOf("."));
+            basename = basename.substring(0, basename.indexOf('.'));
         }
         return basename;
     }
