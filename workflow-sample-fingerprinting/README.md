@@ -63,11 +63,11 @@ Optional:
                                           SampleFingerprinting workflow runs)
     queue                     string      Name of the (SGE) queue to schedule to [production]
 
-####Building similarity matrix
+#### Building similarity matrix
 
 This step uses a wrapper perl script (jaccard_coeff.matrix.pl) which calls vcftools executable vcf-compare. Vcf files are analyzed for overlap and then we calculate Jaccard index that gets recorded into the matrix and uses as a measurement of similarity between two genotypes.
 
-####Producing the HTML report
+#### Producing the HTML report
 
 make_report.pl is doing the bulk of the job by clustering data (using R scripts) and identifying potential swaps.This script produces several output files, most notably - heatmaps for lanes grouped together based on their similarity. The heatmaps organized in a html report (index.html), which also provides links for downloading similarity matrices and genotype tables for each of the heatmaps. The report may be further customized using our webtool (needs to be deployed on a webserver).
 
@@ -82,15 +82,15 @@ The HTML Report contains the following:
     Similarity matrix describing the proximity of all files in a heatmap
     Link to Genotype CSV (for each heatmap)
     
-####Sending Alerts
+#### Sending Alerts
 
 There is a small script plotReporter.pl that sends alerts notifying about potential sample swaps detected by this workflow. A comma-delimited list of emails should be assigned to parameter watchers_list. The scripts rely on make_report.pl script that inserts special flags into .html report. plotReporter.pl detects these tags and sends out emails with generic text and location of the result bundle.
 
-###Output files
+### Output files
 
 **sample_fingerprint.[StudyName].report.zip**
 Contains index.html with Sample Swap report, similarity matrix files, heatmaps of clustered samples in png format
 
-###Support
+### Support
 
 For support, please file an issue on the [Github project](https://github.com/oicr-gsi) or send an email to gsi@oicr.on.ca .
