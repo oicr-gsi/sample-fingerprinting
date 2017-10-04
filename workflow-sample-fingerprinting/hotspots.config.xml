@@ -26,6 +26,10 @@
       <checked_snps>/.mounts/labs/PDE/data/SampleFingerprinting/snps/dbsnp137.hg19.402.overlap.vcf.gz</checked_snps>
       <check_points>400</check_points>
      </resequencing_type>
+     <resequencing_type id="Agilent SureSelect Human All Exon V6">
+     <checked_snps>/.mounts/labs/PDE/data/SampleFingerprinting/snps/dbsnp137.hg19.402.overlap.vcf.gz</checked_snps>
+      <check_points>400</check_points>
+     </resequencing_type>
      <resequencing_type id="Agilent SureSelect Human All Exon V5 + UTRs">
       <checked_snps>/.mounts/labs/PDE/data/SampleFingerprinting/snps/dbsnp137.hg19.402.overlap.vcf.gz</checked_snps>
       <check_points>550</check_points>
