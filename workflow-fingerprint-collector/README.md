@@ -1,8 +1,6 @@
-##fingerprint-collector workflow
+## fingerprint-collector workflow
 
-Version 1.1.3
-
-###Overview
+### Overview
 
 Fingerprint Collector workflow produces "fingerprint" data for input alignments passed as .bam files. It is a part of the
 original implementation and its task is to produce all intermediate data just before creation of similarity matrix 
@@ -11,7 +9,7 @@ variation data independently for each input .bam file. The below graph describes
 
 ![sample-fingerprinting flowchart](docs/FingerprintCollector_specs.png)
 
-###Dependencies
+### Dependencies
 
 This workflow requires:
 
@@ -21,16 +19,16 @@ This workflow requires:
 * [GenomeAnalysisTK](https://www.broadinstitute.org/gatk/) 2.7-2
 * [tabix](http://sourceforge.net/projects/samtools/files/tabix/) 0.2.6
 
-###Compile
+### Compile
 
 ```
 mvn clean install
 ```
 
-###Usage
+### Usage
 After compilation, [test](http://seqware.github.io/docs/3-getting-started/developer-tutorial/#testing-the-workflow), [bundle](http://seqware.github.io/docs/3-getting-started/developer-tutorial/#packaging-the-workflow-into-a-workflow-bundle) and [install](http://seqware.github.io/docs/3-getting-started/admin-tutorial/#how-to-install-a-workflow) the workflow using the techniques described in the SeqWare documentation.
 
-####Options
+#### Options
 These parameters can be overridden either in the INI file on on the command line using `--override` when [directly scheduling workflow runs](http://seqware.github.io/docs/3-getting-started/user-tutorial/#listing-available-workflows-and-their-parameters) (not using a decider). Defaults are in [square brackets].
 
 Required:
@@ -70,7 +68,7 @@ Optional:
                                           needed for .bam files, should rarely be true
     queue                     string      Name of the (SGE) queue to schedule to [production]
 
-####Indexing with samtools
+#### Indexing with samtools
 
 Indexing with samtools is required by GATK which picks up after indexes (.bai) get generated. The command (samtools index ###.bam) is executed so that index files end up together with their .bam in provisionfiles/### directory.
 Building vcf files with GATK, calculating depth of coverage
@@ -99,8 +97,8 @@ GATK is also used to produce coverage data for SNP loci with the help of another
     -L dbsnp137.hg19.402.overlap.vcf
 
 
-###Output files
+### Output files
 "fingerprint" .vcf.gz, .tbi, .fin files used by the downstream (Sample Fingerprinting) workflow
 
-###Support
+### Support
 For support, please file an issue on the [Github project](https://github.com/oicr-gsi) or send an email to gsi@oicr.on.ca .
