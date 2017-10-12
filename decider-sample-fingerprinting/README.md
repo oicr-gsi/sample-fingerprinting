@@ -1,22 +1,20 @@
-##sample-fingerprinting decider
+## sample-fingerprinting Decider
 
-Version 2.2.3
-
-###Overview
+### Overview
 
 This decider allows to customize and launch SampleFingerprinting workflow runs with the goal
 to identify possible sample swaps.
 
-###Compile
+### Compile
 
 ```
 mvn clean install
 ```
 
-###Usage
+### Usage
 After compilation, [test](http://seqware.github.io/docs/3-getting-started/developer-tutorial/#testing-the-workflow), [bundle](http://seqware.github.io/docs/3-getting-started/developer-tutorial/#packaging-the-workflow-into-a-workflow-bundle) and [install](http://seqware.github.io/docs/3-getting-started/admin-tutorial/#how-to-install-a-workflow) the workflow using the techniques described in the SeqWare documentation.
 
-####Options
+#### Options
 These parameters can be overridden either in the INI file on on the command line using `--override` when [directly scheduling workflow runs](http://seqware.github.io/docs/3-getting-started/user-tutorial/#listing-available-workflows-and-their-parameters) (not using a decider). Defaults are in [square brackets].
 
 Required:
@@ -58,5 +56,5 @@ Optional:
                                           [empty]
 
 
-###Support
+### Support
 For support, please file an issue on the [Github project](https://github.com/oicr-gsi) or send an email to gsi@oicr.on.ca .
