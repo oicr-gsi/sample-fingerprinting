@@ -1,7 +1,5 @@
 ## sample-fingerprinting workflow
 
-Version 2.0.2
-
 ### Overview
 
 Sample Fingerprinting workflow produces a graphical report on genotype clustering by sample (donor) and sends alerts if there's a possible swap/mix-up detected. It uses .vcf .tbi and .fin files produced by FingerprintCollector workflow. The below graph describes the process:
