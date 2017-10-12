@@ -1,14 +1,14 @@
-##sample-fingerprinting workflow
+## sample-fingerprinting workflow
 
 Version 2.0.2
 
-###Overview
+### Overview
 
 Sample Fingerprinting workflow produces a graphical report on genotype clustering by sample (donor) and sends alerts if there's a possible swap/mix-up detected. It uses .vcf .tbi and .fin files produced by FingerprintCollector workflow. The below graph describes the process:
 
 ![sample-fingerprinting flowchart](docs/SampleFingerprinting_specs.png)
 
-###Dependencies
+### Dependencies
 
 This workflow requires:
 
@@ -16,16 +16,16 @@ This workflow requires:
 * [tabix](http://sourceforge.net/projects/samtools/files/tabix/) 0.2.6
 * [vcftools] (http://vcftools.sourceforge.net/) 0.1.10
 
-###Compile
+### Compile
 
 ```
 mvn clean install
 ```
 
-###Usage
+### Usage
 After compilation, [test](http://seqware.github.io/docs/3-getting-started/developer-tutorial/#testing-the-workflow), [bundle](http://seqware.github.io/docs/3-getting-started/developer-tutorial/#packaging-the-workflow-into-a-workflow-bundle) and [install](http://seqware.github.io/docs/3-getting-started/admin-tutorial/#how-to-install-a-workflow) the workflow using the techniques described in the SeqWare documentation.
 
-####Options
+#### Options
 These parameters can be overridden either in the INI file on on the command line using `--override` when [directly scheduling workflow runs](http://seqware.github.io/docs/3-getting-started/user-tutorial/#listing-available-workflows-and-their-parameters) (not using a decider). Defaults are in [square brackets].
 
 Required:
