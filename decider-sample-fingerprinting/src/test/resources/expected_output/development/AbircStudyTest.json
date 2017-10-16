@@ -38,7 +38,7 @@
       "experimentAttributes" : { },
       "sampleName" : [ "PCSI_0100_Ly_R_PE_446_EX" ],
       "sampleAttributes" : {
-        "geo_external_name" : [ [ "2537-1" ] ],
+        "geo_external_name" : [ [ "2011-04-19", "2537-1" ] ],
         "geo_library_source_template_type" : [ [ "EX" ] ],
         "geo_organism" : [ [ "Homo sapiens" ] ],
         "geo_prep_kit" : [ [ "GA_multiplex" ] ],

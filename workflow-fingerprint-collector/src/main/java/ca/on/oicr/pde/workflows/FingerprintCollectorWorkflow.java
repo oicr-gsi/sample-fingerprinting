@@ -1,7 +1,3 @@
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
 package ca.on.oicr.pde.workflows;
 
 import ca.on.oicr.pde.utilities.workflows.OicrWorkflow;
@@ -16,13 +12,6 @@ import net.sourceforge.seqware.pipeline.workflowV2.model.Job;
 import net.sourceforge.seqware.pipeline.workflowV2.model.SqwFile;
 import net.sourceforge.seqware.pipeline.workflowV2.model.Workflow;
 
-/*
- A workaround tested with Bowtie2Alignemr workflow that allows provisioning multiple files into a single dir:
- //DEBUG
- file.setOutputPath("provisionfiles/CUSTOMDIR/" + this.input_fastq1[fileIndex].substring(
- this.input_fastq1[fileIndex].lastIndexOf("/") + 1, this.input_fastq1[fileIndex].length()));
- file.getOutputPath() //GET the path in workflow
- */
 /**
  * @Description For pairing with SampleFingerprinting 2.0 A lighter (split)
  * version of SampleFingerprinting 1.1
@@ -34,13 +23,10 @@ public class FingerprintCollectorWorkflow extends OicrWorkflow {
     private String[] bamFiles;
     private String[] vcfFiles;
     private String[] gatkDirs;
-    private String studyName = "";
     private String dataDir;
-    private final String tempDir = "tempfiles/";
-    private final String gatkTmp = "temp";
-    private final String finDir  = "finfiles/";
-    //private final int batchCount = 100; // Use for job batching, this many jobs
-    private String gatkPrefix = "./";
+    private static final String TEMP_DIR = "tempfiles/";
+    private static final String GATK_TMP = "temp";
+    private static final String FINDIR  = "finfiles/";
 
     //Additional one for GATK:
     private String gatkVersion;
@@ -70,16 +56,17 @@ public class FingerprintCollectorWorkflow extends OicrWorkflow {
     private String bundledJRE;
     private String[] rgDetails;
     private boolean doBamFix = false;
+    private static final String INPUT_FILES="input_files";
 
     @Override
     public Map<String, SqwFile> setupFiles() {
         // Set up reference, bam and vcf files here
         try {
-            if (getProperty("input_files") == null) {
-                Logger.getLogger(FingerprintCollectorWorkflow.class.getName()).log(Level.SEVERE, "input_files is not set, we need at least one bam file");
+            if (getProperty(INPUT_FILES) == null) {
+                Logger.getLogger(FingerprintCollectorWorkflow.class.getName()).log(Level.SEVERE, "% is not set, we need at least one bam file", INPUT_FILES);
                 return (null);
             } else {
-                this.bamFiles = getProperty("input_files").split(",");
+                this.bamFiles = getProperty(INPUT_FILES).split(",");
             }
 
             if (getProperty("gatk_java") == null) {
@@ -149,12 +136,14 @@ public class FingerprintCollectorWorkflow extends OicrWorkflow {
             } else {
                 this.queue = getProperty("queue");
             }
+            
+            String studyName;
 
             if (getProperty("study_name") == null) {
                 Logger.getLogger(FingerprintCollectorWorkflow.class.getName()).log(Level.WARNING, "Study name isn't not set, will try to extract it from file names");
-                this.studyName = "";
+                studyName = "";
             } else {
-                this.studyName = getProperty("study_name");
+                studyName = getProperty("study_name");
             }
 
             if (getProperty("manual_output") == null) {
@@ -162,25 +151,25 @@ public class FingerprintCollectorWorkflow extends OicrWorkflow {
                 Logger.getLogger(FingerprintCollectorWorkflow.class.getName()).log(Level.WARNING, "No manual output requested, will append a random dir to the output path");
             } else {
                 String manualCheck = getProperty("manual_output");
-                this.manualOutput = (manualCheck.isEmpty() || manualCheck.equalsIgnoreCase("false")) ? false : true;
+                this.manualOutput = (manualCheck.isEmpty() || manualCheck.equalsIgnoreCase("false"));
             }
 
             this.vcfFiles = new String[this.bamFiles.length];
-            this.baseNames = new ArrayList<String>();
+            this.baseNames = new ArrayList<>();
             for (int i = 0; i < this.bamFiles.length; i++) {
                 //Using first file, try to guess the study name if it was not provided as an argument in .ini file
-                if (i == 0 && this.studyName.isEmpty()) {
+                if (i == 0 && studyName.isEmpty()) {
                     if (bamFiles[i].matches("SWID_\\d+_\\D+_\\d+")) {
                         String tempName = bamFiles[i].substring(bamFiles[i].lastIndexOf("SWID_"));
-                        this.studyName = tempName.substring(0, tempName.indexOf("_") - 1);
+                        studyName = tempName.substring(0, tempName.indexOf('_') - 1);
                     } else {
-                        this.studyName = "UNDEF";
+                        studyName = "UNDEF";
                     }
                 }
 
-                String basename = this.bamFiles[i].substring(this.bamFiles[i].lastIndexOf("/") + 1, this.bamFiles[i].lastIndexOf(".bam"));
+                String basename = this.bamFiles[i].substring(this.bamFiles[i].lastIndexOf('/') + 1, this.bamFiles[i].lastIndexOf(".bam"));
                 if (basename.contains(".")) {
-                    basename = basename.substring(0, basename.indexOf("."));
+                    basename = basename.substring(0, basename.indexOf('.'));
                 }
 
                 String vcfName = basename + SNPFILE_SUFFIX;
@@ -206,20 +195,20 @@ public class FingerprintCollectorWorkflow extends OicrWorkflow {
                 this.dataDir += "/";
             }
             //Setup gatk prefix
-            this.gatkPrefix = getOptionalProperty("gatk_prefix", "./");
-            if (!this.gatkPrefix.endsWith("/")) {
-                this.gatkPrefix += "/";
+            String gatkPrefix = getOptionalProperty("gatk_prefix", "./");
+            if (!gatkPrefix.endsWith("/")) {
+                gatkPrefix += "/";
             }
 
             this.addDirectory(this.dataDir);
-            this.addDirectory(this.tempDir);
-            this.addDirectory(this.dataDir + this.finDir);
-            int numberOfFiles = getProperty("input_files").split(",").length;
+            this.addDirectory(TEMP_DIR);
+            this.addDirectory(this.dataDir + FINDIR);
+            int numberOfFiles = getProperty(INPUT_FILES).split(",").length;
             //Make a pool of tmp directories for GATK:
             this.gatkDirs = new String[numberOfFiles];
             int seed = this.makeRandom(RANDOM_SEED);
             for (int b = 0; b < numberOfFiles; b++) {
-                this.gatkDirs[b] = this.gatkPrefix + this.gatkTmp + seed++;
+                this.gatkDirs[b] = gatkPrefix + GATK_TMP + seed++;
                 this.addDirectory(gatkDirs[b]);
             }
 
@@ -236,7 +225,7 @@ public class FingerprintCollectorWorkflow extends OicrWorkflow {
             Workflow workflow = this.getWorkflow();
             int newVcfs = 0;
 
-            List<Job> gatkJobs = new ArrayList<Job>();
+            List<Job> gatkJobs = new ArrayList<>();
 
             String[] orderedBamfilePaths = new String[this.bamFiles.length];
             String[] bamfilePathsRG = new String[this.bamFiles.length];
@@ -246,7 +235,7 @@ public class FingerprintCollectorWorkflow extends OicrWorkflow {
 
                 SqwFile bamFile = this.createInFile("application/bam", this.bamFiles[i]);
                 bamFile.setIsInput(true);
-                List<Job> fixerJobs = new ArrayList<Job>();
+                List<Job> fixerJobs = new ArrayList<>();
 
                 if (this.doBamFix) {
                     Log.stdout("Bam pre-processing requested, will re-order and add Read Groups");
@@ -301,11 +290,6 @@ public class FingerprintCollectorWorkflow extends OicrWorkflow {
                     Job bamIndexJob = workflow.createBashJob("index_bams_" + i);
                     bamIndexJob.addFile(bamFile);
                     
-                    /*bamIndexJob.setCommand(getWorkflowBaseDir() + "/bin/" + this.bundledJRE + "/bin/java"
-                            + " -Xmx4000M"
-                            + " -jar " + getWorkflowBaseDir() + "/bin/picard-tools-" + this.picardVersion + "/BuildBamIndex.jar"
-                            + " INPUT=" + bamFile.getProvisionedPath());
-                    */
                     bamIndexJob.setCommand(getWorkflowBaseDir() + "/bin/samtools-" + this.samtoolsVersion
                                          + "/samtools index "
                                          + bamFile.getProvisionedPath());
@@ -351,7 +335,7 @@ public class FingerprintCollectorWorkflow extends OicrWorkflow {
                         .append("-R ").append(this.genomeFile).append(" ")
                         .append("-T DepthOfCoverage ")
                         .append("-I ").append(gatkInputs[i]).append(" ")
-                        .append("-o ").append(this.tempDir).append(this.makeBasename(this.bamFiles[i])).append(" ")
+                        .append("-o ").append(TEMP_DIR).append(this.makeBasename(this.bamFiles[i])).append(" ")
                         .append("-filterRNC ")
                         .append("-L ").append(this.checkedSNPs);
 
@@ -373,12 +357,12 @@ public class FingerprintCollectorWorkflow extends OicrWorkflow {
                 finCommand.append(getWorkflowBaseDir()).append("/dependencies/create_fin.pl")
                         .append(" --refvcf=").append(this.checkedSNPs)
                         .append(" --genotype=").append(this.vcfFiles[i])
-                        .append(" --coverage=").append(this.tempDir).append(basename).append(".sample_interval_summary")
-                        .append(" --datadir=").append(this.tempDir)
-                        .append(" --outdir=").append(this.dataDir).append(this.finDir)
+                        .append(" --coverage=").append(TEMP_DIR).append(basename).append(".sample_interval_summary")
+                        .append(" --datadir=").append(TEMP_DIR)
+                        .append(" --outdir=").append(this.dataDir).append(FINDIR)
                         .append(" --basename=").append(basename);
                 // provision .fin file
-                SqwFile finFile = this.createOutputFile(this.dataDir + this.finDir + basename + ".fin", "text/plain", this.manualOutput);
+                SqwFile finFile = this.createOutputFile(this.dataDir + FINDIR + basename + ".fin", "text/plain", this.manualOutput);
                 finFile.getAnnotations().put(HOTSPOTS_TOKEN, this.checkedSNPs);
                 jobFin.addFile(finFile);
 
@@ -456,9 +440,9 @@ public class FingerprintCollectorWorkflow extends OicrWorkflow {
     }
 
     private String makeBasename(final String name) {
-        String basename = name.substring(name.lastIndexOf("/") + 1, name.lastIndexOf(".bam"));
+        String basename = name.substring(name.lastIndexOf('/') + 1, name.lastIndexOf(".bam"));
         if (basename.contains(".")) {
-            basename = basename.substring(0, basename.indexOf("."));
+            basename = basename.substring(0, basename.indexOf('.'));
         }
         return basename;
     }
