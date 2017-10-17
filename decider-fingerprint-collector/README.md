@@ -1,4 +1,4 @@
-## fingerprint-collector Dcider
+## fingerprint-collector Decider
 
 ### Overview
 
