@@ -159,7 +159,7 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
                     + "/data/* "
                     + this.dataDir);
 
-            job_copy.setMaxMemory("2000");
+            job_copy.setMaxMemory(getProperty("memory_job_copy"));
             if (!this.queue.isEmpty()) {
                 job_copy.setQueue(this.queue);
             }
@@ -180,7 +180,7 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
                         + " --datadir " + this.dataDir
                         + " --findir "  + this.dataDir + this.finDir
                         + " --extensions " + extList);
-                job_link_maker.setMaxMemory("2000");
+                job_link_maker.setMaxMemory(getProperty("memory_job_link_maker"));
                 if (!this.queue.isEmpty()) {
                     job_link_maker.setQueue(this.queue);
                 }
@@ -208,7 +208,7 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
                                 + cc * this.jChunkSize + ":" + ((cc + 1) * this.jChunkSize - 1) + "\""
                                 + " > " + this.dataDir + chunkList);
 
-                        job_list_writer.setMaxMemory("2000");
+                        job_list_writer.setMaxMemory(getProperty("memory_job_list_writer"));
                         if (!this.queue.isEmpty()) {
                             job_list_writer.setQueue(this.queue);
                         }
@@ -232,7 +232,7 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
                                 + " --studyname "   + this.studyName
                                 + " > " + this.dataDir + chunkName);
 
-                        job_jchunk.setMaxMemory("2000");
+                        job_jchunk.setMaxMemory(getProperty("memory_job_jchunk"));
                         if (!this.queue.isEmpty()) {
                             job_jchunk.setQueue(this.queue);
                         }
@@ -254,7 +254,7 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
                     + " --datadir " + this.dataDir
                     + " > "         + this.dataDir + chunkList);
 
-            job_list_writer2.setMaxMemory("2000");
+            job_list_writer2.setMaxMemory(getProperty("memory_job_list_writer2"));
             if (!this.queue.isEmpty()) {
                 job_list_writer2.setQueue(this.queue);
             }
@@ -287,11 +287,7 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
                 }
             }
 
-            if (this.vcfFiles.length > MAX_INPUTS) {
-                job_jaccard.setMaxMemory("12000");
-            } else {
-                job_jaccard.setMaxMemory("6000");
-            }
+            job_jaccard.setMaxMemory(getProperty("memory_job_jaccard"));
             if (!this.queue.isEmpty()) {
                 job_jaccard.setQueue(this.queue);
             }
@@ -316,7 +312,7 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
 
             make_pics.setCommand(reportCommand.toString());
             make_pics.addParent(job_jaccard);
-            make_pics.setMaxMemory("6000");
+            make_pics.setMaxMemory(getProperty("memory_make_pics"));
             if (!this.queue.isEmpty()) {
                 make_pics.setQueue(this.queue);
             }
@@ -330,7 +326,7 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
             if (this.allowSingletons) {prox_table.getCommand().addArgument(" --singletons "); }
 
             prox_table.addParent(make_pics);
-            prox_table.setMaxMemory("8000");
+            prox_table.setMaxMemory(getProperty("memory_prox_table"));
             if (!this.queue.isEmpty()) {
                 prox_table.setQueue(this.queue);
             }
@@ -341,7 +337,7 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
                     + this.dataDir + this.finDir + " "
                     + matrix.getSourcePath());
             zip_fins.addParent(prox_table);
-            zip_fins.setMaxMemory("2000");
+            zip_fins.setMaxMemory(getProperty("memory_zip_fins"));
             if (!this.queue.isEmpty()) {
                 zip_fins.setQueue(this.queue);
             }
@@ -360,7 +356,7 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
                     + this.dataDir + "customize.me.zip "
                     + this.dataDir + "*.html");
             zip_report.addParent(zip_fins);
-            zip_report.setMaxMemory("2000");
+            zip_report.setMaxMemory(getProperty("memory_zip_report"));
 
             report_file.getAnnotations().put(HOTSPOTS_TOKEN, this.checkedSnps);
             zip_report.addFile(report_file);
@@ -377,7 +373,7 @@ public class SampleFingerprintingWorkflow extends OicrWorkflow {
                         + " --report "    + this.dataDir + "index.html"
                         + " --studyname " + this.studyName
                         + " --bundle "    + report_file.getOutputPath());
-                job_alert.setMaxMemory("2000");
+                job_alert.setMaxMemory(getProperty("memory_job_alert"));
                 job_alert.addParent(zip_report);
                 if (!this.queue.isEmpty()) {
                     job_alert.setQueue(this.queue);
