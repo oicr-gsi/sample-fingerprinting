@@ -13,7 +13,7 @@ import net.sourceforge.seqware.pipeline.workflowV2.model.SqwFile;
 import net.sourceforge.seqware.pipeline.workflowV2.model.Workflow;
 
 /**
- * @Description For pairing with SampleFingerprinting 2.0 A lighter (split)
+ * For pairing with SampleFingerprinting 2.0 A lighter (split)
  * version of SampleFingerprinting 1.1
  *
  * @author pruzanov
