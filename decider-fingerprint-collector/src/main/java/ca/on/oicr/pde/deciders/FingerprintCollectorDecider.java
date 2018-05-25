@@ -179,10 +179,6 @@ public class FingerprintCollectorDecider extends OicrDecider {
                 System.exit(1);
             }
         }
-
-        if (this.options.has("verbose")) {
-            Log.setVerbose(true);
-        }
         
         if (this.options.has("study-name")) {
             this.studyName = options.valueOf("study-name").toString();
