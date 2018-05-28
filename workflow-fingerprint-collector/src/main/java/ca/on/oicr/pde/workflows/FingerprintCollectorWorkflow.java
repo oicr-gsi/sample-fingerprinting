@@ -316,7 +316,7 @@ public class FingerprintCollectorWorkflow extends OicrWorkflow {
                 // provisioning .vcf.gz and .vcf.tbi files
 
                 jobGATK.setCommand(gatkCommand.toString());
-                jobGATK.setMaxMemory(getProperty("gatk_memory"));
+                jobGATK.setMaxMemory(getProperty("memory_job_gatk"));
 
                 if (!this.queue.isEmpty()) {
                     jobGATK.setQueue(this.queue);
@@ -340,7 +340,7 @@ public class FingerprintCollectorWorkflow extends OicrWorkflow {
                         .append("-L ").append(this.checkedSNPs);
 
                 jobGATK2.setCommand(gatk2Command.toString());
-                jobGATK2.setMaxMemory(getProperty("gatk_memory"));
+                jobGATK2.setMaxMemory(getProperty("memory_job_gatk"));
 
                 if (!this.queue.isEmpty()) {
                     jobGATK2.setQueue(this.queue);
