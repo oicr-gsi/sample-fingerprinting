@@ -36,8 +36,6 @@ import org.w3c.dom.NodeList;
 public class SampleFingerprintingDecider extends OicrDecider {
 
     private final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.S");
-    private String output_prefix = "./";
-    private String output_dir = "seqware-results";
     private String studyName = "";
     private String watchersList = "";
     private String customVcfList = "";
@@ -50,7 +48,6 @@ public class SampleFingerprintingDecider extends OicrDecider {
     private String existingMatrix = "";
     private String templateTypeFilter = "";
     private String reseqTypeFilter = "";
-    private String manual_output = "false";
     private boolean separate_platforms = true;
     private boolean allow_singletons   = false;
     private boolean mixedCoverageMode  = false;
@@ -95,22 +92,6 @@ public class SampleFingerprintingDecider extends OicrDecider {
         Log.debug("INIT");
         String[] metaTypes = {TBI_METATYPE, VCF_GZIP_METATYPE, FIN_METATYPE};
         this.setMetaType(Arrays.asList(metaTypes));
-        // Handle .ini file - we accept only memory size allocated to different steps
-        if (options.has("ini-file")) {
-            File file = new File(options.valueOf("ini-file").toString());
-            if (file.exists()) {
-                String iniFile = file.getAbsolutePath();
-                Map<String, String> iniFileMap = new HashMap<String, String>();
-                MapTools.ini2Map(iniFile, iniFileMap);
-                this.customVcfList = iniFileMap.get("input_files");
-                if (!this.customVcfList.isEmpty()) {
-                    Log.warn("Note that list of .vcf.gz files from this .ini will be APPENDED to the list retrieved from metaDB");
-                }
-            } else {
-                Log.error("The given INI file does not exist: " + file.getAbsolutePath());
-                System.exit(1);
-            }
-        }
 
         this.reseqType = new HashMap<String, Map>();
         // Group by template type if no other grouping selected
@@ -131,28 +112,6 @@ public class SampleFingerprintingDecider extends OicrDecider {
             Log.warn("Passing group-by parameter overrides the defaults, I hope you know what you are doing");
         }
 
-        if (this.options.has("output-path")) {
-            this.output_prefix = options.valueOf("output-path").toString();
-            if (this.output_prefix.isEmpty()) {
-                this.output_prefix = "./";
-            } else if (!this.output_prefix.endsWith("/")) {
-                this.output_prefix += "/";
-            }
-
-        }
-
-        if (this.options.has("output-folder")) {
-            this.output_dir = options.valueOf("output-folder").toString();
-            if (this.output_dir.isEmpty()) {
-                this.output_dir = "seqware-results";
-            }
-        }
-        
-        if (this.options.has("manual-output")) {
-            this.manual_output = options.valueOf("manual_output").toString();
-            Log.debug("Setting manual output, default is false and needs to be set only in special cases");
-	}
-        
         if (this.options.has("mixed-coverage")) {
             this.mixedCoverageMode = Boolean.valueOf(options.valueOf("mixed-coverage").toString());
             Log.debug("Setting mixed coverage mode, default is false");
@@ -444,9 +403,6 @@ public class SampleFingerprintingDecider extends OicrDecider {
         }
 
         run.addProperty("input_files", inputString.toString());
-        run.addProperty("output_prefix", this.output_prefix);
-        run.addProperty("output_dir", this.output_dir);
-        run.addProperty("manual_output",  this.manual_output);
         run.addProperty("mixed_coverage", Boolean.toString(this.mixedCoverageMode));
         run.addProperty("allow_singletons", Boolean.toString(this.allow_singletons));
         

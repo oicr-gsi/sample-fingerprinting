@@ -13,7 +13,7 @@ import net.sourceforge.seqware.pipeline.workflowV2.model.SqwFile;
 import net.sourceforge.seqware.pipeline.workflowV2.model.Workflow;
 
 /**
- * @Description For pairing with SampleFingerprinting 2.0 A lighter (split)
+ * For pairing with SampleFingerprinting 2.0 A lighter (split)
  * version of SampleFingerprinting 1.1
  *
  * @author pruzanov
@@ -252,7 +252,7 @@ public class FingerprintCollectorWorkflow extends OicrWorkflow {
                             + " OUTPUT=" + orderedBamfilePaths[i]
                             + " REFERENCE=" + this.genomeFile);
 
-                    jobReorder.setMaxMemory("7000");
+                    jobReorder.setMaxMemory(getProperty("memory_job_reorder"));
 
                     if (!this.queue.isEmpty()) {
                         jobReorder.setQueue(this.queue);
@@ -277,7 +277,7 @@ public class FingerprintCollectorWorkflow extends OicrWorkflow {
                             + " CREATE_INDEX=TRUE"
                             + " SORT_ORDER=coordinate");
 
-                    jobIndex.setMaxMemory("10000");
+                    jobIndex.setMaxMemory(getProperty("memory_job_index"));
                     jobIndex.addParent(jobReorder);
                     if (!this.queue.isEmpty()) {
                         jobIndex.setQueue(this.queue);
@@ -293,7 +293,7 @@ public class FingerprintCollectorWorkflow extends OicrWorkflow {
                     bamIndexJob.setCommand(getWorkflowBaseDir() + "/bin/samtools-" + this.samtoolsVersion
                                          + "/samtools index "
                                          + bamFile.getProvisionedPath());
-                    bamIndexJob.setMaxMemory("4000");
+                    bamIndexJob.setMaxMemory(getProperty("memory_job_bam_index"));
                     fixerJobs.add(bamIndexJob);
                 }
 
@@ -316,7 +316,7 @@ public class FingerprintCollectorWorkflow extends OicrWorkflow {
                 // provisioning .vcf.gz and .vcf.tbi files
 
                 jobGATK.setCommand(gatkCommand.toString());
-                jobGATK.setMaxMemory(getProperty("gatk_memory"));
+                jobGATK.setMaxMemory(getProperty("memory_job_gatk"));
 
                 if (!this.queue.isEmpty()) {
                     jobGATK.setQueue(this.queue);
@@ -340,7 +340,7 @@ public class FingerprintCollectorWorkflow extends OicrWorkflow {
                         .append("-L ").append(this.checkedSNPs);
 
                 jobGATK2.setCommand(gatk2Command.toString());
-                jobGATK2.setMaxMemory(getProperty("gatk_memory"));
+                jobGATK2.setMaxMemory(getProperty("memory_job_gatk"));
 
                 if (!this.queue.isEmpty()) {
                     jobGATK2.setQueue(this.queue);
@@ -367,7 +367,7 @@ public class FingerprintCollectorWorkflow extends OicrWorkflow {
                 jobFin.addFile(finFile);
 
                 jobFin.setCommand(finCommand.toString());
-                jobFin.setMaxMemory("4000");
+                jobFin.setMaxMemory(getProperty("memory_job_fin"));
                 jobFin.addParent(jobGATK2);
 
                 if (!this.queue.isEmpty()) {
@@ -389,7 +389,7 @@ public class FingerprintCollectorWorkflow extends OicrWorkflow {
                     + "--datadir=" + this.dataDir + " "
                     + "--tabix=" + getWorkflowBaseDir() + "/bin/tabix-" + this.tabixVersion + "/tabix "
                     + "--bgzip=" + getWorkflowBaseDir() + "/bin/tabix-" + this.tabixVersion + "/bgzip");
-            jobVcfPrep.setMaxMemory("2000");
+            jobVcfPrep.setMaxMemory(getProperty("memory_job_vcf_prep"));
 
             if (!this.queue.isEmpty()) {
                 jobVcfPrep.setQueue(this.queue);
