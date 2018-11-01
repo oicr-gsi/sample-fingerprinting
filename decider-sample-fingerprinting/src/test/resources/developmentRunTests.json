@@ -7,6 +7,9 @@
             "--parent-wf-accessions": "1753099",
             "--before-date": "2015-05-12"
         },
+        "properties": {
+            "watchers_list": "pruzanov@oicr.on.ca"
+        },
         "iniExclusions": ["parent-accessions", "workflow_run_accession", "workflow-run-accession",
             "unique_string", "parent_accessions", "parent_accession", "input_file", "input_files", "workflow_bundle_dir",
             "output_prefix"]
