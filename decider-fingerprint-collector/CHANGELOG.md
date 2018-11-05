@@ -1,3 +1,5 @@
+## 1.3.2-SNAPSHOT - 2018-11-05
+- [GP-1867](https://jira.oicr.on.ca/browse/GP-1867) - Updated Regression tests, better check for organism id
 ## 1.3 - 2017-01-30
 - [GP-875](https://jira.oicr.on.ca/browse/GP-875) - Update decider to SeqWare 1.1.1-gsi
 ## 1.2.2 - 2016-02-02

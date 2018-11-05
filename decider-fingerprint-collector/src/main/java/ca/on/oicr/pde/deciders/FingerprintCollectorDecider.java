@@ -247,7 +247,7 @@ public class FingerprintCollectorDecider extends OicrDecider {
         }
         //Check organism GP-473 check if it is indeed an integer
         String organismId  = returnValue.getAttribute("Sample Organism ID");
-        if (null != organismId) {
+        if (null != organismId && !organismId.isEmpty()) {
             try {
                 int passedId = Integer.valueOf(organismId);
                 if (passedId != HUMAN_ORG_ID) {
@@ -360,12 +360,7 @@ public class FingerprintCollectorDecider extends OicrDecider {
 
     @Override
     public ReturnValue customizeRun(WorkflowRun run) {
-
-         //reset test mode
-        if (!this.options.has("test")) {
-            this.setTest(false);
-        }
-        
+       
         StringBuilder inputFiles  = new StringBuilder();
         StringBuilder rgDetails  = new StringBuilder();
         String checkedSNPs = "";
@@ -390,13 +385,7 @@ public class FingerprintCollectorDecider extends OicrDecider {
               inputFiles.append(atts.getPath());
               rgDetails.append(fileSwaToSmall.get(atts.getOtherAttribute(Header.FILE_SWA.getTitle())).getRGdata());
           }
-        }
-                
-        //setting testmode for excluded stuff (I am not sure if it is necessery though, but just to be safe):
-	if (inputFiles.length() == 0) {
-	    this.setTest(true);
-	}
-        
+        }       
         
         if (!this.customBamList.isEmpty()) {   
             inputFiles.append(",").append(this.customBamList);

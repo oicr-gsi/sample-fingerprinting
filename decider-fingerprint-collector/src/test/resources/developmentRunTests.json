@@ -3,7 +3,7 @@
         "description": "FingerprintCollectorDecider test",
         "metricsResources": "/expected_output/development/",
         "parameters": {
-            "--before-date": "2014-06-13"
+            "--before-date": "2016-06-13"
         },
         "iniExclusions": ["parent-accessions", "workflow_run_accession", "workflow-run-accession",
             "unique_string", "parent_accessions", "parent_accession", "input_file",
@@ -13,23 +13,15 @@
         {
             "id": "General sample test 1",
             "parameters": {
-                "--root-sample-name": "PCSI_0191",
-                "--template-type": "EX"
+                "--root-sample-name": "ERNA_0051",
+                "--template-type": "WT"
             }
         },
         {
             "id": "General sample test 2",
             "parameters": {
-                "--root-sample-name": "PCSI_0098",
-                "--template-type": "WG"
-            }
-        },
-        {
-            "id": "Grouping test 1",
-            "parameters": {
-                "--root-sample-name": "PCSI_0191",
-                "--group-by": "SAMPLE_NAME",
-                "--template-type": "EX"
+                "--root-sample-name": "ERNA_0066",
+                "--template-type": "WT"
             }
         }
     ]
