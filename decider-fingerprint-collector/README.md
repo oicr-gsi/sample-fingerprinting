@@ -1,6 +1,6 @@
 ## fingerprint-collector Decider
 
-Version 1.1.3
+Version 1.3.3
 
 ### Overview
 
