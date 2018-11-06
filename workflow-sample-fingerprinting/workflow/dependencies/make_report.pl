@@ -107,7 +107,7 @@ if ($matrix && -e $matrix) {
     } 
   }
 
-  if ($temp[$snp_index] && $temp[$snp_index] >= THRESHOLD && $notgarbage && $trimmed_name=~/([A-Z]{3,6}_\d+)_/ ) { 
+  if ($temp[$snp_index] && $temp[$snp_index] >= THRESHOLD && $notgarbage && $trimmed_name=~/(\w{3,6}_\d+)_/ ) { 
     $ids{$temp[0]} = $trimmed_name;
     $samples{$ids{$temp[0]}} = {sample=>$1,file=>$temp[0],name=>$trimmed_name}; # register a file as pertaining to a certain sample (studyname_sampleid)
     $sample_counter{$1}++; 
@@ -525,7 +525,7 @@ sub printout_slice {
  my $png = $datadir.$filecard.".png";
  print STDERR "Will Rscript $Bin/create_heatmap.r $outfile $pngtitle $refsnps $png $pngsize $flagged FALSE\n" if DEBUG;
  my $clustered_ids = `Rscript $Bin/create_heatmap.r $outfile $pngtitle $refsnps $png $pngsize $flagged FALSE`;
- my @clustered_ids = grep {/\S+/}  map {if(/^([A-Z]{3,6}_\d+)_/ && $sample_counter{$1}){$_}} split(" ",$clustered_ids); 
+ my @clustered_ids = grep {/\S+/}  map {if(/^(\w{3,6}_\d+)_/ && $sample_counter{$1}){$_}} split(" ",$clustered_ids); 
  print STDERR "=====Clustered IDs:======\n" if DEBUG;
  print STDERR Dumper(@clustered_ids) if DEBUG;
 
@@ -837,7 +837,7 @@ sub getNodes {
   } elsif ($line=~/--leaf.*\"(\S+?)\"/) {
     push (@{$nodes{$parents[$level]}->{leafs}}, $1);
     $flagged{files}->{$1} = 1;
-    if ($line=~/\"([A-Z]{3,6}_\d+)_/) {
+    if ($line=~/\"(\w{3,6}_\d+)_/) {
       $flagged{samples}->{$1} = 1;
     }
   }
@@ -896,7 +896,7 @@ sub isSwapPresent {
  # Pass all arrays/hashes as refs 
  my ($test_id, $list) = @_;
  my %found_donors = ();
- map{if (/^([A-Z]{3,6}_\d+)_/){$found_donors{$1}++}} (@{$list});
+ map{if (/^(\w{3,6}_\d+)_/){$found_donors{$1}++}} (@{$list});
 
  if (scalar(keys %found_donors) > 1) {
     # Special Case when small number (up to 2) of files mix with valid large cluster
@@ -914,7 +914,7 @@ sub isSwapPresent {
        # Unflagging larger complete sub-cluster
        if ($unflag > 0) {
          $flagged{samples}->{(keys %found_donors)[$unflag]} = undef;
-         map{if (/^([A-Z]{3,6}_\d+)_/ && $1 eq (keys %found_donors)[$unflag]){$flagged{files}->{$_} = undef;}}  @{$list}
+         map{if (/^(\w{3,6}_\d+)_/ && $1 eq (keys %found_donors)[$unflag]){$flagged{files}->{$_} = undef;}}  @{$list}
        }
     }
     print STDERR "Node [$test_id] is invalid, need to trace deeper\n" if DEBUG;

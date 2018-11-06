@@ -1,3 +1,5 @@
+## 2.4.1 - 2018-11-01
+- [GP-1867](https://jira.oicr.on.ca/browse/GP-1867?filter=-1)Fixed a regular expression in make_report.pl script preventing processing such studies as TGL08 or C4GD (numbers in donor's names)
 ## 2.4   - 2016-12-13
 - Added two new jobs - optional alternative to jaccard matric building and proximity table generator script (specs for table in perldoc of make_table.pl script)
 ## 2.2.2 - 2016-01-19

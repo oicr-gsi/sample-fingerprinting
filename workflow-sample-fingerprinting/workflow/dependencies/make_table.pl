@@ -74,7 +74,7 @@ while(my $line = <MATRIX>) {
  my @fields = split("\t",$line);
  # This regex assumes that id complies with OICR naming ideosyncrasis
  # | FLAG | Sample | FlowCell | Lane | Type | SNPs | Score | SimilarTo |
- if ($fields[0] =~/^SWID_\d+_(\w+?_\d+)_\S+?_(\S+?)_\S+?_\d+_[A-Z]+?(_\d+)*_(\d+_\S+?_\d+_\S+?)_(\S+?)_L(\d+)_/) {
+ if ($fields[0] =~/^SWID_\d+_(\S+?_\d+)_\S+?_(\S+?)_\S+?_\d+_[A-Z]+?(_\d+)*_(\d+_\S+?_\d+_\S+?)_(\S+?)_L(\d+)_/) {
    $data{$fields[0]} = {FLAG     => $flagged{$fields[0]} ? 1 : 0,
                         Sample   => $1,
                         FlowCell => $4,
