@@ -1,5 +1,5 @@
-## 2.5.1 - 2018-05-25
-- Support for a fixed workflow
+## 2.5.2 - 2018-05-25
+- Support for a fixed workflow, dependancy update and explicit specification of pinery version
 ## 2.5.1 - 2018-05-25
 - [GP-1607](https://jira.oicr.on.ca/browse/GP-1607) - Fix output path and update to pipedev 2.4.1
 ## 2.5 - 2017-01-30
