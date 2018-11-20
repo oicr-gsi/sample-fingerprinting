@@ -10,6 +10,9 @@
   "maxInputFiles" : 1,
   "minInputFiles" : 1,
   "totalInputFiles" : 1,
+  "maxOutputFileProvenanceRecords" : 1,
+  "minOutputFileProvenanceRecords" : 1,
+  "totalOutputFileProvenanceRecords" : 1,
   "workflowRuns" : [ {
     "workflowIni" : {
       "allow_singletons" : "false",
@@ -76,6 +79,7 @@
       "fileMetaType" : [ "application/vcf-4-gzip" ],
       "fileAttributes" : { },
       "fileId" : -1051809594
-    } ]
+    } ],
+    "outputFileProvenanceRecords" : 1
   } ]
 }
