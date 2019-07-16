@@ -21,7 +21,7 @@ These parameters can be overridden either in the INI file on on the command line
 
 Required:
 
-    study_name                string      A required parameter passed by the decider
+    study-name                string      A required parameter passed by the decider
                                           or on the command line if workflow is launched
                                           manually
     template-type             string      type of experimental template - WG (Whole Genome sequencing)
@@ -31,10 +31,10 @@ Required:
 
 Input/output:
 
-    output_prefix             dir         The root output directory
-    output_dir                string      The sub-directory of output_prefix where 
+    output-prefix             dir         The root output directory
+    output-dir                string      The sub-directory of output_prefix where 
                                           the output files will be moved
-    manual_output             true|false  When false, a random integer will be 
+    manual-output             true|false  When false, a random integer will be 
                                           inserted into the path of the final file 
                                           in order to ensure uniqueness. When true,
                                           the output files will be moved to the 
@@ -54,6 +54,9 @@ Optional:
     before-date               string      Optional: Format YYYY-MM-DD. Implemented by OICRDecider, Only run
                                           on files modified before a certain date, not inclusive
     watchers-list             string      List of people notified by email about detected sample swaps
+    mixed-coverage            string      Parameter tells SampleFingerprinting workflow to
+                                          use .fin files for calculation of similarities
+                                          between the analyzed samples (disabled by default)
     queue                     string      Name of the (SGE) queue to schedule to 
                                           [empty]
 

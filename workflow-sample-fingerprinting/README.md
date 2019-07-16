@@ -61,15 +61,24 @@ Optional:
     watchers_list             string      A comma-delimited list of emails 
                                           (of those who are interested in monitoring 
                                           SampleFingerprinting workflow runs)
+    mixed_coverage            string      Parameter tells SampleFingerprinting workflow to
+                                          use .fin files for calculation of similarities
+                                          between the analyzed samples
     queue                     string      Name of the (SGE) queue to schedule to [production]
 
 #### Building similarity matrix
 
-This step uses a wrapper perl script (jaccard_coeff.matrix.pl) which calls vcftools executable vcf-compare. Vcf files are analyzed for overlap and then we calculate Jaccard index that gets recorded into the matrix and uses as a measurement of similarity between two genotypes.
+This step uses a wrapper perl script (jaccard_coeff.matrix.pl) which calls vcftools executable vcf-compare. Vcf files are analyzed for overlap and then we calculate Jaccard index that gets recorded into the matrix and uses as a measurement of similarity between two genotypes. The Jaccad coefficient is defined as the [number of matches]/[total number of loci with enough coverage] in a two-sample comparison.
+
+We have two slightly different ways to calculate similarities. The default (older of the two) method is using vcf files made with FingerprintCollector and counts the number of matching SNPs. The newer algorithm which is disabled by default analyzes .fin files and while counting SNPs it also takes the number of matching 'M's in account. The later allows to somewhat boost the numbers for samples with a low number of SNPs and as practice shows, helps to better separate such samples from the ones with low coverage. It is important to note that theoretically we may encounter two samples with no matching SNPs and a few matching 'M's. In this case the Jaccard coefficient will be zero since counting REF-matching bases is possible only if there at least few matching SNPs are also present. This logic disallow grouping samples for which we do not have any polymorphism (and therefore, no any identifying information).
 
 #### Producing the HTML report
 
-make_report.pl is doing the bulk of the job by clustering data (using R scripts) and identifying potential swaps.This script produces several output files, most notably - heatmaps for lanes grouped together based on their similarity. The heatmaps organized in a html report (index.html), which also provides links for downloading similarity matrices and genotype tables for each of the heatmaps. The report may be further customized using our webtool (needs to be deployed on a webserver).
+make_report.pl is doing the bulk of the job by clustering data (using R scripts) and identifying potential swaps. This script produces several output files, most notably - heatmaps for lanes grouped together based on their similarity. The heatmaps organized in a html report (index.html), which also provides links for downloading similarity matrices and genotype tables for each of the heatmaps. The report may be further customized using our webtool (needs to be deployed on a webserver).
+
+### Marking swaps
+
+The algorithm that marks potentially swapped samples relies on an assumption that samples from the same donor will be grouped together by clustering. The script (make_report.pl) launches a clustering script and then parses the dendrogram that this script produces. The algorithm starts from the root of the dendrogram and starts splitting (chopping) this tree until all donor-specific samples are sitting on separate branches. In case when a sample sits outside the branch which holds all the other samples from the same donor a swap will be called and all the samples from this donor will be marked.
 
 ![sample-fingerprinting report](docs/HTML_report.png)
 
