@@ -103,7 +103,7 @@ GATK is also used to produce coverage data for SNP loci with the help of another
 "fingerprint" .vcf.gz, .tbi, .fin files used by the downstream (Sample Fingerprinting) workflow
 
 ### Algorithm Overview
-Fingerprint Collector uses UnifiedGenotyper to call SNPs in pre-defined 'hotspot' loci. These SNP calls are later used by SampleFingerprinting workflow to determine the relationship between analyzed samples. DeapthOfCoverage walker is used to check for loci without coverage which are essentially ignored when calculating beween-sample similarities.
+Fingerprint Collector uses UnifiedGenotyper to call SNPs in pre-defined 'hotspot' loci. These SNP calls are later used by SampleFingerprinting workflow to determine the relationship between analyzed samples. DepthOfCoverage walker is used to check for loci without coverage which are essentially ignored when calculating beween-sample similarities.
 
 #### Fin files
 .fin files allow to do two things - produce glyphs with color-coded SNP calls (A,C,T,G) + two shades of gray showing either match with the reference genotype (no call) or zero coverage (too low to make a call), the later detected using output from DepthOfCoverage walker from GATK suite. Below is an excerpt from a random .fin file:
