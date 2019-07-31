@@ -19,7 +19,6 @@
 
     <properties>
         <workflow-version>2.4.1</workflow-version>
-        <pinery-version>2.2.0</pinery-version>
         <main-class>ca.on.oicr.pde.deciders.SampleFingerprintingDecider</main-class>
     </properties>
 
