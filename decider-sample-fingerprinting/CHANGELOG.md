@@ -1,3 +1,5 @@
+## 2.5.3 - 2019-08-19
+- Support for a fixed workflow
 ## 2.5.2 - 2018-05-25
 - Support for a fixed workflow, dependancy update and explicit specification of pinery version
 ## 2.5.1 - 2018-05-25
