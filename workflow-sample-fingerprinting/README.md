@@ -101,6 +101,7 @@ There is a small script plotReporter.pl that sends alerts notifying about potent
 Contains index.html with Sample Swap report, similarity matrix files, heatmaps of clustered samples in png format
 
 Details:
+
     report file (*report.zip) content:
       index.html - main report, to be viewed in a browser (Firefox, Chrome). Contains information on swapped samples
       images     - directory with icons for html report
