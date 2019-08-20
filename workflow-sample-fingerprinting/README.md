@@ -111,7 +111,7 @@ Details:
       *similarity_matrix*.csv - similarity matrices for heatmaps (8 donors maximum)
       *proximity_table.csv    - a table showing basic metrics for a sample + the most similar sample from the analyzed set
       *html                   - other html files needed for report     
-      *_jaccard.matrix.csv    - main similarity matrix with jaccard coefficients and number of called SNPs per sample
+    *_jaccard.matrix.csv    - main similarity matrix with jaccard coefficients and number of called SNPs per sample
     
 ### Support
 
