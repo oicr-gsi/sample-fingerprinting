@@ -2,7 +2,7 @@
 
 cmd_args = commandArgs(trailingOnly = TRUE);
 
-DATA<-read.table(cmd_args[1],header=T)
+DATA<-read.table(cmd_args[1],header=T,check.names=FALSE)
 
 # Sort the matrix, it saves a lot of headaches
 ordcol<-order(colnames(DATA[,1:dim(DATA)[1]]))

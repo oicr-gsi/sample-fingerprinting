@@ -1,3 +1,5 @@
+## 2.4.2 - 2019-08-19
+- [GP-2060](https://jira.oicr.on.ca/browse/GP-2060?filter=-1)Fixed cluster.r script to address issue when wf does not produce plots
 ## 2.4.1 - 2018-11-01
 - [GP-1867](https://jira.oicr.on.ca/browse/GP-1867?filter=-1)Fixed a regular expression in make_report.pl script preventing processing such studies as TGL08 or C4GD (numbers in donor's names)
 ## 2.4   - 2016-12-13
