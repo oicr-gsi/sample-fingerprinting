@@ -10,6 +10,9 @@
   "maxInputFiles" : 1,
   "minInputFiles" : 1,
   "totalInputFiles" : 1,
+  "maxOutputFileProvenanceRecords" : 1,
+  "minOutputFileProvenanceRecords" : 1,
+  "totalOutputFileProvenanceRecords" : 1,
   "workflowRuns" : [ {
     "workflowIni" : {
       "bundled_jre" : "jre1.8.0_45",
@@ -78,6 +81,7 @@
       "fileMetaType" : [ "application/bam" ],
       "fileAttributes" : { },
       "fileId" : 634006829
-    } ]
+    } ],
+    "outputFileProvenanceRecords" : 1
   } ]
 }
