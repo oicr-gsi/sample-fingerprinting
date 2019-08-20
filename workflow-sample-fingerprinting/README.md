@@ -100,6 +100,18 @@ There is a small script plotReporter.pl that sends alerts notifying about potent
 **sample_fingerprint.[StudyName].report.zip**
 Contains index.html with Sample Swap report, similarity matrix files, heatmaps of clustered samples in png format
 
+Details:
+    report file (*report.zip) content:
+      index.html - main report, to be viewed in a browser (Firefox, Chrome). Contains information on swapped samples
+      images     - directory with icons for html report
+      *png       - images of all heatmaps for html reports
+      *genotype_report*.csv   - heatmap-specific lists of called SNPs
+      *similarity_matrix*.csv - similarity matrices for heatmaps (8 donors maximum)
+      *proximity_table.csv    - a table showing basic metrics for a sample + the most similar sample from the analyzed set
+      *html                   - other html files needed for report
+      customize_me.zip - a zip file to use with a report-customization Web Tool (see [Web Customization Tool](https://www-pde.hpc.oicr.on.ca/cgi-bin/sampleswap/swap_reporter.pl), OICR intranet)
+      *_jaccard.matrix.csv    - main similarity matrix with jaccard coefficients and number of called SNPs per sample
+    
 ### Support
 
 For support, please file an issue on the [Github project](https://github.com/oicr-gsi) or send an email to gsi@oicr.on.ca .
