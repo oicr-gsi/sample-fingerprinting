@@ -102,5 +102,31 @@ GATK is also used to produce coverage data for SNP loci with the help of another
 ### Output files
 "fingerprint" .vcf.gz, .tbi, .fin files used by the downstream (Sample Fingerprinting) workflow
 
+### Algorithm Overview
+Fingerprint Collector uses UnifiedGenotyper to call SNPs in pre-defined 'hotspot' loci. These SNP calls are later used by SampleFingerprinting workflow to determine the relationship between analyzed samples. DepthOfCoverage walker is used to check for loci without coverage which are essentially ignored when calculating beween-sample similarities.
+
+#### Fin files
+.fin files allow to do two things. First, .fin files help to produce glyphs with color-coded SNP calls (A,C,T,G) + two shades of gray showing either match with the reference genotype (no call) or zero coverage (too low to make a call), the latter detected using output from DepthOfCoverage walker from GATK suite. The loci from 'hotspot' list are checked against the summary files produced by DepthOfCoverage. If there is no coverage in a locus, it is assigned 'N' in the .fin file. Second, .fin files are used by the downstream SampleFingerprinting workflow to produce the similarity matrix (explained in details in SampleFingerpinting README).
+Below is an excerpt from a random .fin file:
+
+```
+CHROM   POS     ID      SNP     FLAG
+chr1    2391252 rs16824398      AC      C
+chr1    11594400        rs2235663       TC      C
+chr1    33985353        rs2641959       CC      M
+chr1    34038214        rs2641962       TC      C
+chr1    34052605        rs7526990       AA      M
+chr1    34070826        rs12733436      GA      A
+chr1    34071434        rs1874044       CT      T
+chr1    34071525        rs1874045       CT      T
+chr1    34189917        rs519370        CC      M
+...
+chr14   75485489        rs175053                N
+chr14   94915743        rs200619911             N
+
+```
+
+The most important are positions 4 and 5 (SNP shown as REF/ALT base, if applicable) and one-letter code showing alternative base (A-T) or M for match or N for no coverage.
+
 ### Support
 For support, please file an issue on the [Github project](https://github.com/oicr-gsi) or send an email to gsi@oicr.on.ca .
