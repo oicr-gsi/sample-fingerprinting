@@ -1,6 +1,6 @@
-## fingerprint-collector workflow
+## fingerprintCollector
 
-Version 1.1.3
+FingerprintCollector 2.0, workflow that generates genotype fingerprints consumed by SampleFingerprinting workflow
 
 ### Overview
 
@@ -11,122 +11,87 @@ variation data independently for each input .bam file. The below graph describes
 
 ![sample-fingerprinting flowchart](docs/FingerprintCollector_specs.png)
 
-### Dependencies
+## Dependencies
 
-This workflow requires:
+* [gatk 4.1.7.0](https://gatk.broadinstitute.org)
+* [tabix 0.2.6](http://www.htslib.org)
+* [python 3.6](https://www.python.org/)
 
-* [SeqWare](http://seqware.github.io/)
-* [picard-tools](http://broadinstitute.github.io/picard/) 1.72
-* [samtools](http://www.htslib.org/) 0.1.19
-* [GenomeAnalysisTK](https://www.broadinstitute.org/gatk/) 2.7-2
-* [tabix](http://sourceforge.net/projects/samtools/files/tabix/) 0.2.6
 
-### Compile
+## Usage
 
+### Cromwell
+```
+java -jar cromwell.jar run fingerprintCollector.wdl --inputs inputs.json
+```
+
+### Inputs
+
+#### Required workflow parameters:
+Parameter|Value|Description
+---|---|---
+`inputBam`|File|Input lane-level BAM file
+`inputBai`|File|Index for the input BAM file
+`refFasta`|String|Path to the reference fasta file
+`hotspotSNPs`|String|Path to the gzipped hotspot vcf file
+`runHaplotypeCaller.modules`|String|Names and versions of modules
+`runDepthOfCoverage.modules`|String|Names and versions of modules
+`runFinCreator.modules`|String|Names and versions of modules
+
+
+#### Optional workflow parameters:
+Parameter|Value|Default|Description
+---|---|---|---
+`outputFileNamePrefix`|String|basename(inputBam,".bam")|Output prefix, customizable. Default is the input file's basename.
+
+
+#### Optional task parameters:
+Parameter|Value|Default|Description
+---|---|---|---
+`runHaplotypeCaller.jobMemory`|Int|8|memory allocated for Job
+`runHaplotypeCaller.timeout`|Int|24|Timeout in hours, needed to override imposed limits
+`runHaplotypeCaller.stdCC`|Float|30.0|standard call confidence score, default is 30
+`runDepthOfCoverage.jobMemory`|Int|8|memory allocated for Job
+`runDepthOfCoverage.timeout`|Int|24|Timeout in hours, needed to override imposed limits
+`runFinCreator.chroms`|Array[String]|["chr1", "chr2", "chr3", "chr4", "chr5", "chr6", "chr7", "chr8", "chr9", "chr10", "chr11", "chr12", "chr13", "chr14", "chr15", "chr16", "chr17", "chr18", "chr19", "chr20", "chr21", "chr22", "chrX"]|Canonical chromosomes in desired order (used for soting lines in .fin file)
+`runFinCreator.timeout`|Int|10|Timeout in hours, needed to override imposed limits
+`runFinCreator.jobMemory`|Int|8|memory allocated for Job
+
+
+### Outputs
+
+Output | Type | Description
+---|---|---
+`outputVcf`|File|gzipped vcf expression levels for all genes recorded in the reference
+`outbutTbi`|File|expression levels for all isoforms recorded in the reference
+`outputFin`|File|Custom format file, shows which hotspots were called as variants
+
+
+## Niassa + Cromwell
+
+This WDL workflow is wrapped in a Niassa workflow (https://github.com/oicr-gsi/pipedev/tree/master/pipedev-niassa-cromwell-workflow) so that it can used with the Niassa metadata tracking system (https://github.com/oicr-gsi/niassa).
+
+* Building
 ```
 mvn clean install
+
+* Testing
+```
+mvn clean verify \
+-Djava_opts="-Xmx1g -XX:+UseG1GC -XX:+UseStringDeduplication" \
+-DrunTestThreads=2 \
+-DskipITs=false \
+-DskipRunITs=false \
+-DworkingDirectory=/path/to/tmp/ \
+-DschedulingHost=niassa_oozie_host \
+-DwebserviceUrl=http://niassa-url:8080 \
+-DwebserviceUser=niassa_user \
+-DwebservicePassword=niassa_user_password \
+-Dcromwell-host=http://cromwell-url:8000
 ```
 
-### Usage
-After compilation, [test](http://seqware.github.io/docs/3-getting-started/developer-tutorial/#testing-the-workflow), [bundle](http://seqware.github.io/docs/3-getting-started/developer-tutorial/#packaging-the-workflow-into-a-workflow-bundle) and [install](http://seqware.github.io/docs/3-getting-started/admin-tutorial/#how-to-install-a-workflow) the workflow using the techniques described in the SeqWare documentation.
+## Support
 
-#### Options
-These parameters can be overridden either in the INI file on on the command line using `--override` when [directly scheduling workflow runs](http://seqware.github.io/docs/3-getting-started/user-tutorial/#listing-available-workflows-and-their-parameters) (not using a decider). Defaults are in [square brackets].
-
-Required:
-
-    study_name                string      A required parameter passed by the decider
-                                          or on the command line if workflow is launched
-                                          manually
-
-Input/output:
-
-    output_prefix             dir         The root output directory
-    output_dir                string      The sub-directory of output_prefix where 
-                                          the output files will be moved
-    manual_output             true|false  When false, a random integer will be 
-                                          inserted into the path of the final file 
-                                          in order to ensure uniqueness. When true,
-                                          the output files will be moved to the 
-                                          location of output_prefix/output_dir
-                                          [false]
-
-Optional:
-
-    data_dir                  dir         A standard SeqWare parameter specifying the
-                                          sub-directory where the output files will 
-                                          be staged
-    checked_snps              string      path to the vcf file (bgzipped and tabix-indexed)
-                                          that contains coordinates and ids of dbSNPs
-                                          used to genotype .bam files
-    check_points              int         Number of snps in 'checked_snps' file
-    genome_file               string      Reference fasta assembly (i.e. hg19.fa) Note that 
-                                          there should be .fai and .dict files (generated with
-                                          samtools and picard, respectively) in the same directory
-    gatk_prefix               string      GATK prefix should point to a 'well-performing' file system
-                                          for writing temporary files into it. May prevent possible
-                                          failures of a workflow run
-    preprocess_bam            true|false  Flag that shows if re-ordering/adding read groups are 
-                                          needed for .bam files, should rarely be true
-    queue                     string      Name of the (SGE) queue to schedule to [production]
-
-#### Indexing with samtools
-
-Indexing with samtools is required by GATK which picks up after indexes (.bai) get generated. The command (samtools index ###.bam) is executed so that index files end up together with their .bam in provisionfiles/### directory.
-Building vcf files with GATK, calculating depth of coverage
-
-We use GATK UnifiedGenotyper to call snps on our bam files with following parameters:
-    
-    java -jar GenomeAnalysisTK.jar 
-    -R ###.fa
-    -T UnifiedGenotyper 
-    -I ###.bam
-    -o ###.vcf
-    -stand_call_conf 50.0
-    -stand_emit_conf 10.0
-    -dcov 50
-    -L dbsnp137.hg19.402.overlap.vcf
-
-dbsnp137.hg19.402.overlap.vcf is a file produced using dbSNP data by selecting SNPs with MAF (minor allele frequency) >=0.50.
-
-GATK is also used to produce coverage data for SNP loci with the help of another module, DepthOfCoverage.
-    
-    java -jar GenomeAnalysisTK.jar 
-    -R ###.fa
-    -T DepthOfCoverage "
-    -I ###.bam
-    -o outputdir/basename 
-    -L dbsnp137.hg19.402.overlap.vcf
-
-
-### Output files
-"fingerprint" .vcf.gz, .tbi, .fin files used by the downstream (Sample Fingerprinting) workflow
-
-### Algorithm Overview
-Fingerprint Collector uses UnifiedGenotyper to call SNPs in pre-defined 'hotspot' loci. These SNP calls are later used by SampleFingerprinting workflow to determine the relationship between analyzed samples. DepthOfCoverage walker is used to check for loci without coverage which are essentially ignored when calculating beween-sample similarities.
-
-#### Fin files
-.fin files allow to do two things. First, .fin files help to produce glyphs with color-coded SNP calls (A,C,T,G) + two shades of gray showing either match with the reference genotype (no call) or zero coverage (too low to make a call), the latter detected using output from DepthOfCoverage walker from GATK suite. The loci from 'hotspot' list are checked against the summary files produced by DepthOfCoverage. If there is no coverage in a locus, it is assigned 'N' in the .fin file. Second, .fin files are used by the downstream SampleFingerprinting workflow to produce the similarity matrix (explained in details in SampleFingerpinting README).
-Below is an excerpt from a random .fin file:
-
-```
-CHROM   POS     ID      SNP     FLAG
-chr1    2391252 rs16824398      AC      C
-chr1    11594400        rs2235663       TC      C
-chr1    33985353        rs2641959       CC      M
-chr1    34038214        rs2641962       TC      C
-chr1    34052605        rs7526990       AA      M
-chr1    34070826        rs12733436      GA      A
-chr1    34071434        rs1874044       CT      T
-chr1    34071525        rs1874045       CT      T
-chr1    34189917        rs519370        CC      M
-...
-chr14   75485489        rs175053                N
-chr14   94915743        rs200619911             N
-
-```
-
-The most important are positions 4 and 5 (SNP shown as REF/ALT base, if applicable) and one-letter code showing alternative base (A-T) or M for match or N for no coverage.
-
-### Support
 For support, please file an issue on the [Github project](https://github.com/oicr-gsi) or send an email to gsi@oicr.on.ca .
+
+_Generated with generate-markdown-readme (https://github.com/oicr-gsi/gsi-wdl-tools/)_

@@ -1,3 +1,5 @@
+## 2.0   - 2020-06-03
+- Converting to WDL
 ## 1.2.1 - 2016-01-19
 - Changed the order of provisioning vcf and tbi files
 ## 1.2   - 2015-09-08
