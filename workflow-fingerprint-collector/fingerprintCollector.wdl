@@ -239,7 +239,7 @@ command <<<
      temp = cLine.split("\t")
      if refs[temp[0]] and refs[temp[0]].get(temp[1]):
          variant = temp[4].upper()
-         if re.match('[ACGT]{1}', variant) and temp[4] != temp[3]:
+         if re.fullmatch('[ACGT]{1}', variant) and temp[4] != temp[3]:
              refs[temp[0]][temp[1]]["flag"] = variant
          else:
              refs[temp[0]][temp[1]]["flag"] = flags['nosnp']
