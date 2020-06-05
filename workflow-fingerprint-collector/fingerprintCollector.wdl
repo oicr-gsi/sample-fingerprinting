@@ -87,6 +87,7 @@ parameter_meta {
 }
 
 command <<<
+ set -euo pipefail
  $GATK_ROOT/bin/gatk HaplotypeCaller \
                     -R ~{refFasta} \
                     -I ~{inputBam} \
@@ -186,7 +187,7 @@ parameter_meta {
 }
 
 command <<<
- python<<CODE
+ python3 <<CODE
  import gzip
  import re
 
