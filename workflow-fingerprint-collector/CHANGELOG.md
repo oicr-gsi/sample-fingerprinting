@@ -1,3 +1,5 @@
+## 2.1   - 2020-06-23
+- Switched to gatk3 for DeapthOfCoverage (gatk4 was not working), increased version to 2.1
 ## 2.0   - 2020-06-03
 - Converting to WDL
 ## 1.2.1 - 2016-01-19

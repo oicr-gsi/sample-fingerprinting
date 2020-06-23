@@ -28,10 +28,10 @@ parameter_meta {
 meta {
   author: "Peter Ruzanov"
   email: "peter.ruzanov@oicr.on.ca"
-  description: "FingerprintCollector 2.0, workflow that generates genotype fingerprints consumed by SampleFingerprinting workflow"
+  description: "FingerprintCollector 2.1, workflow that generates genotype fingerprints consumed by SampleFingerprinting workflow"
   dependencies: [
       {
-        name: "gatk/4.1.7.0",
+        name: "gatk/4.1.7.0, gatk/3.6.0",
         url: "https://gatk.broadinstitute.org"
       },
       {
@@ -141,12 +141,14 @@ parameter_meta {
 }
 
 command <<<
- $GATK_ROOT/bin/gatk DepthOfCoverage \
-                    -R ~{refFasta} \
-                    -I ~{inputBam} \
-                    -O ~{sampleID} \
-                   --read-filter CigarContainsNoNOperator \
-                    -L ~{hotspotSNPs}
+ $JAVA_ROOT/bin/java -jar $GATK_ROOT/GenomeAnalysisTK.jar \
+                     -R ~{refFasta} \
+                     -T DepthOfCoverage \
+                     -I ~{inputBam} \
+                     -o ~{sampleID} \
+                     -filterRNC \
+                     -L ~{hotspotSNPs} 
+
 >>>
 
 runtime {
@@ -219,7 +221,7 @@ command <<<
  for dLine in depthLines:
      if dLine.startswith("Locus"):
          continue
-     temp = dLine.split(",")
+     temp = dLine.split("\t")
      coords = temp[0].split(":")
      if len(coords) != 2:
          continue
