@@ -21,7 +21,7 @@
            "fingerprintCollector.hotspotSNPs": "/.mounts/labs/gsi/testdata/fingerprintCollector/dbsnp137.hg19.402.overlap.vcf.gz",
            "fingerprintCollector.refFasta": "$HG19_ROOT/hg19_random.fa",
            "fingerprintCollector.runHaplotypeCaller.modules": "hg19/p13 gatk/4.1.7.0 tabix/0.2.6",
-           "fingerprintCollector.runDepthOfCoverage.modules": "hg19/p13 gatk/4.1.7.0",
+           "fingerprintCollector.runDepthOfCoverage.modules": "hg19/p13 gatk/3.6-0",
            "fingerprintCollector.runFinCreator.modules": "python/3.6"
           }
       }

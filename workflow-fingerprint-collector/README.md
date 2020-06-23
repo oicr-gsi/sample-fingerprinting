@@ -1,6 +1,6 @@
 ## fingerprintCollector
 
-FingerprintCollector 2.0, workflow that generates genotype fingerprints consumed by SampleFingerprinting workflow
+FingerprintCollector 2.1, workflow that generates genotype fingerprints consumed by SampleFingerprinting workflow
 
 ### Overview
 
@@ -13,7 +13,7 @@ variation data independently for each input .bam file. The below graph describes
 
 ## Dependencies
 
-* [gatk 4.1.7.0](https://gatk.broadinstitute.org)
+* [gatk 4.1.7.0,gatk/3.6.0](https://gatk.broadinstitute.org)
 * [tabix 0.2.6](http://www.htslib.org)
 * [python 3.6](https://www.python.org/)
 
