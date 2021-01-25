@@ -1,3 +1,24 @@
 {
-        "fingerprintCompare.finFile": "/.mounts/labs/gsi/testdata/fingerprintCompare/finlist.txt"
+  "defaults": {
+    "description": "fingerprintCompare workflow test",
+    "metrics_calculate": "calculate.sh",
+    "metrics_compare": "compare.sh",
+    "output_metrics_dir": "/.mounts/labs/gsi/testdata/fingerprintCompare/output_expectations",
+    "parameters": {
+      "wdl_options": {
+        "write_to_cache": false,
+        "read_from_cache": false
+      }
     }
+  },
+  "tests": [
+    {
+      "id": "testCase1",
+      "parameters": {
+        "wdl_inputs": {
+            "fingerprintCompare.finFile": "/.mounts/labs/gsi/testdata/fingerprintCompare/finlist.txt"
+        }
+      }
+    }
+  ]
+}
