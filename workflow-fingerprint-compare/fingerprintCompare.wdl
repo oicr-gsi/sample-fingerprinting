@@ -3,13 +3,13 @@ version 1.0
 workflow fingerprintCompare {
 
     input {
-        File finFile
+        File finList
     }
 
-    call generateMatrix { input: finFile = finFile }
+    call generateMatrix { input: finList = finList }
 
     parameter_meta {
-        finFile: "Input .fin file containing list of .fin files"
+        finList: "Input .txt file containing list of .fin files"
     }
 
     meta {
@@ -23,28 +23,28 @@ workflow fingerprintCompare {
             }
         ]
         output_meta: {
-            outputFin: "generated jaccard matrix"
+            output: "generated jaccard matrix"
         }
     }
 
     output {
-        File outputFin = generateMatrix.fin
+        File output = generateMatrix.fin
     }
 }
 
 task generateMatrix {
 
     input {
-        File finFile
+        File finList
     }
 
     parameter_meta {
-        finFile: "input .fin file"
+        finList: "input .fin file"
     }
 
     command <<<
         module load sample-fingerprinting/0
-        jaccard_coeff_matrix_mc --list ~{finFile} > matrix.txt
+        jaccard_coeff_matrix_mc --list ~{finList} > matrix.txt
     >>>
 
     output {
