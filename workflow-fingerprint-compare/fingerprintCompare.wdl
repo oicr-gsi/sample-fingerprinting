@@ -36,18 +36,32 @@ task generateMatrix {
 
     input {
         File finList
+        String modules = "sample-fingerprinting/0"
+        Int timeout = 12
+        Int memory = 21
     }
 
     parameter_meta {
-        finList: "input .fin file"
+        finList: "The .txt file containing a list of .fin files on which a jaccard matrix will be generated."
     }
 
     command <<<
-        module load sample-fingerprinting/0
         jaccard_coeff_matrix_mc --list ~{finList} > matrix.txt
     >>>
 
+    runtime {
+        modules: "~{modules}"
+        timeout: "~{timeout}"
+        memory: "~{memory}G"
+    }
+
     output {
         File fin = "matrix.txt"
+    }
+
+    meta {
+        output_meta: {
+            fin: "A good description of what an output file is:"
+        }
     }
 }
