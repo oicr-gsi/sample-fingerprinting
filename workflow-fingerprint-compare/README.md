@@ -21,7 +21,7 @@ java -jar cromwell.jar run fingerprintCompare.wdl --inputs inputs.json
 #### Required workflow parameters:
 Parameter|Value|Description
 ---|---|---
-`finFile`|File|Input .fin file containing list of .fin files
+`finList`|File|Input .txt file containing list of .fin files
 
 
 #### Optional workflow parameters:
@@ -38,7 +38,7 @@ Parameter|Value|Default|Description
 
 Output | Type | Description
 ---|---|---
-`outputFin`|File|generated jaccard matrix
+`output`|File|generated jaccard matrix
 
 
 ## Niassa + Cromwell
@@ -70,3 +70,4 @@ mvn clean verify \
 For support, please file an issue on the [Github project](https://github.com/oicr-gsi) or send an email to gsi@oicr.on.ca .
 
 _Generated with generate-markdown-readme (https://github.com/oicr-gsi/gsi-wdl-tools/)_
+
