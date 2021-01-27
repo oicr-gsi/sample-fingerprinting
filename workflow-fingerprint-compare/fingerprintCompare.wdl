@@ -23,12 +23,12 @@ workflow fingerprintCompare {
             }
         ]
         output_meta: {
-            output: "generated jaccard matrix"
+            output: "Generated jaccard matrix"
         }
     }
 
     output {
-        File output = generateMatrix.fin
+        File output = generateMatrix.jaccard_matrix
     }
 }
 
@@ -56,12 +56,12 @@ task generateMatrix {
     }
 
     output {
-        File fin = "matrix.txt"
+        File jaccard_matrix = "matrix.txt"
     }
 
     meta {
         output_meta: {
-            fin: "A good description of what an output file is:"
+            jaccard_matrix: "A matrix of jaccard scores from pairwise comparisions between the fingerprints."
         }
     }
 }
