@@ -1,0 +1,81 @@
+[
+    {
+        "arguments": {
+            "fingerprintCollector.hotspotSNPs": "/.mounts/labs/gsi/testdata/fingerprintCollector/dbsnp137.hg19.402.overlap.vcf.gz",
+            "fingerprintCollector.inputBai": {
+                "contents": {
+                    "configuration": "/.mounts/labs/gsi/testdata/fingerprintCollector/SWID_278681_PCSI_0098_Pa_P_PE_700_WG_120905_h803_0093_AC12P2ACXX_NoIndex_L002_R1_001.chr22.bam.bai",
+                    "externalIds": [
+                        {
+                            "id": "TEST",
+                            "provider": "TEST"
+                        }
+                    ]
+                },
+                "type": "EXTERNAL"
+            },
+            "fingerprintCollector.inputBam": {
+                "contents": {
+                    "configuration": "/.mounts/labs/gsi/testdata/fingerprintCollector/SWID_278681_PCSI_0098_Pa_P_PE_700_WG_120905_h803_0093_AC12P2ACXX_NoIndex_L002_R1_001.chr22.bam",
+                    "externalIds": [
+                        {
+                            "id": "TEST",
+                            "provider": "TEST"
+                        }
+                    ]
+                },
+                "type": "EXTERNAL"
+            },
+            "fingerprintCollector.outputFileNamePrefix": null,
+            "fingerprintCollector.refFasta": "$HG19_ROOT/hg19_random.fa",
+            "fingerprintCollector.runDepthOfCoverage.jobMemory": null,
+            "fingerprintCollector.runDepthOfCoverage.modules": "hg19/p13 gatk/3.6-0",
+            "fingerprintCollector.runDepthOfCoverage.timeout": null,
+            "fingerprintCollector.runFinCreator.chroms": null,
+            "fingerprintCollector.runFinCreator.jobMemory": null,
+            "fingerprintCollector.runFinCreator.modules": "python/3.6",
+            "fingerprintCollector.runFinCreator.timeout": null,
+            "fingerprintCollector.runHaplotypeCaller.jobMemory": null,
+            "fingerprintCollector.runHaplotypeCaller.modules": "hg19/p13 gatk/4.1.7.0 tabix/0.2.6",
+            "fingerprintCollector.runHaplotypeCaller.stdCC": null,
+            "fingerprintCollector.runHaplotypeCaller.timeout": null
+        },
+        "description": "FingerprintCollector workflow test",
+        "engineArguments": {},
+        "id": "TEST_PCSI",
+        "metadata": {
+            "fingerprintCollector.outbutTbi": {
+                "contents": [
+                    {
+                        "outputDirectory": "@SCRATCH@/@DATE@_Workflow_fingerprintCollector_TEST_PCSI_@JENKINSID@"
+                    }
+                ],
+                "type": "ALL"
+            },
+            "fingerprintCollector.outputFin": {
+                "contents": [
+                    {
+                        "outputDirectory": "@SCRATCH@/@DATE@_Workflow_fingerprintCollector_TEST_PCSI_@JENKINSID@"
+                    }
+                ],
+                "type": "ALL"
+            },
+            "fingerprintCollector.outputVcf": {
+                "contents": [
+                    {
+                        "outputDirectory": "@SCRATCH@/@DATE@_Workflow_fingerprintCollector_TEST_PCSI_@JENKINSID@"
+                    }
+                ],
+                "type": "ALL"
+            }
+        },
+        "validators": [
+            {
+                "metrics_calculate": "@CHECKOUT@/./calculate.sh",
+                "metrics_compare": "@CHECKOUT@/./compare.sh",
+                "output_metrics": "/.mounts/labs/gsi/testdata/fingerprintCollector/output_metrics/TEST_PCSI.metrics",
+                "type": "script"
+            }
+        ]
+    }
+]

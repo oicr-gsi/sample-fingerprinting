@@ -1,3 +1,5 @@
+## 2.1.1 - 2021-06-02
+- Migrating to Vidarr
 ## 2.1   - 2020-06-23
 - Switched to gatk3 for DeapthOfCoverage (gatk4 was not working), increased version to 2.1
 ## 2.0   - 2020-06-03

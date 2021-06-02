@@ -1,0 +1,6 @@
+{
+    "names": [
+        "fingerprintCollector"
+    ],
+    "wdl": "fingerprintCollector.wdl"
+}
