@@ -2,13 +2,11 @@
 
 FingerprintCollector 2.1, workflow that generates genotype fingerprints consumed by SampleFingerprinting workflow
 
-##Overview
+## Overview
 
 Fingerprint Collector workflow produces "fingerprint" data for input alignments passed as .bam files. It is a part of the original implementation and its task is to produce all intermediate data just before creation of similarity matrix and sample swap report. The goal is to decrease the stress on the system by splitting the workflow and collecting variation data independently for each input .bam file. The below graph describes the process:
 
 ![sample-fingerprinting flowchart](docs/FingerprintCollector_specs.png)
-
-## Overview
 
 ## Dependencies
 
