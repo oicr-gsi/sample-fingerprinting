@@ -1,0 +1,44 @@
+## Commands
+
+This section lists command(s) run by fingerprintCollector workflow
+
+* Running fingerprintCollector
+
+GATK Haplotype Caller using a list of genotyping hotspots:
+
+````
+ gatk HaplotypeCaller
+     -R REF_FASTA
+     -I INPUT_BAM
+     -O SAMPLE_ID.snps.raw.vcf
+    --read-filter CigarContainsNoNOperator
+    --stand-call-conf STD_CC
+     -L HOTSPOT_SNPS
+
+ bgzip -c SAMPLE_ID.snps.raw.vcf > SAMPLE_ID.snps.raw.vcf.gz
+ tabix -p vcf SAMPLE_ID.snps.raw.vcf.gz 
+
+```
+
+Depth of Coverage analysis:
+
+```
+ java -jar GenomeAnalysisTK.jar 
+      -R REF_FASTA
+      -T DepthOfCoverage
+      -I INPUT_BAM
+      -o SAMPLE_ID
+      -filterRNC
+      -L HOTSPOT_SNPS 
+
+```
+
+Creation of a fingerprint file:
+
+...
+
+ Custom python code producing .fin file with hotspot calls
+
+ please refer to the fingerprintCollector.wdl for source
+
+```

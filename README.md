@@ -1,19 +1,18 @@
-## fingerprintCollector
+# fingerprintCollector
 
 FingerprintCollector 2.1, workflow that generates genotype fingerprints consumed by SampleFingerprinting workflow
 
-### Overview
+##Overview
 
-Fingerprint Collector workflow produces "fingerprint" data for input alignments passed as .bam files. It is a part of the
-original implementation and its task is to produce all intermediate data just before creation of similarity matrix 
-and sample swap report. The goal is to decrease the stress on the system by splitting the workflow and collecting 
-variation data independently for each input .bam file. The below graph describes the process:
+Fingerprint Collector workflow produces "fingerprint" data for input alignments passed as .bam files. It is a part of the original implementation and its task is to produce all intermediate data just before creation of similarity matrix and sample swap report. The goal is to decrease the stress on the system by splitting the workflow and collecting variation data independently for each input .bam file. The below graph describes the process:
 
 ![sample-fingerprinting flowchart](docs/FingerprintCollector_specs.png)
 
+## Overview
+
 ## Dependencies
 
-* [gatk 4.1.7.0,gatk/3.6.0](https://gatk.broadinstitute.org)
+* [gatk 4.1.7.0, gatk 3.6.0](https://gatk.broadinstitute.org)
 * [tabix 0.2.6](http://www.htslib.org)
 * [python 3.6](https://www.python.org/)
 
@@ -66,7 +65,52 @@ Output | Type | Description
 `outbutTbi`|File|expression levels for all isoforms recorded in the reference
 `outputFin`|File|Custom format file, shows which hotspots were called as variants
 
-## Support
+
+## Commands
+ 
+ This section lists command(s) run by fingerprintCollector workflow
+ 
+ * Running fingerprintCollector
+ 
+ GATK Haplotype Caller using a list of genotyping hotspots:
+ 
+ ````
+  gatk HaplotypeCaller
+      -R REF_FASTA
+      -I INPUT_BAM
+      -O SAMPLE_ID.snps.raw.vcf
+     --read-filter CigarContainsNoNOperator
+     --stand-call-conf STD_CC
+      -L HOTSPOT_SNPS
+ 
+  bgzip -c SAMPLE_ID.snps.raw.vcf > SAMPLE_ID.snps.raw.vcf.gz
+  tabix -p vcf SAMPLE_ID.snps.raw.vcf.gz 
+ 
+ ```
+ 
+ Depth of Coverage analysis:
+ 
+ ```
+  java -jar GenomeAnalysisTK.jar 
+       -R REF_FASTA
+       -T DepthOfCoverage
+       -I INPUT_BAM
+       -o SAMPLE_ID
+       -filterRNC
+       -L HOTSPOT_SNPS 
+ 
+ ```
+ 
+ Creation of a fingerprint file:
+ 
+ ...
+ 
+  Custom python code producing .fin file with hotspot calls
+ 
+  please refer to the fingerprintCollector.wdl for source
+ 
+ ```
+ ## Support
 
 For support, please file an issue on the [Github project](https://github.com/oicr-gsi) or send an email to gsi@oicr.on.ca .
 
