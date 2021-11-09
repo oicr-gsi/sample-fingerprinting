@@ -41,7 +41,10 @@
             "fingerprintCollector.runHaplotypeCaller.timeout": null
         },
         "description": "FingerprintCollector workflow test",
-        "engineArguments": {},
+        "engineArguments": {
+           "write_to_cache": false,
+           "read_from_cache": false
+        },
         "id": "TEST_PCSI",
         "metadata": {
             "fingerprintCollector.outbutTbi": {
@@ -71,8 +74,8 @@
         },
         "validators": [
             {
-                "metrics_calculate": "@CHECKOUT@/./calculate.sh",
-                "metrics_compare": "@CHECKOUT@/./compare.sh",
+                "metrics_calculate": "@CHECKOUT@/tests/calculate.sh",
+                "metrics_compare": "@CHECKOUT@/tests/compare.sh",
                 "output_metrics": "/.mounts/labs/gsi/testdata/fingerprintCollector/output_metrics/TEST_PCSI.metrics",
                 "type": "script"
             }

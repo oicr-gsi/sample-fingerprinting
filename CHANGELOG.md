@@ -1,3 +1,5 @@
+## Unreleased - 2021-11-10
+[GP-2877](https://jira.oicr.on.ca/browse/GP-2877) making calculate.sh script more robust
 ## 2.1.1 - 2021-06-02
 - Migrating to Vidarr
 ## 2.1   - 2020-06-23
