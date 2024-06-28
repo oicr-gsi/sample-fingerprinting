@@ -44,10 +44,19 @@ meta {
       }
     ]
     output_meta: {
-      outputVcf: "gzipped vcf expression levels for all genes recorded in the reference",
-      outbutTbi: "expression levels for all isoforms recorded in the reference",
-      outputFin: "Custom format file, shows which hotspots were called as variants"
+    outputVcf: {
+        description: "gzipped vcf expression levels for all genes recorded in the reference",
+        vidarr_label: "outputVcf"
+    },
+    outbutTbi: {
+        description: "expression levels for all isoforms recorded in the reference",
+        vidarr_label: "outbutTbi"
+    },
+    outputFin: {
+        description: "Custom format file, shows which hotspots were called as variants",
+        vidarr_label: "outputFin"
     }
+}
 }
 
 output {

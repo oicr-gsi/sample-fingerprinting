@@ -57,22 +57,22 @@ Parameter|Value|Default|Description
 
 ### Outputs
 
-Output | Type | Description
----|---|---
-`outputVcf`|File|gzipped vcf expression levels for all genes recorded in the reference
-`outbutTbi`|File|expression levels for all isoforms recorded in the reference
-`outputFin`|File|Custom format file, shows which hotspots were called as variants
+Output | Type | Description | Labels
+---|---|---|---
+`outputVcf`|File|gzipped vcf expression levels for all genes recorded in the reference|vidarr_label: outputVcf
+`outbutTbi`|File|expression levels for all isoforms recorded in the reference|vidarr_label: outbutTbi
+`outputFin`|File|Custom format file, shows which hotspots were called as variants|vidarr_label: outputFin
 
 
 ## Commands
  
- This section lists command(s) run by fingerprintCollector workflow
+This section lists command(s) run by fingerprintCollector workflow
  
- * Running fingerprintCollector
+* Running fingerprintCollector
  
- GATK Haplotype Caller using a list of genotyping hotspots:
+### GATK Haplotype Caller using a list of genotyping hotspots:
  
- ````
+```
   gatk HaplotypeCaller
       -R REF_FASTA
       -I INPUT_BAM
@@ -84,11 +84,11 @@ Output | Type | Description
   bgzip -c SAMPLE_ID.snps.raw.vcf > SAMPLE_ID.snps.raw.vcf.gz
   tabix -p vcf SAMPLE_ID.snps.raw.vcf.gz 
  
- ```
+```
  
- Depth of Coverage analysis:
+### Depth of Coverage analysis:
  
- ```
+```
   java -jar GenomeAnalysisTK.jar 
        -R REF_FASTA
        -T DepthOfCoverage
@@ -97,18 +97,20 @@ Output | Type | Description
        -filterRNC
        -L HOTSPOT_SNPS 
  
- ```
+```
  
- Creation of a fingerprint file:
+### Creation of a fingerprint file:
  
- ...
+```
+  ...
  
   Custom python code producing .fin file with hotspot calls
  
   please refer to the fingerprintCollector.wdl for source
  
- ```
- ## Support
+```
+
+## Support
 
 For support, please file an issue on the [Github project](https://github.com/oicr-gsi) or send an email to gsi@oicr.on.ca .
 

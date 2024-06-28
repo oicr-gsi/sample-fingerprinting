@@ -1,5 +1,9 @@
+## 2.3.0 - 2024-06-25
+- [GRD-797](https://jira.oicr.on.ca/browse/GRD-797) - add vidarr labels to outputs (changes to medata only)
 ## Unreleased - 2021-11-10
-[GP-2877](https://jira.oicr.on.ca/browse/GP-2877) making calculate.sh script more robust
+- [GP-2877](https://jira.oicr.on.ca/browse/GP-2877) making calculate.sh script more robust
+## 2.2.0 - 2024-06-25
+- [GRD-797](https://jira.oicr.on.ca/browse/GRD-797) - add vidarr labels to outputs (changes to medata only)
 ## 2.1.1 - 2021-06-02
 - Migrating to Vidarr
 ## 2.1   - 2020-06-23
