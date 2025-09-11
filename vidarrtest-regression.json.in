@@ -1,10 +1,10 @@
 [
     {
         "arguments": {
-            "fingerprintCollector.hotspotSNPs": "/.mounts/labs/gsi/testdata/fingerprintCollector/dbsnp137.hg19.402.overlap.vcf.gz",
+            "fingerprintCollector.hotspotSNPs": "/.mounts/labs/gsi/testdata/fingerprintCollector/test_inputs/dbsnp137.hg19.402.overlap.vcf.gz",
             "fingerprintCollector.inputBai": {
                 "contents": {
-                    "configuration": "/.mounts/labs/gsi/testdata/fingerprintCollector/SWID_278681_PCSI_0098_Pa_P_PE_700_WG_120905_h803_0093_AC12P2ACXX_NoIndex_L002_R1_001.chr22.bam.bai",
+                    "configuration": "/.mounts/labs/gsi/testdata/fingerprintCollector/test_inputs/PCSI_Test01.chr22.bam.bai",
                     "externalIds": [
                         {
                             "id": "TEST",
@@ -16,7 +16,7 @@
             },
             "fingerprintCollector.inputBam": {
                 "contents": {
-                    "configuration": "/.mounts/labs/gsi/testdata/fingerprintCollector/SWID_278681_PCSI_0098_Pa_P_PE_700_WG_120905_h803_0093_AC12P2ACXX_NoIndex_L002_R1_001.chr22.bam",
+                    "configuration": "/.mounts/labs/gsi/testdata/fingerprintCollector/test_inputs/PCSI_Test01.chr22.bam",
                     "externalIds": [
                         {
                             "id": "TEST",
@@ -76,7 +76,7 @@
             {
                 "metrics_calculate": "@CHECKOUT@/tests/calculate.sh",
                 "metrics_compare": "@CHECKOUT@/tests/compare.sh",
-                "output_metrics": "/.mounts/labs/gsi/testdata/fingerprintCollector/output_metrics/TEST_PCSI.metrics",
+                "output_metrics": "/.mounts/labs/gsi/testdata/fingerprintCollector/output_metrics/workflow_test_01.metrics",
                 "type": "script"
             }
         ]
